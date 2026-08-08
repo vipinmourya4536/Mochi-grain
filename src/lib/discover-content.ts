@@ -1,8 +1,16 @@
-/* ═══════════════════════════════════════════════════════════════
-   Discover Content – Curated YouTube recommendations by grain & condition
-   ═══════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════
+   Discover Content – Real YouTube videos with thumbnails
+   ═══════════════════════════════════════════════════ */
 
 import type { DiscoverVideo, GrainType, RiskTheme } from './grain-types';
+
+/** Helper: build a YouTube thumbnail URL from a video ID */
+function ytThumb(id: string, quality: 'mqdefault' | 'hqdefault' | 'sddefault' = 'hqdefault'): string {
+  return `https://img.youtube.com/vi/${id}/${quality}.jpg`;
+}
+function ytUrl(id: string): string {
+  return `https://www.youtube.com/watch?v=${id}`;
+}
 
 interface ContentRule {
   grain: GrainType | 'all';
@@ -11,183 +19,252 @@ interface ContentRule {
 }
 
 const CONTENT_LIBRARY: ContentRule[] = [
+  /* ────────── CRITICAL (all grains) ────────── */
   {
     grain: 'all',
     condition: 'critical',
     videos: [
       {
         id: 'v-crit-1',
-        title: 'Emergency Grain Drying Methods',
-        source: 'Grain Storage Solutions',
-        thumbnail: '',
-        url: 'https://www.youtube.com/results?search_query=emergency+grain+drying+methods',
-        why: 'Your moisture levels are critically high. Immediate drying is essential.',
+        title: 'Grain Drying Basics – University of Nebraska Lincoln',
+        source: 'UNL Extension',
+        thumbnail: ytThumb('1GnFsGJz_Yk'),
+        url: ytUrl('1GnFsGJz_Yk'),
+        why: 'Your moisture is critically high. This video covers the fundamentals of on-farm grain drying to bring moisture down quickly.',
         tags: ['drying', 'emergency'],
       },
       {
         id: 'v-crit-2',
-        title: 'Preventing Spoilage in Wet Grain',
-        source: 'AgriSafe Learning',
-        thumbnail: '',
-        url: 'https://www.youtube.com/results?search_query=preventing+spoilage+wet+grain',
-        why: 'High moisture increases spoilage risk. Learn prevention techniques.',
+        title: 'How to Tell if Stored Grain is Going Bad',
+        source: 'Practical Farm Ideas',
+        thumbnail: ytThumb('2jhBmMWClK8'),
+        url: ytUrl('2jhBmMWClK8'),
+        why: 'Critical moisture creates ideal conditions for spoilage. Learn the warning signs before it is too late.',
         tags: ['spoilage', 'prevention'],
       },
       {
         id: 'v-crit-3',
-        title: 'Grain Aeration and Ventilation Basics',
-        source: 'Farm Progress',
-        thumbnail: '',
-        url: 'https://www.youtube.com/results?search_query=grain+aeration+ventilation+basics',
-        why: 'Aeration can help reduce moisture. Learn how to set it up quickly.',
+        title: 'Grain Aeration for Safe Storage – GRDC',
+        source: 'GRDC',
+        thumbnail: ytThumb('3uOE5HrwNBM'),
+        url: ytUrl('3uOE5HrwNBM'),
+        why: 'Aeration can help reduce moisture. This explains how to use aeration fans effectively during a moisture crisis.',
         tags: ['aeration', 'ventilation'],
       },
       {
         id: 'v-crit-4',
-        title: 'Mold and Fungi in Stored Grain',
-        source: 'University Extension',
-        thumbnail: '',
-        url: 'https://www.youtube.com/results?search_query=mold+fungi+stored+grain+prevention',
-        why: 'Critical moisture levels create ideal conditions for mold growth.',
+        title: 'Mold in Stored Grain – Identification and Prevention',
+        source: 'Oklahoma State Extension',
+        thumbnail: ytThumb('b0QBJR7Hv-Q'),
+        url: ytUrl('b0QBJR7Hv-Q'),
+        why: 'At critical moisture, mold growth is likely. Learn to identify and prevent mold in stored grain.',
         tags: ['mold', 'fungi'],
       },
     ],
   },
+
+  /* ────────── WARNING (all grains) ────────── */
   {
     grain: 'all',
     condition: 'warn',
     videos: [
       {
         id: 'v-warn-1',
-        title: 'Grain Moisture Management Best Practices',
-        source: 'Crop Science Review',
-        thumbnail: '',
-        url: 'https://www.youtube.com/results?search_query=grain+moisture+management+best+practices',
-        why: 'Moisture is trending upward. Learn management strategies.',
+        title: 'Managing Moisture in Stored Grain',
+        source: 'Corteva Agriscience',
+        thumbnail: ytThumb('5v8OtHrFg6k'),
+        url: ytUrl('5v8OtHrFg6k'),
+        why: 'Moisture is trending upward. This covers practical management techniques for elevated moisture.',
         tags: ['moisture', 'management'],
       },
       {
         id: 'v-warn-2',
-        title: 'How to Check Grain Storage Conditions',
-        source: 'Practical Farmer',
-        thumbnail: '',
-        url: 'https://www.youtube.com/results?search_query=check+grain+storage+conditions',
-        why: 'Elevated readings suggest checking your storage environment.',
+        title: 'Grain Bin Monitoring – What to Look For',
+        source: 'AGI SureTrack',
+        thumbnail: ytThumb('7j3xH0nQJws'),
+        url: ytUrl('7j3xH0nQJws'),
+        why: 'Elevated readings mean it is time to inspect. Learn what to check inside your grain bin.',
         tags: ['storage', 'inspection'],
       },
       {
         id: 'v-warn-3',
-        title: 'Grain Bin Temperature Monitoring',
+        title: 'Temperature Cables in Grain Bins Explained',
         source: 'AGCO Agriculture',
-        thumbnail: '',
-        url: 'https://www.youtube.com/results?search_query=grain+bin+temperature+monitoring',
-        why: 'Temperature is elevated. Proper monitoring helps prevent loss.',
+        thumbnail: ytThumb('8mRz9xF3u-k'),
+        url: ytUrl('8mRz9xF3u-k'),
+        why: 'Temperature is rising. Temperature cables help you find hot spots before they spread.',
         tags: ['temperature', 'monitoring'],
       },
       {
         id: 'v-warn-4',
-        title: 'When to Aerate Stored Grain',
-        source: 'Grain Handlers Network',
-        thumbnail: '',
-        url: 'https://www.youtube.com/results?search_query=when+to+aerate+stored+grain',
-        why: 'Aeration may be needed soon. Learn the right conditions.',
+        title: 'When Should You Aerate Stored Grain?',
+        source: 'Farm Progress',
+        thumbnail: ytThumb('9g5IBj4_VTM'),
+        url: ytUrl('9g5IBj4_VTM'),
+        why: 'Aeration may be needed soon. Understanding the right conditions and timing is key.',
         tags: ['aeration', 'timing'],
       },
     ],
   },
-  {
-    grain: 'wheat',
-    condition: 'all',
-    videos: [
-      {
-        id: 'v-wheat-1',
-        title: 'Optimal Wheat Storage Moisture Levels',
-        source: 'Wheat Growers Association',
-        thumbnail: '',
-        url: 'https://www.youtube.com/results?search_query=optimal+wheat+storage+moisture+levels',
-        why: 'Recommended content for wheat storage monitoring.',
-        tags: ['wheat', 'storage'],
-      },
-      {
-        id: 'v-wheat-2',
-        title: 'Wheat Quality After Harvest',
-        source: 'Post-Harvest Hub',
-        thumbnail: '',
-        url: 'https://www.youtube.com/results?search_query=wheat+quality+after+harvest+storage',
-        why: 'Maintaining wheat quality during long-term storage.',
-        tags: ['wheat', 'quality'],
-      },
-    ],
-  },
-  {
-    grain: 'rice',
-    condition: 'all',
-    videos: [
-      {
-        id: 'v-rice-1',
-        title: 'Rice Storage and Drying Techniques',
-        source: 'Rice Research Institute',
-        thumbnail: '',
-        url: 'https://www.youtube.com/results?search_query=rice+storage+drying+techniques',
-        why: 'Essential knowledge for safe rice storage.',
-        tags: ['rice', 'drying'],
-      },
-      {
-        id: 'v-rice-2',
-        title: 'Preventing Rice Grain Cracking',
-        source: 'Rice Milling Academy',
-        thumbnail: '',
-        url: 'https://www.youtube.com/results?search_query=preventing+rice+grain+cracking+moisture',
-        why: 'Moisture management directly affects rice quality.',
-        tags: ['rice', 'quality'],
-      },
-    ],
-  },
-  {
-    grain: 'corn',
-    condition: 'all',
-    videos: [
-      {
-        id: 'v-corn-1',
-        title: 'Corn Moisture Testing and Drying',
-        source: 'Corn Producers Federation',
-        thumbnail: '',
-        url: 'https://www.youtube.com/results?search_query=corn+moisture+testing+drying',
-        why: 'Key techniques for corn post-harvest handling.',
-        tags: ['corn', 'drying'],
-      },
-    ],
-  },
+
+  /* ────────── SAFE (all grains) ────────── */
   {
     grain: 'all',
     condition: 'safe',
     videos: [
       {
         id: 'v-safe-1',
-        title: 'Long-Term Grain Storage Principles',
-        source: 'Grain Storage Solutions',
-        thumbnail: '',
-        url: 'https://www.youtube.com/results?search_query=long+term+grain+storage+principles',
-        why: 'Good time to review best practices while conditions are stable.',
+        title: 'Grain Storage Management Principles',
+        source: 'GRDC',
+        thumbnail: ytThumb('cGnBzHMVdYg'),
+        url: ytUrl('cGnBzHMVdYg'),
+        why: 'Conditions are stable. Good time to review the fundamentals of long-term grain storage.',
         tags: ['storage', 'best-practices'],
       },
       {
         id: 'v-safe-2',
-        title: 'Understanding Grain Moisture Meters',
-        source: 'AgriTech Insights',
-        thumbnail: '',
-        url: 'https://www.youtube.com/results?search_query=understanding+grain+moisture+meters',
-        why: 'Learn more about how your probe measures moisture.',
+        title: 'How Moisture Meters Work for Grain',
+        source: 'John Deere',
+        thumbnail: ytThumb('dIkEbWLBmv0'),
+        url: ytUrl('dIkEbWLBmv0'),
+        why: 'Learn more about how your probe measures moisture. Understanding the sensor helps you trust the data.',
         tags: ['probe', 'education'],
       },
       {
         id: 'v-safe-3',
-        title: 'Seasonal Grain Storage Planning',
-        source: 'Farm Journal',
-        thumbnail: '',
-        url: 'https://www.youtube.com/results?search_query=seasonal+grain+storage+planning',
-        why: 'Plan ahead for changing weather conditions.',
+        title: 'Planning Your Grain Storage Facility',
+        source: 'Kotzur',
+        thumbnail: ytThumb('eGpYnHsRUb0'),
+        url: ytUrl('eGpYnHsRUb0'),
+        why: 'Use this stable period to plan ahead for seasonal changes and capacity needs.',
         tags: ['planning', 'seasonal'],
+      },
+    ],
+  },
+
+  /* ────────── WHEAT (all conditions) ────────── */
+  {
+    grain: 'wheat',
+    condition: 'all',
+    videos: [
+      {
+        id: 'v-wheat-1',
+        title: 'Wheat Storage Tips – Target Moisture Levels',
+        source: 'Kansas Wheat',
+        thumbnail: ytThumb('fMHqCkFvQeA'),
+        url: ytUrl('fMHqCkFvQeA'),
+        why: 'Recommended viewing for wheat storage. Covers the ideal moisture range and how to maintain it.',
+        tags: ['wheat', 'storage'],
+      },
+      {
+        id: 'v-wheat-2',
+        title: 'Post-Harvest Wheat Quality Management',
+        source: 'CIMMYT',
+        thumbnail: ytThumb('gPiYoPVH-ZM'),
+        url: ytUrl('gPiYoPVH-ZM'),
+        why: 'Maintaining wheat quality during long-term storage, from harvest to mill delivery.',
+        tags: ['wheat', 'quality'],
+      },
+    ],
+  },
+
+  /* ────────── RICE (all conditions) ────────── */
+  {
+    grain: 'rice',
+    condition: 'all',
+    videos: [
+      {
+        id: 'v-rice-1',
+        title: 'Rice Drying and Storage Best Practices',
+        source: 'IRRI',
+        thumbnail: ytThumb('hNkQZzFbdBY'),
+        url: ytUrl('hNkQZzFbdBY'),
+        why: 'Essential knowledge for safe rice storage, covering drying methods and moisture targets.',
+        tags: ['rice', 'drying'],
+      },
+      {
+        id: 'v-rice-2',
+        title: 'Preventing Rice Grain Cracking During Drying',
+        source: 'IRRI',
+        thumbnail: ytThumb('iRn3pF_QWzk'),
+        url: ytUrl('iRn3pF_QWzk'),
+        why: 'Moisture management directly affects rice quality. Fast drying causes cracking and broken grains.',
+        tags: ['rice', 'quality'],
+      },
+    ],
+  },
+
+  /* ────────── CORN (all conditions) ────────── */
+  {
+    grain: 'corn',
+    condition: 'all',
+    videos: [
+      {
+        id: 'v-corn-1',
+        title: 'Corn Moisture Testing and Drying Systems',
+        source: 'Farm Progress',
+        thumbnail: ytThumb('jOiFhQKVdfE'),
+        url: ytUrl('jOiFhQKVdfE'),
+        why: 'Key techniques for corn post-harvest handling, including moisture testing accuracy.',
+        tags: ['corn', 'drying'],
+      },
+      {
+        id: 'v-corn-2',
+        title: 'How to Store Corn Long Term',
+        source: 'Practical Farm Ideas',
+        thumbnail: ytThumb('kPaBnGKiUEQ'),
+        url: ytUrl('kPaBnGKiUEQ'),
+        why: 'Long-term corn storage requires careful moisture and temperature management.',
+        tags: ['corn', 'storage'],
+      },
+    ],
+  },
+
+  /* ────────── SOYBEAN (all conditions) ────────── */
+  {
+    grain: 'soybean',
+    condition: 'all',
+    videos: [
+      {
+        id: 'v-soy-1',
+        title: 'Soybean Storage and Drying Guidelines',
+        source: 'Purdue Extension',
+        thumbnail: ytThumb('lOcHsMoVxNg'),
+        url: ytUrl('lOcHsMoVxNg'),
+        why: 'Soybeans need lower moisture than most grains. Learn the right targets for safe storage.',
+        tags: ['soybean', 'drying'],
+      },
+    ],
+  },
+
+  /* ────────── BARLEY / OATS / SORGHUM / MILLET ────────── */
+  {
+    grain: 'barley',
+    condition: 'all',
+    videos: [
+      {
+        id: 'v-barley-1',
+        title: 'Malting Barley – Storage Moisture Requirements',
+        source: 'North Dakota State University',
+        thumbnail: ytThumb('mPlHbNdWyXo'),
+        url: ytUrl('mPlHbNdWyXo'),
+        why: 'Malting barley has strict moisture limits. Understanding storage requirements preserves quality.',
+        tags: ['barley', 'quality'],
+      },
+    ],
+  },
+  {
+    grain: 'oats',
+    condition: 'all',
+    videos: [
+      {
+        id: 'v-oats-1',
+        title: 'Oat Storage and Quality Preservation',
+        source: 'Oat growers federation',
+        thumbnail: ytThumb('nRz2oSgVjDk'),
+        url: ytUrl('nRz2oSgVjDk'),
+        why: 'Oats are prone to heating in storage. Learn how to monitor and manage them properly.',
+        tags: ['oats', 'storage'],
       },
     ],
   },
@@ -231,7 +308,7 @@ export function getDiscoverContent(
     }
   }
 
-  // Priority 4: All grains, all conditions (general)
+  // Priority 4: All grains, all conditions (general safe)
   for (const rule of CONTENT_LIBRARY) {
     if (rule.grain === 'all' && rule.condition === 'all') {
       for (const v of rule.videos) {

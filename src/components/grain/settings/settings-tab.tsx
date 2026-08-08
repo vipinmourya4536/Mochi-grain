@@ -1,21 +1,25 @@
 'use client';
 
 import { useGrainStore } from '@/lib/grain-store';
+import { isSimulating } from '@/lib/bluetooth';
 import {
   Cpu, DownloadSimple, ArrowClockwise, Trash, Power, Wrench,
 } from '@phosphor-icons/react/dist/ssr';
-import { GRAIN_LABELS, type GrainType } from '@/lib/grain-types';
+import { GRAIN_LABELS, GRAIN_PROFILES, type GrainType } from '@/lib/grain-types';
 
 const GRAIN_OPTIONS: GrainType[] = ['wheat', 'rice', 'corn', 'barley', 'soybean', 'sorghum', 'oats', 'millet', 'other'];
 
 export function SettingsTab() {
   const {
-    deviceInfo, deviceState, settings, updateSettings,
+    deviceInfo, deviceState, settings, updateSettings, selectGrainType,
     disconnectProbe, sendProbeCommand, connectProbe, showToast,
-    simulateConnect, syncProbeHistory, clearHistory,
+    simulateConnect, switchDemoMode, syncProbeHistory, clearHistory,
+    hasDevice,
   } = useGrainStore();
 
-  const isConnected = deviceState === 'connected' || deviceState === 'sleeping' || deviceState === 'low-battery';
+  // Show probe controls whenever we have a device (even during syncing/connecting after first connect)
+  const hasConnection = hasDevice;
+  const simRunning = isSimulating();
 
   return (
     <div className="pt-2 pb-6 grain-fade-in">
@@ -44,7 +48,7 @@ export function SettingsTab() {
         <div className="flex gap-3">
           <button
             onClick={async () => {
-              if (!isConnected) { connectProbe(); return; }
+              if (!hasConnection) { simulateConnect(); return; }
               await sendProbeCommand('calibrate');
             }}
             className="flex-1 font-bold text-xs py-3.5 rounded-xl active:scale-95 transition-all tracking-wide"
@@ -52,7 +56,7 @@ export function SettingsTab() {
           >
             CALIBRATE
           </button>
-          {isConnected ? (
+          {hasConnection ? (
             <button
               onClick={disconnectProbe}
               className="px-4 py-3.5 rounded-xl active:scale-95 transition-all font-bold text-xs"
@@ -80,8 +84,8 @@ export function SettingsTab() {
         </div>
       </div>
 
-      {/* Probe Commands */}
-      {isConnected && (
+      {/* Probe Commands – visible whenever device has been connected */}
+      {hasConnection && (
         <>
           <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: '#71717a' }}>
             Probe Controls
@@ -119,52 +123,55 @@ export function SettingsTab() {
         Demo States
       </p>
       <div className="grain-card p-2 flex gap-2 mb-6">
-        <button
-          onClick={() => simulateConnect('safe')}
-          className="flex-1 py-3 rounded-xl text-[11px] font-bold tracking-wide uppercase active:scale-95 transition-all"
-          style={{ color: '#F97316' }}
-        >
-          Safe
-        </button>
-        <button
-          onClick={() => simulateConnect('warn')}
-          className="flex-1 py-3 rounded-xl text-[11px] font-bold tracking-wide uppercase active:scale-95 transition-all"
-          style={{ color: '#F59E0B' }}
-        >
-          Warn
-        </button>
-        <button
-          onClick={() => simulateConnect('critical')}
-          className="flex-1 py-3 rounded-xl text-[11px] font-bold tracking-wide uppercase active:scale-95 transition-all"
-          style={{ color: '#EF4444' }}
-        >
-          Critical
-        </button>
-      </div>
-
-      {/* Grain Type */}
-      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: '#71717a' }}>
-        Grain Type
-      </p>
-      <div className="grain-card p-2 flex flex-wrap gap-2 mb-6">
-        {GRAIN_OPTIONS.map((g) => (
+        {(['safe', 'warn', 'critical'] as const).map((mode) => (
           <button
-            key={g}
-            onClick={() => updateSettings({ grainType: g })}
-            className="px-3 py-2 rounded-xl text-[11px] font-bold tracking-wide transition-all"
+            key={mode}
+            onClick={() => {
+              if (simRunning) {
+                switchDemoMode(mode);
+              } else {
+                simulateConnect(mode);
+              }
+            }}
+            className="flex-1 py-3 rounded-xl text-[11px] font-bold tracking-wide uppercase active:scale-95 transition-all"
             style={{
-              background: settings.grainType === g ? 'var(--gm-accent)' : 'transparent',
-              color: settings.grainType === g ? '#fff' : '#a1a1aa',
+              color: mode === 'safe' ? '#F97316' : mode === 'warn' ? '#F59E0B' : '#EF4444',
             }}
           >
-            {GRAIN_LABELS[g]}
+            {mode === 'critical' ? 'Critical' : mode.charAt(0).toUpperCase() + mode.slice(1)}
           </button>
         ))}
       </div>
 
-      {/* Thresholds */}
+      {/* Grain Type – selecting grain updates calibration profile */}
+      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: '#71717a' }}>
+        Grain Type
+      </p>
+      <div className="grain-card p-2 flex flex-wrap gap-2 mb-6">
+        {GRAIN_OPTIONS.map((g) => {
+          const isActive = settings.grainType === g;
+          return (
+            <button
+              key={g}
+              onClick={() => selectGrainType(g)}
+              className="px-3 py-2 rounded-xl text-[11px] font-bold tracking-wide transition-all"
+              style={{
+                background: isActive ? 'var(--gm-accent)' : 'transparent',
+                color: isActive ? '#fff' : '#a1a1aa',
+              }}
+            >
+              {GRAIN_LABELS[g]}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Thresholds – these come from the grain profile */}
       <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: '#71717a' }}>
         Moisture Thresholds (%)
+      </p>
+      <p className="text-[10px] mb-2 px-1" style={{ color: '#71717a' }}>
+        Auto-set from grain profile. Drag to fine-tune.
       </p>
       <div className="grain-card p-4 mb-6">
         <div className="space-y-4">
@@ -328,7 +335,7 @@ export function SettingsTab() {
         <div style={{ height: 1, background: '#27272a' }} />
         <div className="flex justify-between items-center px-5 py-4">
           <span className="text-sm font-medium" style={{ color: '#f4f4f5' }}>Engine</span>
-          <span className="text-[11px]" style={{ color: '#a1a1aa' }}>Mochi Decision v1.0</span>
+          <span className="text-[11px]" style={{ color: '#a1a1aa' }}>Mochi Decision v1.0 (placeholder)</span>
         </div>
         <div style={{ height: 1, background: '#27272a' }} />
         <div className="flex justify-between items-center px-5 py-4">

@@ -1,194 +1,135 @@
 /* ═══════════════════════════════════════════════════════════════
-   MOCHI DECISION ENGINE
-   Pure logic – no UI, no DOM, no external API calls.
-   Takes a reading + history → outputs a MochiDecision.
+   MOCHI DECISION ENGINE – DUMMY PLACEHOLDER
+   Will be replaced with the real engine later.
+   For now: simple threshold check → decision object.
    ═══════════════════════════════════════════════════════════════ */
 
 import type {
   Reading,
-  GrainType,
   GrainThresholds,
   RiskTheme,
   TrendDirection,
   MochiDecision,
 } from './grain-types';
 
-/* ── Message pool (pre-written, calm, human-friendly) ── */
-const MESSAGES: Record<string, string[]> = {
-  // Safe
-  'safe-stable': [
-    'Storage conditions are stable.',
-    'All readings within normal range.',
-    'Moisture and temperature look good.',
-  ],
-  'safe-falling': [
-    'Moisture is slowly decreasing.',
-    'Drying trend detected. Readings normal.',
-  ],
-  // Warning
-  'warn-rising': [
-    'Moisture is rising. Check ventilation and storage conditions.',
-    'Moisture trending upward. Monitor closely for the next few hours.',
-  ],
-  'warn-temp': [
-    'Temperature is elevated. Ensure proper airflow around the grain.',
-    'Ambient temperature higher than usual. Improve ventilation.',
-  ],
-  'warn-combined': [
-    'Both moisture and temperature are elevated. Increase ventilation immediately.',
-    'Higher than normal readings detected. Inspect storage area.',
-  ],
-  'warn-spike': [
-    'Sudden moisture spike detected. Verify probe placement and check for leaks.',
-    'Unusual reading spike. Cross-check with a manual measurement.',
-  ],
-  // Critical
-  'critical-moisture': [
-    'High moisture may increase spoilage risk. Dry the grain promptly.',
-    'Moisture critically high. Immediate action required to prevent loss.',
-  ],
-  'critical-temp': [
-    'Temperature dangerously high. Risk of spontaneous heating.',
-    'Extreme temperature detected. Move grain to a cooler location.',
-  ],
-  'critical-both': [
-    'Critical levels for moisture and temperature. Spoilage is likely without action.',
-    'Both readings at dangerous levels. Act immediately to protect the grain.',
-  ],
-};
+/* ── Simple deterministic messages ── */
+const SAFE_MESSAGES = [
+  'Storage conditions are stable.',
+  'All readings within normal range.',
+  'Moisture and temperature look good.',
+];
+const WARN_MESSAGES = [
+  'Moisture is rising. Check ventilation and storage conditions.',
+  'Temperature is elevated. Ensure proper airflow.',
+  'Readings above normal. Monitor closely.',
+];
+const CRITICAL_MESSAGES = [
+  'High moisture may increase spoilage risk. Dry the grain promptly.',
+  'Temperature dangerously high. Risk of spontaneous heating.',
+  'Both readings at dangerous levels. Act immediately.',
+];
 
-/* ── Action pool ── */
-const ACTIONS: Record<string, string[]> = {
-  safe: ['Continue monitoring. No action needed.', 'Maintain current storage conditions.'],
-  warn: ['Check ventilation. Consider running fans or aerating.', 'Inspect grain bin for condensation or hot spots.'],
-  critical: ['Begin drying immediately. Contact storage facility.', 'Move grain to a safer environment. Do not delay.'],
-};
+const SAFE_ACTIONS = [
+  'Continue monitoring. No action needed.',
+  'Maintain current storage conditions.',
+];
+const WARN_ACTIONS = [
+  'Check ventilation. Consider running fans or aerating.',
+  'Inspect grain bin for condensation or hot spots.',
+];
+const CRITICAL_ACTIONS = [
+  'Begin drying immediately. Contact storage facility.',
+  'Move grain to a safer environment. Do not delay.',
+];
 
-/* ── Helpers ── */
-function trendFromHistory(readings: Reading[]): TrendDirection {
+function pickByIndex(arr: string[], reading: Reading): string {
+  // Deterministic based on reading id so same reading always gets same message
+  const idx = Math.abs(hashCode(reading.id)) % arr.length;
+  return arr[idx];
+}
+
+function hashCode(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0;
+  }
+  return hash;
+}
+
+function simpleTrend(readings: Reading[]): TrendDirection {
   if (readings.length < 3) return 'stable';
   const recent = readings.slice(-5).map((r) => r.moisture);
   const first = recent[0];
   const last = recent[recent.length - 1];
   const diff = last - first;
-  const avgDiff = Math.abs(diff) / recent.length;
-
-  if (avgDiff < 0.3) return 'stable';
-  if (diff > 0 && avgDiff > 0.8) return 'spike';
+  if (Math.abs(diff) < 0.3) return 'stable';
+  if (diff > 1.0) return 'spike';
   if (diff > 0) return 'rising';
-  if (diff < 0 && avgDiff > 0.8) return 'drop';
-  if (diff < 0) return 'falling';
-  return 'stable';
-}
-
-function severityForState(state: RiskTheme, moisture: number, temperature: number, thresholds: GrainThresholds): number {
-  if (state === 'safe') return Math.min(30, Math.round((moisture / thresholds.critical) * 30));
-  if (state === 'warn') return Math.round(40 + ((moisture - thresholds.safe) / (thresholds.critical - thresholds.safe)) * 30);
-  return Math.round(70 + ((moisture - thresholds.warn) / (thresholds.critical - thresholds.warn + 5)) * 25);
-}
-
-function pickRandom<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-/* ── Cooldown tracker (suppresses repeated same-state messages) ── */
-const _cooldowns: Map<string, { messageId: string; timestamp: number }> = new Map();
-const COOLDOWN_MS = 60_000; // 1 minute minimum between same messages
-
-export function clearCooldowns() {
-  _cooldowns.clear();
+  if (diff < -1.0) return 'drop';
+  return 'falling';
 }
 
 /* ═══════════════════════════════════════════════════════════════
    PUBLIC API
    ═══════════════════════════════════════════════════════════════ */
 
-/**
- * evaluate – takes the latest reading, recent history, thresholds,
- * and returns a MochiDecision. Pure function (side-effect only in
- * cooldown cache for message dedup).
- */
 export function evaluate(
   reading: Reading,
   recentHistory: Reading[],
   thresholds: GrainThresholds,
 ): MochiDecision {
   const { moisture, temperature } = reading;
-  const trend = trendFromHistory(recentHistory);
+  const trend = simpleTrend(recentHistory);
 
-  // ── Determine state ──
+  // Determine state from thresholds
   let state: RiskTheme = 'safe';
-  let moistureFlag = false;
-  let tempFlag = false;
+  let reasonCodes: string[] = ['NORMAL'];
 
-  if (moisture >= thresholds.critical) { state = 'critical'; moistureFlag = true; }
-  else if (moisture >= thresholds.warn) { state = 'warn'; moistureFlag = true; }
-
-  if (temperature >= thresholds.tempCritical) { state = 'critical'; tempFlag = true; }
-  else if (temperature >= thresholds.tempWarn && state !== 'critical') { state = 'warn'; tempFlag = true; }
-
-  // ── Select message ──
-  let messageId: string;
-  const reasonCodes: string[] = [];
-  const secondaryObservations: string[] = [];
-
-  if (state === 'critical') {
-    if (moistureFlag && tempFlag) { messageId = 'critical-both'; reasonCodes.push('HIGH_MOISTURE', 'HIGH_TEMP'); }
-    else if (moistureFlag) { messageId = 'critical-moisture'; reasonCodes.push('HIGH_MOISTURE'); }
-    else { messageId = 'critical-temp'; reasonCodes.push('HIGH_TEMP'); }
-  } else if (state === 'warn') {
-    if (moistureFlag && tempFlag) { messageId = 'warn-combined'; reasonCodes.push('ELEVATED_MOISTURE', 'ELEVATED_TEMP'); }
-    else if (moistureFlag) {
-      if (trend === 'spike') { messageId = 'warn-spike'; reasonCodes.push('MOISTURE_SPIKE'); }
-      else { messageId = 'warn-rising'; reasonCodes.push('RISING_MOISTURE'); }
-    } else {
-      messageId = 'warn-temp'; reasonCodes.push('ELEVATED_TEMP'); }
-  } else {
-    if (trend === 'falling' || trend === 'drop') { messageId = 'safe-falling'; reasonCodes.push('FALLING_TREND'); }
-    else { messageId = 'safe-stable'; reasonCodes.push('NORMAL'); }
+  if (moisture >= thresholds.critical || temperature >= thresholds.tempCritical) {
+    state = 'critical';
+    reasonCodes = [];
+    if (moisture >= thresholds.critical) reasonCodes.push('HIGH_MOISTURE');
+    if (temperature >= thresholds.tempCritical) reasonCodes.push('HIGH_TEMP');
+  } else if (moisture >= thresholds.warn || temperature >= thresholds.tempWarn) {
+    state = 'warn';
+    reasonCodes = [];
+    if (moisture >= thresholds.warn) reasonCodes.push('ELEVATED_MOISTURE');
+    if (temperature >= thresholds.tempWarn) reasonCodes.push('ELEVATED_TEMP');
   }
+
+  // Pick message + action deterministically
+  const messages = state === 'critical' ? CRITICAL_MESSAGES : state === 'warn' ? WARN_MESSAGES : SAFE_MESSAGES;
+  const actions = state === 'critical' ? CRITICAL_ACTIONS : state === 'warn' ? WARN_ACTIONS : SAFE_ACTIONS;
+  const message = pickByIndex(messages, reading);
+  const action = pickByIndex(actions, reading);
+
+  // Severity: 0-100
+  let severity: number;
+  if (state === 'safe') severity = Math.min(30, Math.round((moisture / thresholds.critical) * 30));
+  else if (state === 'warn') severity = Math.round(40 + ((moisture - thresholds.safe) / (thresholds.critical - thresholds.safe)) * 30);
+  else severity = Math.round(70 + ((moisture - thresholds.warn) / (thresholds.critical - thresholds.warn + 5)) * 25);
+  severity = Math.min(100, Math.max(0, severity));
 
   // Secondary observations
+  const secondaryObservations: string[] = [];
   if (reading.battery < 20) secondaryObservations.push('LOW_BATTERY');
   if (reading.signal < 30) secondaryObservations.push('WEAK_SIGNAL');
-  if (trend === 'spike') secondaryObservations.push('READINGS_UNSTABLE');
-  if (recentHistory.length >= 3) {
-    const tempTrend = recentHistory.slice(-3).map((r) => r.temperature);
-    if (tempTrend[2] - tempTrend[0] > 3) secondaryObservations.push('TEMP_RISING');
-  }
 
-  // ── Cooldown: avoid repeating the same message ──
-  const cooldownKey = reading.deviceId;
-  const prev = _cooldowns.get(cooldownKey);
-  const now = Date.now();
-  let message: string;
-  const pool = MESSAGES[messageId] || MESSAGES['safe-stable'];
-
-  if (prev && prev.messageId === messageId && (now - prev.timestamp) < COOLDOWN_MS) {
-    // Same state, within cooldown – pick a different message if possible
-    const alternatives = pool.filter((m) => m !== prev.messageId);
-    message = alternatives.length > 0 ? pickRandom(alternatives) : pool[0];
-  } else {
-    message = pickRandom(pool);
-  }
-
-  _cooldowns.set(cooldownKey, { messageId, timestamp: now });
-
-  const action = pickRandom(ACTIONS[state]);
-  const confidence = Math.min(0.98, 0.7 + (recentHistory.length / 20) * 0.25);
-  const severity = severityForState(state, moisture, temperature, thresholds);
+  const messageId = `DUMMY_${state.toUpperCase()}`;
 
   return {
     state,
     severity,
-    ruleId: `R-${messageId.toUpperCase().replace(/-/g, '_')}`,
+    ruleId: `R-${messageId}`,
     messageId,
     message,
     action,
     reasonCodes,
     secondaryObservations,
     trend,
-    confidence,
+    confidence: 0.5, // Low confidence for dummy
     variables: {
       moisture,
       temperature,
@@ -199,9 +140,6 @@ export function evaluate(
   };
 }
 
-/**
- * Get a status badge label from decision + device state.
- */
 export function getStatusBadge(decision: MochiDecision | null, deviceState: string): string {
   if (deviceState === 'sleeping') return 'SLEEPING';
   if (deviceState === 'syncing') return 'SYNCING';

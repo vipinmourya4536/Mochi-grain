@@ -40,9 +40,9 @@ export interface DeviceInfo {
   id: string;
   name: string;
   firmware: string;
- platform: string;
- grainType: GrainType;
- battery: number;
+  platform: string;
+  grainType: GrainType;
+  battery: number;
   signal: number;
 }
 
@@ -108,12 +108,25 @@ export const DEFAULT_THRESHOLDS: GrainThresholds = {
   tempCritical: 36,
 };
 
+/* ── Grain-specific calibration profiles ── */
+export const GRAIN_PROFILES: Record<GrainType, GrainThresholds> = {
+  wheat:   { safe: 13.0, warn: 15.0, critical: 17.0, tempSafe: 30, tempWarn: 33, tempCritical: 36 },
+  rice:    { safe: 13.5, warn: 15.5, critical: 17.5, tempSafe: 28, tempWarn: 31, tempCritical: 34 },
+  corn:    { safe: 14.0, warn: 15.5, critical: 18.0, tempSafe: 28, tempWarn: 32, tempCritical: 35 },
+  barley:  { safe: 13.0, warn: 14.5, critical: 16.5, tempSafe: 29, tempWarn: 32, tempCritical: 35 },
+  soybean: { safe: 12.0, warn: 14.0, critical: 16.0, tempSafe: 28, tempWarn: 31, tempCritical: 34 },
+  sorghum: { safe: 12.5, warn: 14.0, critical: 16.0, tempSafe: 29, tempWarn: 32, tempCritical: 35 },
+  oats:    { safe: 13.0, warn: 14.5, critical: 16.5, tempSafe: 28, tempWarn: 31, tempCritical: 34 },
+  millet:  { safe: 12.0, warn: 13.5, critical: 15.5, tempSafe: 29, tempWarn: 32, tempCritical: 35 },
+  other:   { safe: 13.0, warn: 15.0, critical: 17.0, tempSafe: 30, tempWarn: 33, tempCritical: 36 },
+};
+
 export const DEFAULT_SETTINGS: AppSettings = {
   autoReconnect: true,
   pushAlerts: true,
   autoSync: true,
   grainType: 'wheat',
-  thresholds: DEFAULT_THRESHOLDS,
+  thresholds: GRAIN_PROFILES.wheat,
   historyRetention: 90,
   wakeOnConnect: true,
 };

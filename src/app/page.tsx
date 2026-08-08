@@ -15,7 +15,7 @@ import { SettingsTab } from '@/components/grain/settings/settings-tab';
 
 export default function GrainMonitorPage() {
   const {
-    activeTab, deviceState, riskTheme,
+    activeTab, deviceState, riskTheme, currentReading,
     loadSettings, loadHistory,
   } = useGrainStore();
 
@@ -35,20 +35,23 @@ export default function GrainMonitorPage() {
   }, [activeTab]);
 
   const renderHomeState = () => {
+    // If we have a reading, always show the dashboard (even during syncing)
+    if (currentReading) {
+      return <ConnectedView />;
+    }
+
     switch (deviceState) {
       case 'disconnected':
         return <DisconnectedView />;
       case 'connecting':
         return <ConnectingView />;
       case 'syncing':
+        // No reading yet but syncing – show spinner
         return <SyncingView />;
       case 'sleeping':
         return <SleepingView />;
       case 'low-battery':
         return <LowBatteryView />;
-      case 'connected':
-      case 'awake':
-        return <ConnectedView />;
       default:
         return <DisconnectedView />;
     }
