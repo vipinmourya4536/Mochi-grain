@@ -30,7 +30,7 @@ export function SettingsTab() {
   const lang = settings.language as 'en' | 'hi' | 'mr' | 'hinglish';
   const hasConnection = hasDevice;
   const simRunning = isSimulating();
-  const isLight = settings.theme === 'light';
+  const isDark = settings.theme === 'dark';
 
   return (
     <div className="pt-2 pb-6 grain-fade-in">
@@ -47,7 +47,7 @@ export function SettingsTab() {
       </p>
       <div className="grain-card overflow-hidden mb-6">
         <button
-          onClick={() => updateSettings({ theme: isLight ? 'dark' : 'light' })}
+          onClick={() => updateSettings({ theme: isDark ? 'light' : 'dark' })}
           className="w-full flex justify-between items-center px-5 py-4 text-left"
         >
           <div className="flex items-center gap-3">
@@ -55,25 +55,25 @@ export function SettingsTab() {
               className="w-9 h-9 rounded-xl flex items-center justify-center"
               style={{ background: 'var(--gm-accent-dim)' }}
             >
-              {isLight
+              {isDark
                 ? <Moon size={18} weight="bold" style={{ color: 'var(--gm-accent)' }} />
                 : <Sun size={18} weight="bold" style={{ color: 'var(--gm-accent)' }} />}
             </div>
             <div>
               <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>
-                {isLight ? t('theme.light', lang) : t('theme.dark', lang)}
+                {isDark ? t('theme.dark', lang) : t('theme.light', lang)}
               </span>
               <p className="text-[10px] mt-0.5" style={{ color: 'var(--gm-text-tertiary)' }}>
                 Tap to switch
               </p>
             </div>
           </div>
-          <div className="w-11 h-6 rounded-full relative" style={{ background: isLight ? 'var(--gm-accent)' : 'var(--gm-toggle-bg)', border: `1px solid ${isLight ? 'var(--gm-accent)' : 'var(--gm-toggle-border)'}` }}>
+          <div className="w-11 h-6 rounded-full relative" style={{ background: isDark ? 'var(--gm-toggle-bg)' : 'var(--gm-accent)', border: `1px solid ${isDark ? 'var(--gm-toggle-border)' : 'var(--gm-accent)'}` }}>
             <div
               className="w-5 h-5 rounded-full absolute top-0.5 transition-all"
               style={{
-                left: isLight ? '22px' : '2px',
-                background: isLight ? '#fff' : 'var(--gm-toggle-thumb)',
+                left: isDark ? '2px' : '22px',
+                background: isDark ? 'var(--gm-toggle-thumb)' : '#fff',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
               }}
             />

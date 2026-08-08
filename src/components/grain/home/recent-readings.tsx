@@ -3,14 +3,7 @@
 import { useGrainStore } from '@/lib/grain-store';
 import type { HistoryEntry } from '@/lib/grain-types';
 import { t } from '@/lib/i18n';
-
-function getDotColor(state: string): string {
-  switch (state) {
-    case 'critical': return '#EF4444';
-    case 'warn': return '#F59E0B';
-    default: return 'var(--gm-accent)';
-  }
-}
+import { getRiskColor, getRiskBg } from '@/lib/accent-hex';
 
 function getDay(timestamp: number, lang: string): string {
   const d = new Date(timestamp);
@@ -25,6 +18,7 @@ function getDay(timestamp: number, lang: string): string {
 function ReadingRow({ entry }: { entry: HistoryEntry }) {
   const { setActiveTab, setSelectedHistoryId, settings } = useGrainStore();
   const lang = settings.language as 'en' | 'hi' | 'mr' | 'hinglish';
+  const dotHex = getRiskColor(entry.decision.state, settings.accentColor);
 
   return (
     <div
@@ -37,8 +31,8 @@ function ReadingRow({ entry }: { entry: HistoryEntry }) {
       <div
         className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold"
         style={{
-          background: `${getDotColor(entry.decision.state)}22`,
-          color: getDotColor(entry.decision.state),
+          background: getRiskBg(entry.decision.state, settings.accentColor, 0.13),
+          color: dotHex,
         }}
       >
         {new Date(entry.reading.timestamp).getDate()}
@@ -63,8 +57,8 @@ function ReadingRow({ entry }: { entry: HistoryEntry }) {
       <div
         className="w-1.5 h-1.5 rounded-full shrink-0"
         style={{
-          background: getDotColor(entry.decision.state),
-          boxShadow: `0 0 6px ${getDotColor(entry.decision.state)}`,
+          background: dotHex,
+          boxShadow: `0 0 6px ${dotHex}`,
         }}
       />
     </div>
@@ -81,10 +75,7 @@ export function RecentReadings() {
   return (
     <div className="mt-2">
       <div className="flex justify-between items-center mb-3 px-1">
-        <h3
-          className="text-[10px] font-bold tracking-[0.2em] uppercase"
-          style={{ color: 'var(--gm-text-tertiary)' }}
-        >
+        <h3 className="text-[10px] font-bold tracking-[0.2em] uppercase" style={{ color: 'var(--gm-text-tertiary)' }}>
           {t('recent.title', lang)}
         </h3>
         <button

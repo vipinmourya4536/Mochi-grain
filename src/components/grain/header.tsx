@@ -47,18 +47,26 @@ export function Header() {
         ? t('status.pairing', lang)
         : statusBadge;
 
-  const accentColor =
-    riskTheme === 'critical'
-      ? '#EF4444'
-      : riskTheme === 'warn'
-        ? '#F59E0B'
-        : 'var(--gm-accent)';
+  const isConnected = deviceState !== 'disconnected' && deviceState !== 'connecting';
+
+  const statusColor =
+    !isConnected
+      ? 'var(--gm-text-tertiary)'
+      : riskTheme === 'critical'
+        ? '#EF4444'
+        : riskTheme === 'warn'
+          ? '#F59E0B'
+          : 'var(--gm-accent)';
+
+  const dotStyle = !isConnected
+    ? { background: 'var(--gm-dot-offline, #71717a)', boxShadow: '0 0 8px var(--gm-dot-offline, #71717a)' }
+    : {};
 
   return (
     <>
       <header className="grain-glass-header px-5 pt-14 pb-3 flex justify-between items-center shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full grain-status-dot" />
+          <div className="w-2 h-2 rounded-full grain-status-dot" style={dotStyle} />
           <div>
             <h1
               className="text-[11px] font-bold tracking-[0.2em] uppercase"
@@ -68,14 +76,14 @@ export function Header() {
             </h1>
             <p
               className="text-[10px] mt-0.5 font-medium tracking-wide transition-colors duration-500"
-              style={{ color: accentColor }}
+              style={{ color: statusColor }}
             >
               {statusLabel}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2.5">
-          {deviceInfo && <BatteryIndicator level={deviceInfo.battery} accentColor={accentColor} />}
+          {deviceInfo && <BatteryIndicator level={deviceInfo.battery} accentColor={statusColor} />}
           <LanguageSelector />
         </div>
       </header>

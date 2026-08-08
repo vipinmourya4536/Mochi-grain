@@ -18,7 +18,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "Grain Monitor",
-  description: "Real-time grain moisture monitoring companion for ESP32 probes. Track moisture, temperature, and storage safety with intelligent guidance.",
+  description: "Real-time grain moisture monitoring companion for ESP32 probes.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
