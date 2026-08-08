@@ -128,3 +128,25 @@ Stage Summary:
 - Liquid glass effect applied throughout entire app via computed CSS variables
 - All glass surfaces (header, cards, nav, toast, badge, insight, discover) dynamically respond to opacity slider
 - Clean lint, zero runtime errors, all tabs verified
+---
+Task ID: 5
+Agent: Main
+Task: Fix sharp header line, opacity slider, settings lag
+
+Work Log:
+- Analyzed uploaded screenshot via VLM: identified sharp border-bottom on .grain-glass-header between header and content
+- Fixed sharp line: removed border-bottom, added soft box-shadow (0 6px 32px + 0 2px 8px), added ::before pseudo-element for gradient fade below header
+- Fixed opacity slider: root cause was CSS calc() with custom properties in backdrop-filter/rgba() being unreliable. Solution: moved ALL glass value computation to JavaScript in page.tsx via computeGlassVars() function that returns pre-computed CSS variable values. Removed all calc() expressions from CSS, replaced with var(--gm-blur-header, 28px) fallback pattern
+- Added 15 pre-computed CSS variables: --gm-blur-header, --gm-saturate-header, --gm-blur-card, --gm-saturate-card, --gm-blur-nav, --gm-saturate-nav, --gm-blur-insight, --gm-insight-shadow-alpha, --gm-blur-toast, --gm-blur-badge, --gm-blur-lang, --gm-saturate-lang, --gm-card-shadow, --gm-nav-shadow, plus --gm-glass-bg and --gm-surface computed in JS
+- Confirmed language selector stays in settings tab (user confirmed it was good there)
+- Fixed settings tab lag: split settings into Basic (always rendered) and Advanced (collapsed by default). Created AdvancedSettingsContent as separate lazy-rendered component that only mounts when advanced section is opened
+- Added CSS for collapsible section: .grain-advanced-toggle, .grain-advanced-content with collapsed/expanded states, .grain-chevron with rotation animation
+- Added CaretDown and SlidersHorizontal icons from Phosphor
+- Verified via Agent Browser: no sharp line, soft shadow/fade on header, glass opacity CSS variables correctly computed, advanced settings expand/collapse works, all tabs render correctly
+
+Stage Summary:
+- Header border replaced with soft shadow + gradient fade pseudo-element
+- Opacity slider now works reliably: all glass math done in JS, no CSS calc() with custom properties
+- Settings tab loads fast: basic settings (theme, glass, accent, language) render immediately, advanced content lazy-mounted on expand
+- Language selector confirmed in settings tab only
+- Clean lint, zero runtime errors

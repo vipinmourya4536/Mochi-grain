@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useGrainStore } from '@/lib/grain-store';
 import { isSimulating } from '@/lib/bluetooth';
 import {
   Cpu, DownloadSimple, ArrowClockwise, Trash, Power, Wrench,
-  Sun, Moon, Palette, Drop,
+  Sun, Moon, Palette, Drop, CaretDown, SlidersHorizontal,
 } from '@phosphor-icons/react/dist/ssr';
 import { GRAIN_LABELS, type GrainType, type AccentColor } from '@/lib/grain-types';
 import { t, LANGUAGE_OPTIONS, type AppLanguage } from '@/lib/i18n';
@@ -23,21 +23,21 @@ const ACCENT_COLORS: { value: AccentColor; color: string; labelKey: string }[] =
 export function SettingsTab() {
   const {
     deviceInfo, deviceState, settings, updateSettings, selectGrainType,
-    disconnectProbe, sendProbeCommand, connectProbe, showToast,
-    simulateConnect, switchDemoMode, syncProbeHistory, clearHistory,
-    hasDevice,
+    disconnectProbe, sendProbeCommand, simulateConnect,
+    switchDemoMode, syncProbeHistory, clearHistory,
+    hasDevice, showToast,
   } = useGrainStore();
 
   const lang = settings.language as AppLanguage;
   const hasConnection = hasDevice;
   const simRunning = isSimulating();
   const isDark = settings.theme === 'dark';
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   // Language selection state
   const [pendingLang, setPendingLang] = useState<AppLanguage | null>(null);
 
   const applyAndReload = useCallback((code: AppLanguage) => {
-    // Save current connection state for auto-reconnect after reload
     if (deviceState !== 'disconnected' && deviceState !== 'connecting') {
       const reloadState = {
         trigger: 'language_change' as const,
@@ -70,7 +70,6 @@ export function SettingsTab() {
     }
   }, [pendingLang, lang, showToast, applyAndReload]);
 
-  // Glass opacity labels
   const getOpacityLabel = (v: number) => {
     if (v <= 0.4) return t('glass.subtle', lang);
     if (v <= 0.65) return t('glass.medium', lang);
@@ -86,6 +85,8 @@ export function SettingsTab() {
       <p className="text-sm mb-6" style={{ color: 'var(--gm-text-secondary)' }}>
         {t('settings.desc', lang)}
       </p>
+
+      {/* ═══ BASIC SETTINGS (always visible, fast render) ═══ */}
 
       {/* ─── Theme Toggle (Dark/Light) ─── */}
       <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
@@ -236,7 +237,6 @@ export function SettingsTab() {
                   )}
                 </button>
 
-                {/* Save button for Hindi and Hinglish */}
                 {option.needsSave && isPending && (
                   <button
                     onClick={handleSavePending}
@@ -262,6 +262,47 @@ export function SettingsTab() {
         )}
       </div>
 
+      {/* ═══ ADVANCED SETTINGS (collapsed by default, lazy rendered) ═══ */}
+      <button
+        className="grain-advanced-toggle mb-4"
+        onClick={() => setAdvancedOpen(prev => !prev)}
+      >
+        <div className="flex items-center gap-3">
+          <SlidersHorizontal size={18} weight="bold" style={{ color: 'var(--gm-accent)' }} />
+          <span className="text-sm font-semibold" style={{ color: 'var(--gm-text-primary)' }}>
+            Advanced Settings
+          </span>
+        </div>
+        <CaretDown
+          size={18}
+          weight="bold"
+          className={`grain-chevron ${advancedOpen ? 'rotated' : ''}`}
+          style={{ color: 'var(--gm-text-tertiary)' }}
+        />
+      </button>
+
+      <div className={`grain-advanced-content ${advancedOpen ? 'expanded' : 'collapsed'}`}>
+        {advancedOpen && <AdvancedSettingsContent />}
+      </div>
+    </div>
+  );
+}
+
+/** Lazy-rendered advanced settings – only mounts when the section is opened */
+function AdvancedSettingsContent() {
+  const {
+    deviceInfo, deviceState, settings, updateSettings, selectGrainType,
+    disconnectProbe, sendProbeCommand, simulateConnect,
+    switchDemoMode, syncProbeHistory, clearHistory,
+    hasDevice, showToast,
+  } = useGrainStore();
+
+  const lang = settings.language as AppLanguage;
+  const hasConnection = hasDevice;
+  const simRunning = isSimulating();
+
+  return (
+    <>
       {/* ─── Device Card ─── */}
       <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
         {t('settings.device', lang)}
@@ -362,11 +403,7 @@ export function SettingsTab() {
           <button
             key={mode}
             onClick={() => {
-              if (simRunning) {
-                switchDemoMode(mode);
-              } else {
-                simulateConnect(mode);
-              }
+              if (simRunning) { switchDemoMode(mode); } else { simulateConnect(mode); }
             }}
             className="flex-1 py-3 rounded-xl text-[11px] font-bold tracking-wide uppercase active:scale-95 transition-all"
             style={{
@@ -419,9 +456,7 @@ export function SettingsTab() {
             <input
               type="range" min="8" max="25" step="0.5"
               value={settings.thresholds.safe}
-              onChange={(e) => updateSettings({
-                thresholds: { ...settings.thresholds, safe: parseFloat(e.target.value) }
-              })}
+              onChange={(e) => updateSettings({ thresholds: { ...settings.thresholds, safe: parseFloat(e.target.value) } })}
               className="w-full grain-range h-1.5"
             />
           </div>
@@ -433,9 +468,7 @@ export function SettingsTab() {
             <input
               type="range" min="8" max="30" step="0.5"
               value={settings.thresholds.warn}
-              onChange={(e) => updateSettings({
-                thresholds: { ...settings.thresholds, warn: parseFloat(e.target.value) }
-              })}
+              onChange={(e) => updateSettings({ thresholds: { ...settings.thresholds, warn: parseFloat(e.target.value) } })}
               className="w-full grain-range h-1.5"
             />
           </div>
@@ -447,9 +480,7 @@ export function SettingsTab() {
             <input
               type="range" min="10" max="35" step="0.5"
               value={settings.thresholds.critical}
-              onChange={(e) => updateSettings({
-                thresholds: { ...settings.thresholds, critical: parseFloat(e.target.value) }
-              })}
+              onChange={(e) => updateSettings({ thresholds: { ...settings.thresholds, critical: parseFloat(e.target.value) } })}
               className="w-full grain-range h-1.5"
             />
           </div>
@@ -581,6 +612,6 @@ export function SettingsTab() {
           Grain Monitor v1.0 · Built for ESP32
         </p>
       </div>
-    </div>
+    </>
   );
 }

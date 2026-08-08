@@ -159,8 +159,22 @@
   --gm-toast-border: #3f3f46;
   --gm-toast-text: #f4f4f5;
 
-  /* Glass opacity – controlled by slider (0.3–1.0) */
+  /* Glass opacity – controlled by slider, JS computes derived values */
   --gm-glass-opacity: 0.75;
+  --gm-blur-header: 28px;
+  --gm-saturate-header: 1.4;
+  --gm-blur-card: 20px;
+  --gm-saturate-card: 1.28;
+  --gm-blur-nav: 27px;
+  --gm-saturate-nav: 1.5;
+  --gm-blur-insight: 17px;
+  --gm-insight-shadow-alpha: 0.09;
+  --gm-blur-toast: 21px;
+  --gm-blur-badge: 12px;
+  --gm-blur-lang: 28px;
+  --gm-saturate-lang: 1.6;
+  --gm-card-shadow: 0 2px 8px rgba(0,0,0,0.11), inset 0 1px 0 var(--gm-glass-highlight);
+  --gm-nav-shadow: 0 8px 32px rgba(0,0,0,0.26), 0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 var(--gm-glass-highlight);
 
   /* Default accent = orange */
   --gm-accent: #F97316;
@@ -168,10 +182,10 @@
   --gm-accent-dim: rgba(249, 115, 22, 0.15);
   --gm-accent-glow: rgba(249, 115, 22, 0.3);
 
-  /* Computed glass backgrounds use --gm-glass-opacity */
-  --gm-glass-bg: rgba(var(--gm-bg-r), var(--gm-bg-g), var(--gm-bg-b), var(--gm-glass-opacity));
-  --gm-surface: rgba(24, 24, 27, calc(var(--gm-glass-opacity) * 0.85));
-  --gm-toast-bg: rgba(39, 39, 42, calc(var(--gm-glass-opacity) + 0.2));
+  /* Glass backgrounds computed in JS (page.tsx) → fallback defaults */
+  --gm-glass-bg: rgba(var(--gm-bg-r), var(--gm-bg-g), var(--gm-bg-b), 0.75);
+  --gm-surface: rgba(24, 24, 27, 0.64);
+  --gm-toast-bg: rgba(39, 39, 42, 0.95);
 
   background: var(--gm-bg);
   color: #d4d4d8;
@@ -199,9 +213,9 @@
   --gm-toast-border: #e4e4e7;
   --gm-toast-text: #18181b;
 
-  --gm-glass-bg: rgba(var(--gm-bg-r), var(--gm-bg-g), var(--gm-bg-b), var(--gm-glass-opacity));
-  --gm-surface: rgba(255, 255, 255, calc(var(--gm-glass-opacity) * 0.85));
-  --gm-toast-bg: rgba(255, 255, 255, calc(var(--gm-glass-opacity) + 0.15));
+  --gm-glass-bg: rgba(var(--gm-bg-r), var(--gm-bg-g), var(--gm-bg-b), 0.75);
+  --gm-surface: rgba(255, 255, 255, 0.64);
+  --gm-toast-bg: rgba(255, 255, 255, 0.90);
 
   background: var(--gm-bg);
   color: #3f3f46;
@@ -296,12 +310,13 @@
    LIQUID GLASS EFFECTS
    ═══════════════════════════════════════════════════════════════ */
 
-/* Glass Header – heavy blur for strong glass feel */
+/* Glass Header – heavy blur, NO sharp border, soft fade shadow */
 .grain-glass-header {
   background: var(--gm-glass-bg);
-  backdrop-filter: blur(calc(12px + var(--gm-glass-opacity) * 20px)) saturate(calc(1.1 + var(--gm-glass-opacity) * 0.4));
-  -webkit-backdrop-filter: blur(calc(12px + var(--gm-glass-opacity) * 20px)) saturate(calc(1.1 + var(--gm-glass-opacity) * 0.4));
-  border-bottom: 1px solid var(--gm-glass-border);
+  backdrop-filter: blur(var(--gm-blur-header, 28px)) saturate(var(--gm-saturate-header, 1.4));
+  -webkit-backdrop-filter: blur(var(--gm-blur-header, 28px)) saturate(var(--gm-saturate-header, 1.4));
+  border-bottom: none;
+  box-shadow: 0 6px 32px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.1);
   position: relative;
   z-index: 20;
 }
@@ -310,23 +325,32 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(180deg, var(--gm-glass-highlight) 0%, transparent 50%);
+  background: linear-gradient(180deg, var(--gm-glass-highlight) 0%, transparent 60%);
   pointer-events: none;
+}
+/* Soft gradient fade below header (eliminates sharp line) */
+.grain-glass-header::before {
+  content: '';
+  position: absolute;
+  bottom: -20px;
+  left: 0; right: 0;
+  height: 20px;
+  background: linear-gradient(to bottom, var(--gm-glass-bg), transparent);
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Glass Card – liquid glass with variable intensity */
 .grain-card {
   background: var(--gm-surface);
-  backdrop-filter: blur(calc(8px + var(--gm-glass-opacity) * 16px)) saturate(calc(1.05 + var(--gm-glass-opacity) * 0.3));
-  -webkit-backdrop-filter: blur(calc(8px + var(--gm-glass-opacity) * 16px)) saturate(calc(1.05 + var(--gm-glass-opacity) * 0.3));
+  backdrop-filter: blur(var(--gm-blur-card, 20px)) saturate(var(--gm-saturate-card, 1.28));
+  -webkit-backdrop-filter: blur(var(--gm-blur-card, 20px)) saturate(var(--gm-saturate-card, 1.28));
   border: 1px solid var(--gm-glass-border);
   border-radius: 1rem;
   position: relative;
   overflow: hidden;
   transition: border-color 0.2s, background 0.2s, backdrop-filter 0.3s;
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, calc(var(--gm-glass-opacity) * 0.15)),
-    inset 0 1px 0 var(--gm-glass-highlight);
+  box-shadow: var(--gm-card-shadow, 0 2px 8px rgba(0,0,0,0.11) , inset 0 1px 0 var(--gm-glass-highlight));
 }
 .grain-card::before {
   content: '';
@@ -374,8 +398,8 @@
 }
 .grain-floating-nav-inner {
   background: var(--gm-glass-bg);
-  backdrop-filter: blur(calc(14px + var(--gm-glass-opacity) * 18px)) saturate(calc(1.2 + var(--gm-glass-opacity) * 0.4));
-  -webkit-backdrop-filter: blur(calc(14px + var(--gm-glass-opacity) * 18px)) saturate(calc(1.2 + var(--gm-glass-opacity) * 0.4));
+  backdrop-filter: blur(var(--gm-blur-nav, 27px)) saturate(var(--gm-saturate-nav, 1.5));
+  -webkit-backdrop-filter: blur(var(--gm-blur-nav, 27px)) saturate(var(--gm-saturate-nav, 1.5));
   border: 1px solid var(--gm-glass-border);
   border-radius: 999px;
   padding: 6px 6px;
@@ -383,10 +407,7 @@
   justify-content: space-around;
   align-items: center;
   position: relative;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, calc(var(--gm-glass-opacity) * 0.35)),
-    0 2px 8px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 var(--gm-glass-highlight);
+  box-shadow: var(--gm-nav-shadow, 0 8px 32px rgba(0,0,0,0.26), 0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 var(--gm-glass-highlight));
   overflow: hidden;
 }
 .grain-floating-nav-inner::before {
@@ -445,9 +466,9 @@
   border: 1px solid;
   padding: 1.25rem;
   transition: all 0.5s ease;
-  backdrop-filter: blur(calc(8px + var(--gm-glass-opacity) * 12px)) saturate(1.1);
-  -webkit-backdrop-filter: blur(calc(8px + var(--gm-glass-opacity) * 12px)) saturate(1.1);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, calc(var(--gm-glass-opacity) * 0.12));
+  backdrop-filter: blur(var(--gm-blur-insight, 17px)) saturate(1.1);
+  -webkit-backdrop-filter: blur(var(--gm-blur-insight, 17px)) saturate(1.1);
+  box-shadow: 0 2px 12px rgba(0,0,0, var(--gm-insight-shadow-alpha, 0.09));
 }
 .grain-insight-icon {
   background: var(--gm-icon-bg);
@@ -508,7 +529,7 @@
 
 .grain-toast {
   position: fixed; top: 16px; left: 50%; transform: translateX(-50%) translateY(-20px);
-  background: var(--gm-toast-bg); backdrop-filter: blur(calc(12px + var(--gm-glass-opacity) * 12px)); -webkit-backdrop-filter: blur(calc(12px + var(--gm-glass-opacity) * 12px));
+  background: var(--gm-toast-bg); backdrop-filter: blur(var(--gm-blur-toast, 21px)); -webkit-backdrop-filter: blur(var(--gm-blur-toast, 21px));
   border: 1px solid var(--gm-toast-border); padding: 12px 20px; border-radius: 14px;
   font-size: 13px; font-weight: 500; opacity: 0; pointer-events: none;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); z-index: 100;
@@ -541,8 +562,8 @@
   padding: 6px 12px; border-radius: 999px;
   background: rgba(0,0,0,0.25); color: rgba(255,255,255,0.9);
   border: 1px solid rgba(255,255,255,0.2);
-  backdrop-filter: blur(calc(6px + var(--gm-glass-opacity) * 8px));
-  -webkit-backdrop-filter: blur(calc(6px + var(--gm-glass-opacity) * 8px));
+  backdrop-filter: blur(var(--gm-blur-badge, 12px));
+  -webkit-backdrop-filter: blur(var(--gm-blur-badge, 12px));
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -551,15 +572,15 @@
 
 .grain-discover-card {
   background: var(--gm-surface);
-  backdrop-filter: blur(calc(8px + var(--gm-glass-opacity) * 16px)) saturate(calc(1.05 + var(--gm-glass-opacity) * 0.3));
-  -webkit-backdrop-filter: blur(calc(8px + var(--gm-glass-opacity) * 16px)) saturate(calc(1.05 + var(--gm-glass-opacity) * 0.3));
+  backdrop-filter: blur(var(--gm-blur-card, 20px)) saturate(var(--gm-saturate-card, 1.28));
+  -webkit-backdrop-filter: blur(var(--gm-blur-card, 20px)) saturate(var(--gm-saturate-card, 1.28));
   border: 1px solid var(--gm-glass-border);
   border-radius: 1rem;
   overflow: hidden;
   transition: border-color 0.2s, transform 0.15s;
   cursor: pointer;
   position: relative;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, calc(var(--gm-glass-opacity) * 0.15));
+  box-shadow: var(--gm-card-shadow, 0 2px 8px rgba(0,0,0,0.11), inset 0 1px 0 var(--gm-glass-highlight));
 }
 .grain-discover-card:hover { border-color: var(--gm-border-hover); }
 .grain-discover-card:active { transform: scale(0.98); }
@@ -572,8 +593,8 @@
 .grain-lang-panel {
   width: calc(100% - 40px); max-width: 380px;
   background: var(--gm-surface-solid);
-  backdrop-filter: blur(calc(16px + var(--gm-glass-opacity) * 16px)) saturate(calc(1.3 + var(--gm-glass-opacity) * 0.4));
-  -webkit-backdrop-filter: blur(calc(16px + var(--gm-glass-opacity) * 16px)) saturate(calc(1.3 + var(--gm-glass-opacity) * 0.4));
+  backdrop-filter: blur(var(--gm-blur-lang, 28px)) saturate(var(--gm-saturate-lang, 1.6));
+  -webkit-backdrop-filter: blur(var(--gm-blur-lang, 28px)) saturate(var(--gm-saturate-lang, 1.6));
   border: 1px solid var(--gm-glass-border);
   border-radius: 1.5rem; padding: 1.5rem;
   box-shadow: 0 24px 64px rgba(0,0,0,0.3);
@@ -617,3 +638,43 @@
   background: var(--gm-accent-dim);
 }
 .grain-lang-option:active { transform: scale(0.98); }
+
+/* ═══════════════════════════════════════════════════════════════
+   ADVANCED SETTINGS COLLAPSIBLE
+   ═══════════════════════════════════════════════════════════════ */
+
+.grain-advanced-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--gm-surface);
+  border: 1px solid var(--gm-glass-border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(var(--gm-blur-card, 20px)) saturate(var(--gm-saturate-card, 1.28));
+  -webkit-backdrop-filter: blur(var(--gm-blur-card, 20px)) saturate(var(--gm-saturate-card, 1.28));
+}
+.grain-advanced-toggle:active {
+  transform: scale(0.98);
+}
+.grain-advanced-content {
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+}
+.grain-advanced-content.collapsed {
+  max-height: 0;
+  opacity: 0;
+}
+.grain-advanced-content.expanded {
+  max-height: 2000px;
+  opacity: 1;
+}
+.grain-chevron {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.grain-chevron.rotated {
+  transform: rotate(180deg);
+}
