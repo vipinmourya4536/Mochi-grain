@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Grain Monitor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { 
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        'ui-bg': '#09090b',
+                        'ui-surface': '#18181b',
+                        'ui-border': '#27272a',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            /* Core Colors */
+            --bg: #09090b; 
+            --surface: #18181b; 
+            --surface-raised: #27272a; 
+            --border: #3f3f46; 
+            
+            /* Typography */
+            --text-heading: #f4f4f5; 
+            --text: #d4d4d8; 
+            --text-dim: #a1a1aa; 
+            --text-muted: #71717a; 
+        }
+
+        /* --- THEME STATE COLOR SCIENCE --- */
+        [data-theme="safe"] {
+            --accent: #F97316; /* Orange-500 */
+            --hero-grad-start: #EA580C; /* Rich Orange */
+            --hero-grad-end: #431407; /* Deep Orange/Black */
+            --alert-bg: var(--surface-raised);
+            --alert-border: var(--border);
+            --icon-bg: rgba(249, 115, 22, 0.15);
+        }
+        
+        [data-theme="warn"] {
+            --accent: #F59E0B; /* Amber-500 */
+            --hero-grad-start: #D97706; /* Rich Amber */
+            --hero-grad-end: #451A03; /* Deep Amber/Black */
+            --alert-bg: rgba(245, 158, 11, 0.05);
+            --alert-border: rgba(245, 158, 11, 0.25);
+            --icon-bg: rgba(245, 158, 11, 0.15);
+        }
+        
+        [data-theme="critical"] {
+            --accent: #EF4444; /* Red-500 */
+            --hero-grad-start: #DC2626; /* Crimson */
+            --hero-grad-end: #450A0A; /* Very Dark Maroon */
+            --alert-bg: rgba(239, 68, 68, 0.08);
+            --alert-border: rgba(239, 68, 68, 0.25);
+            --icon-bg: rgba(239, 68, 68, 0.15);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #000;
+            color: var(--text);
+            font-family: 'Inter', system-ui, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            display: flex;
+            justify-content: center;
+        }
+
+        h1, h2, h3, h4 {
+            color: var(--text-heading);
+        }
+
+        .app {
+            width: 100%;
+            max-width: 430px;
+            height: 100dvh;
+            background: var(--bg);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .scroll {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 0 20px 100px;
+            scrollbar-width: none;
+        }
+        .scroll::-webkit-scrollbar { display: none; }
+
+        .tab-content { display: none; animation: fadeIn 0.3s ease-out; }
+        .tab-content.active { display: block; }
+        .state-view { display: none; }
+        .state-view.active { display: flex; animation: fadeIn 0.35s ease-out; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Dynamic Hero Card */
+        .hero-card {
+            background: linear-gradient(145deg, var(--hero-grad-start) 0%, var(--hero-grad-end) 100%);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: background 0.6s ease;
+        }
+        
+        .hero-card::before {
+            content: '';
+            position: absolute;
+            top: -40%;
+            right: -20%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        /* Crisp White Sparkline overlay */
+        .sparkline {
+            stroke: rgba(255, 255, 255, 0.7);
+            stroke-width: 1.5;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            transition: d 0.5s ease;
+        }
+        .sparkline-fill {
+            fill: url(#sparkGradient);
+            stroke: none;
+            transition: d 0.5s ease;
+        }
+
+        /* UI Components */
+        .glass-nav {
+            background: rgba(9, 9, 11, 0.85);
+            backdrop-filter: blur(20px) saturate(1.2);
+            -webkit-backdrop-filter: blur(20px) saturate(1.2);
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .glass-card { background: var(--surface); border: 1px solid var(--border); }
+
+        /* Dynamic Alert Card */
+        #insightCard {
+            background: var(--alert-bg);
+            border-color: var(--alert-border);
+            transition: all 0.5s ease;
+        }
+        #insightIcon {
+            background: var(--icon-bg);
+            transition: all 0.5s ease;
+        }
+        #headerStatus { color: var(--accent); transition: color 0.5s ease; }
+
+        /* Toggle */
+        .toggle {
+            appearance: none;
+            width: 44px;
+            height: 26px;
+            background: var(--surface-raised);
+            border-radius: 999px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+            border: 1px solid var(--border);
+        }
+        .toggle::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: #e4e4e7;
+            border-radius: 50%;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .toggle:checked { background: var(--accent); border-color: var(--accent); }
+        .toggle:checked::after { transform: translateX(18px); background: #ffffff; }
+
+        /* Spinner & Toast */
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 2px solid var(--surface-raised);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        #toast {
+            position: fixed;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: var(--surface-raised);
+            border: 1px solid var(--border);
+            padding: 12px 20px;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 500;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 100;
+            white-space: nowrap;
+            color: var(--text-heading);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+        #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        .nav-btn { color: var(--text-muted); transition: color 0.2s; }
+        .nav-btn.active { color: var(--accent); }
+        
+        .reading-item { transition: background 0.2s, transform 0.15s, border-color 0.2s; }
+        .reading-item:active { transform: scale(0.98); background: var(--surface-raised); }
+        .status-dot { box-shadow: 0 0 8px var(--accent); transition: background 0.5s, box-shadow 0.5s; }
+    </style>
+</head>
+<body data-theme="safe">
+
+<div class="app">
+    <div id="toast">Notification</div>
+
+    <!-- Header -->
+    <header class="px-5 pt-14 pb-3 flex justify-between items-center shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-2 h-2 rounded-full status-dot" style="background: var(--accent);"></div>
+            <div>
+                <h1 class="text-[11px] font-bold tracking-[0.2em] uppercase" style="color: var(--text-heading)">Grain Monitor</h1>
+                <p id="headerStatus" class="text-[10px] mt-0.5 font-medium tracking-wide">Offline</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 text-text-dim">
+            <i id="batteryIcon" class="ph-fill ph-battery-high text-base"></i>
+            <span id="batteryLevel" class="text-[11px] font-bold">--</span>
+        </div>
+    </header>
+
+    <main class="scroll" id="mainScroll">
+
+        <!-- HOME -->
+        <div id="tab-home" class="tab-content active">
+
+            <!-- Disconnected -->
+            <div id="state-disconnected" class="state-view active flex-col items-center justify-center min-h-[65vh]">
+                <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 glass-card">
+                    <i class="ph-bold ph-bluetooth text-2xl text-text-dim"></i>
+                </div>
+                <h2 class="text-lg font-bold mb-2 tracking-tight">No Device</h2>
+                <p class="text-sm text-text-dim mb-8 text-center max-w-[220px] leading-relaxed">Connect your GRAIN-01 probe to begin monitoring moisture levels.</p>
+                <button onclick="simulateConnection()" class="bg-[#e4e4e7] text-[#09090b] font-bold px-8 py-3.5 rounded-xl text-sm active:scale-95 transition-transform tracking-wide">
+                    CONNECT
+                </button>
+            </div>
+
+            <!-- Connecting -->
+            <div id="state-connecting" class="state-view flex-col items-center justify-center min-h-[65vh]">
+                <div class="spinner mb-5"></div>
+                <h2 class="text-base font-bold mb-1 tracking-tight">Pairing</h2>
+                <p class="text-sm text-text-dim">GRAIN-01</p>
+            </div>
+
+            <!-- Connected Dashboard -->
+            <div id="state-connected" class="state-view flex-col gap-4">
+
+                <!-- HERO: Moisture -->
+                <div class="hero-card rounded-3xl p-6 relative shadow-xl">
+                    <div class="relative z-10">
+                        <div class="flex justify-between items-start mb-6">
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] font-bold tracking-[0.15em] uppercase text-white/80">Moisture</span>
+                                <span class="text-[10px] text-white/50 tracking-wide">GRAIN-01</span>
+                            </div>
+                            <span id="heroBadge" class="text-[9px] font-bold tracking-[0.2em] uppercase px-3 py-1.5 rounded-full bg-black/25 text-white/90 border border-white/20 backdrop-blur-md">
+                                STABLE
+                            </span>
+                        </div>
+
+                        <div class="flex items-baseline gap-2 mb-2">
+                            <span id="heroValue" class="text-7xl font-bold tracking-tight text-white">12.8</span>
+                            <span class="text-2xl font-semibold text-white/60">%</span>
+                        </div>
+
+                        <!-- Sparkline Chart (Now White for contrast) -->
+                        <div class="mt-4 h-16 relative">
+                            <svg viewBox="0 0 300 60" class="w-full h-full" preserveAspectRatio="none">
+                                <defs>
+                                    <linearGradient id="sparkGradient" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25"/>
+                                        <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+                                    </linearGradient>
+                                </defs>
+                                <path id="sparkFill" class="sparkline-fill" d=""/>
+                                <path id="sparkPath" class="sparkline" d=""/>
+                            </svg>
+                            <div class="flex justify-between text-[9px] text-white/50 tracking-wide mt-1">
+                                <span>10:00</span>
+                                <span>12:00</span>
+                                <span>14:00</span>
+                                <span>16:00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Metric Pills Row -->
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="glass-card rounded-2xl p-4">
+                        <div class="text-[9px] font-bold tracking-[0.15em] uppercase text-text-dim mb-2">Temp</div>
+                        <div class="flex items-baseline gap-1" style="color: var(--text-heading)">
+                            <span id="tempValue" class="text-2xl font-bold">28</span>
+                            <span class="text-xs text-text-dim font-medium">°C</span>
+                        </div>
+                    </div>
+                    <div class="glass-card rounded-2xl p-4">
+                        <div class="text-[9px] font-bold tracking-[0.15em] uppercase text-text-dim mb-2">Probe</div>
+                        <div class="flex items-baseline gap-1" style="color: var(--text-heading)">
+                            <span class="text-2xl font-bold">82</span>
+                            <span class="text-xs text-text-dim font-medium">%</span>
+                        </div>
+                    </div>
+                    <div class="glass-card rounded-2xl p-4">
+                        <div class="text-[9px] font-bold tracking-[0.15em] uppercase text-text-dim mb-2">Grain</div>
+                        <div class="text-lg font-bold tracking-tight" style="color: var(--text-heading)">Wheat</div>
+                    </div>
+                </div>
+
+                <!-- Insight Alert (Now controlled purely via CSS variables) -->
+                <div id="insightCard" class="rounded-2xl p-5 border">
+                    <div class="flex items-start gap-4">
+                        <div id="insightIcon" class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
+                            <!-- Icon dynamically updated in JS -->
+                        </div>
+                        <div>
+                            <h3 id="insightTitle" class="font-bold text-sm mb-1 tracking-tight" style="color: var(--text-heading)">Storage is Safe</h3>
+                            <p id="insightText" class="text-xs text-text-dim leading-relaxed">Readings stable for 72 hours. No action required.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Readings Section -->
+                <div class="mt-2">
+                    <div class="flex justify-between items-center mb-3 px-1">
+                        <h3 class="text-[10px] font-bold tracking-[0.2em] uppercase text-text-muted">Recent Readings</h3>
+                        <button onclick="switchTab('history')" class="text-[10px] font-bold tracking-wider uppercase text-text-dim hover:text-[var(--text-heading)] transition-colors">
+                            Show More
+                        </button>
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <div class="reading-item glass-card rounded-2xl p-4 flex items-center gap-4 cursor-pointer">
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold bg-[#F9731622] text-[#F97316]">
+                                31
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 mb-0.5">
+                                    <span class="text-xs font-semibold" style="color: var(--text-heading)">Today</span>
+                                    <span class="w-1 h-1 rounded-full bg-border"></span>
+                                    <span class="text-[10px] text-text-dim">10:24</span>
+                                </div>
+                                <div class="text-sm font-bold" style="color: var(--text-heading)">12.8% <span class="text-text-dim font-normal text-xs ml-1">/ 28°C</span></div>
+                            </div>
+                            <div class="w-1.5 h-1.5 rounded-full shrink-0 shadow-[0_0_6px_#F97316] bg-[#F97316]"></div>
+                        </div>
+
+                        <div class="reading-item glass-card rounded-2xl p-4 flex items-center gap-4 cursor-pointer">
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold bg-[#F59E0B22] text-[#F59E0B]">
+                                30
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 mb-0.5">
+                                    <span class="text-xs font-semibold" style="color: var(--text-heading)">Yesterday</span>
+                                    <span class="w-1 h-1 rounded-full bg-border"></span>
+                                    <span class="text-[10px] text-text-dim">09:15</span>
+                                </div>
+                                <div class="text-sm font-bold" style="color: var(--text-heading)">14.1% <span class="text-text-dim font-normal text-xs ml-1">/ 30°C</span></div>
+                            </div>
+                            <div class="w-1.5 h-1.5 rounded-full shrink-0 shadow-[0_0_6px_#F59E0B] bg-[#F59E0B]"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HISTORY -->
+        <div id="tab-history" class="tab-content">
+            <div class="pt-2 pb-6">
+                <h2 class="text-2xl font-bold tracking-tight mb-1">History</h2>
+                <p class="text-sm text-text-dim">Past 7 days of readings</p>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <div class="reading-item glass-card rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-surface-raised">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold bg-[#F9731622] text-[#F97316]">31</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-0.5">
+                            <span class="text-xs font-semibold" style="color: var(--text-heading)">Today</span>
+                            <span class="w-1 h-1 rounded-full bg-border"></span>
+                            <span class="text-[10px] text-text-dim">10:24 AM</span>
+                        </div>
+                        <div class="text-sm font-bold" style="color: var(--text-heading)">12.8% <span class="text-text-dim font-normal text-xs ml-1">/ 28°C</span></div>
+                    </div>
+                    <div class="w-2 h-2 rounded-full shrink-0 bg-[#F97316]"></div>
+                </div>
+
+                <div class="reading-item glass-card rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-surface-raised">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold bg-[#F59E0B22] text-[#F59E0B]">30</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-0.5">
+                            <span class="text-xs font-semibold" style="color: var(--text-heading)">Yesterday</span>
+                            <span class="w-1 h-1 rounded-full bg-border"></span>
+                            <span class="text-[10px] text-text-dim">09:15 AM</span>
+                        </div>
+                        <div class="text-sm font-bold" style="color: var(--text-heading)">14.1% <span class="text-text-dim font-normal text-xs ml-1">/ 30°C</span></div>
+                    </div>
+                    <div class="w-2 h-2 rounded-full shrink-0 bg-[#F59E0B]"></div>
+                </div>
+            </div>
+
+            <button onclick="showToast('Loading archive...')" class="w-full mt-5 py-4 text-[11px] font-bold tracking-[0.15em] uppercase text-text-dim hover:text-[var(--text-heading)] transition-colors text-center glass-card rounded-2xl hover:bg-surface-raised">
+                Load Full Archive
+            </button>
+        </div>
+
+        <!-- SETTINGS -->
+        <div id="tab-settings" class="tab-content">
+            <div class="pt-2 pb-6">
+                <h2 class="text-2xl font-bold tracking-tight mb-1">Settings</h2>
+                <p class="text-sm text-text-dim">Device & preferences</p>
+            </div>
+
+            <!-- Device -->
+            <div class="glass-card rounded-2xl p-5 mb-6 shadow-sm">
+                <div class="flex items-center gap-4 mb-5">
+                    <div class="w-12 h-12 rounded-xl bg-surface-raised flex items-center justify-center border border-border">
+                        <i class="ph-bold ph-cpu text-xl text-text-dim"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm tracking-tight" style="color: var(--text-heading)">GRAIN-01</h3>
+                        <p class="text-[11px] text-text-dim mt-0.5">FW v1.2.4 • ESP32</p>
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="showToast('Calibration active')" class="flex-1 bg-[#e4e4e7] text-[#09090b] hover:bg-[#ffffff] font-bold text-xs py-3.5 rounded-xl active:scale-95 transition-all tracking-wide">
+                        CALIBRATE
+                    </button>
+                    <button onclick="disconnectDevice()" class="px-4 bg-surface-raised hover:bg-danger/10 text-danger font-bold text-xs py-3.5 rounded-xl active:scale-95 transition-all border border-border hover:border-danger/20">
+                        <i class="ph-bold ph-power"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Theme Simulation -->
+            <p class="text-[10px] font-bold tracking-[0.2em] uppercase text-text-muted mb-3 px-1">Simulate State</p>
+            <div class="glass-card rounded-2xl p-2 flex gap-2 mb-6">
+                <button onclick="setCondition('safe')" class="flex-1 py-3 rounded-xl text-[11px] font-bold tracking-wide uppercase text-accent hover:bg-accent/10 active:scale-95 transition-all">Safe</button>
+                <button onclick="setCondition('warning')" class="flex-1 py-3 rounded-xl text-[11px] font-bold tracking-wide uppercase text-warn hover:bg-warn/10 active:scale-95 transition-all">Warn</button>
+                <button onclick="setCondition('critical')" class="flex-1 py-3 rounded-xl text-[11px] font-bold tracking-wide uppercase text-danger hover:bg-danger/10 active:scale-95 transition-all">Critical</button>
+            </div>
+
+            <!-- Preferences -->
+            <p class="text-[10px] font-bold tracking-[0.2em] uppercase text-text-muted mb-3 px-1">Preferences</p>
+            <div class="glass-card rounded-2xl overflow-hidden py-1">
+                <label class="flex justify-between items-center px-5 py-4 cursor-pointer hover:bg-surface-raised transition-colors">
+                    <span class="text-sm font-medium" style="color: var(--text-heading)">Push Alerts</span>
+                    <input type="checkbox" checked class="toggle" onchange="showToast(this.checked ? 'Alerts on' : 'Alerts off')">
+                </label>
+                <label class="flex justify-between items-center px-5 py-4 cursor-pointer hover:bg-surface-raised transition-colors">
+                    <span class="text-sm font-medium" style="color: var(--text-heading)">Auto-sync</span>
+                    <input type="checkbox" checked class="toggle" onchange="showToast('Sync updated')">
+                </label>
+                <button onclick="showToast('Exporting PDF...')" class="w-full flex justify-between items-center px-5 py-4 hover:bg-surface-raised transition-colors text-left">
+                    <span class="text-sm font-medium" style="color: var(--text-heading)">Export Report</span>
+                    <i class="ph-bold ph-download-simple text-text-dim"></i>
+                </button>
+            </div>
+
+            <div class="mt-8 text-center pb-4">
+                <p class="text-[10px] text-text-muted">Grain Monitor v1.0</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Nav -->
+    <nav class="glass-nav shrink-0 px-6 pb-8 pt-3">
+        <div class="flex justify-around items-center">
+            <button onclick="switchTab('home')" class="nav-btn active flex flex-col items-center gap-1 px-6 py-1 active:scale-95 transition-transform" data-tab="home">
+                <i class="ph-fill ph-house text-2xl"></i>
+            </button>
+            <button onclick="switchTab('history')" class="nav-btn flex flex-col items-center gap-1 px-6 py-1 active:scale-95 transition-transform" data-tab="history">
+                <i class="ph-bold ph-clock-counter-clockwise text-2xl"></i>
+            </button>
+            <button onclick="switchTab('settings')" class="nav-btn flex flex-col items-center gap-1 px-6 py-1 active:scale-95 transition-transform" data-tab="settings">
+                <i class="ph-bold ph-gear text-2xl"></i>
+            </button>
+        </div>
+    </nav>
+</div>
+
+<script>
+    let isConnected = false;
+    let toastTimer;
+    let currentTheme = 'safe';
+
+    const sparkData = {
+        safe: [45, 42, 48, 44, 46, 43, 47, 45, 44, 46, 43, 45],
+        warning: [45, 48, 52, 55, 58, 56, 60, 62, 59, 63, 61, 64],
+        critical: [45, 55, 65, 72, 78, 82, 85, 88, 86, 89, 87, 90]
+    };
+
+    function drawSparkline(data) {
+        const width = 300, height = 60, padding = 4;
+        const max = Math.max(...data), min = Math.min(...data);
+        const range = max - min || 1;
+
+        let path = '';
+        let fillPath = '';
+
+        data.forEach((val, i) => {
+            const x = (i / (data.length - 1)) * width;
+            const y = height - padding - ((val - min) / range) * (height - padding * 2);
+            path += (i === 0 ? 'M' : 'L') + x + ',' + y;
+            if (i === 0) fillPath = 'M' + x + ',' + (height) + ' L' + x + ',' + y;
+            else fillPath += ' L' + x + ',' + y;
+        });
+        fillPath += ' L' + width + ',' + height + ' Z';
+
+        document.getElementById('sparkPath').setAttribute('d', path);
+        document.getElementById('sparkFill').setAttribute('d', fillPath);
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    function switchTab(id) {
+        document.getElementById('mainScroll').scrollTop = 0;
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.getElementById('tab-' + id).classList.add('active');
+        document.querySelectorAll('.nav-btn').forEach(b => {
+            const icon = b.querySelector('i');
+            if (b.dataset.tab === id) {
+                b.classList.add('active');
+                icon.classList.replace('ph-bold', 'ph-fill');
+            } else {
+                b.classList.remove('active');
+                icon.classList.replace('ph-fill', 'ph-bold');
+            }
+        });
+    }
+
+    function simulateConnection() {
+        document.getElementById('state-disconnected').classList.remove('active');
+        document.getElementById('state-connecting').classList.add('active');
+        document.getElementById('headerStatus').textContent = 'Pairing...';
+        document.getElementById('headerStatus').style.color = 'var(--warn)';
+
+        setTimeout(() => {
+            isConnected = true;
+            document.getElementById('state-connecting').classList.remove('active');
+            document.getElementById('state-connected').classList.add('active');
+            document.getElementById('batteryLevel').textContent = '82';
+            document.getElementById('batteryIcon').style.color = 'var(--accent)';
+            showToast('GRAIN-01 connected');
+            setCondition('safe');
+        }, 1500);
+    }
+
+    function disconnectDevice() {
+        isConnected = false;
+        switchTab('home');
+        document.getElementById('state-connected').classList.remove('active');
+        document.getElementById('state-connecting').classList.remove('active');
+        document.getElementById('state-disconnected').classList.add('active');
+        document.getElementById('headerStatus').textContent = 'Offline';
+        document.getElementById('headerStatus').style.color = '';
+        document.getElementById('batteryLevel').textContent = '--';
+        document.getElementById('batteryIcon').style.color = '';
+        showToast('Device disconnected');
+    }
+
+    function setCondition(state) {
+        if (!isConnected) {
+            isConnected = true;
+            document.getElementById('state-disconnected').classList.remove('active');
+            document.getElementById('state-connected').classList.add('active');
+            document.getElementById('batteryLevel').textContent = '82';
+            document.getElementById('batteryIcon').style.color = 'var(--accent)';
+        }
+
+        currentTheme = state;
+        document.body.setAttribute('data-theme', state);
+        drawSparkline(sparkData[state]);
+
+        const heroValue = document.getElementById('heroValue');
+        const heroBadge = document.getElementById('heroBadge');
+        const tempValue = document.getElementById('tempValue');
+        const insightTitle = document.getElementById('insightTitle');
+        const insightText = document.getElementById('insightText');
+        const headerStatus = document.getElementById('headerStatus');
+        const iconContainer = document.getElementById('insightIcon');
+
+        if (state === 'safe') {
+            headerStatus.textContent = 'Safe';
+            heroValue.textContent = '12.8';
+            heroBadge.textContent = 'STABLE';
+            tempValue.textContent = '28';
+            insightTitle.textContent = 'Storage is Safe';
+            insightText.textContent = 'Readings stable for 72 hours. No action required.';
+            iconContainer.innerHTML = '<i class="ph-fill ph-check-circle text-lg" style="color: var(--accent);"></i>';
+        } else if (state === 'warning') {
+            headerStatus.textContent = 'Warning';
+            heroValue.textContent = '14.5';
+            heroBadge.textContent = 'RISING';
+            tempValue.textContent = '30';
+            insightTitle.textContent = 'Temperature Rising';
+            insightText.textContent = 'Grain is dry but ambient temp is elevated. Ensure ventilation.';
+            iconContainer.innerHTML = '<i class="ph-fill ph-warning text-lg" style="color: var(--accent);"></i>';
+        } else if (state === 'critical') {
+            headerStatus.textContent = 'Critical';
+            heroValue.textContent = '17.2';
+            heroBadge.textContent = 'CRITICAL';
+            tempValue.textContent = '32';
+            insightTitle.textContent = 'Fungi Risk Detected';
+            insightText.textContent = 'Moisture critically high. Dry grain immediately to prevent spoilage.';
+            iconContainer.innerHTML = '<i class="ph-fill ph-warning-circle text-lg" style="color: var(--accent);"></i>';
+        }
+    }
+
+    // Init display
+    drawSparkline(sparkData.safe);
+</script>
+
+</body>
+</html>

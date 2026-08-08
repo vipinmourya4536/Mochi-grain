@@ -1,0 +1,659 @@
+     1→<!DOCTYPE html>
+     2→<html lang="en">
+     3→<head>
+     4→    <meta charset="UTF-8">
+     5→    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+     6→    <title>Grain Monitor</title>
+     7→    <script src="https://cdn.tailwindcss.com"></script>
+     8→    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+     9→    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    10→
+    11→    <script>
+    12→        tailwind.config = {
+    13→            theme: {
+    14→                extend: {
+    15→                    fontFamily: { 
+    16→                        sans: ['Inter', 'system-ui', 'sans-serif'],
+    17→                    },
+    18→                    colors: {
+    19→                        'ui-bg': '#09090b',
+    20→                        'ui-surface': '#18181b',
+    21→                        'ui-border': '#27272a',
+    22→                    }
+    23→                }
+    24→            }
+    25→        }
+    26→    </script>
+    27→    <style>
+    28→        :root {
+    29→            /* Core Colors */
+    30→            --bg: #09090b; 
+    31→            --surface: #18181b; 
+    32→            --surface-raised: #27272a; 
+    33→            --border: #3f3f46; 
+    34→            
+    35→            /* Typography */
+    36→            --text-heading: #f4f4f5; 
+    37→            --text: #d4d4d8; 
+    38→            --text-dim: #a1a1aa; 
+    39→            --text-muted: #71717a; 
+    40→        }
+    41→
+    42→        /* --- THEME STATE COLOR SCIENCE --- */
+    43→        [data-theme="safe"] {
+    44→            --accent: #F97316; /* Orange-500 */
+    45→            --hero-grad-start: #EA580C; /* Rich Orange */
+    46→            --hero-grad-end: #431407; /* Deep Orange/Black */
+    47→            --alert-bg: var(--surface-raised);
+    48→            --alert-border: var(--border);
+    49→            --icon-bg: rgba(249, 115, 22, 0.15);
+    50→        }
+    51→        
+    52→        [data-theme="warn"] {
+    53→            --accent: #F59E0B; /* Amber-500 */
+    54→            --hero-grad-start: #D97706; /* Rich Amber */
+    55→            --hero-grad-end: #451A03; /* Deep Amber/Black */
+    56→            --alert-bg: rgba(245, 158, 11, 0.05);
+    57→            --alert-border: rgba(245, 158, 11, 0.25);
+    58→            --icon-bg: rgba(245, 158, 11, 0.15);
+    59→        }
+    60→        
+    61→        [data-theme="critical"] {
+    62→            --accent: #EF4444; /* Red-500 */
+    63→            --hero-grad-start: #DC2626; /* Crimson */
+    64→            --hero-grad-end: #450A0A; /* Very Dark Maroon */
+    65→            --alert-bg: rgba(239, 68, 68, 0.08);
+    66→            --alert-border: rgba(239, 68, 68, 0.25);
+    67→            --icon-bg: rgba(239, 68, 68, 0.15);
+    68→        }
+    69→
+    70→        * { margin: 0; padding: 0; box-sizing: border-box; }
+    71→
+    72→        body {
+    73→            background: #000;
+    74→            color: var(--text);
+    75→            font-family: 'Inter', system-ui, sans-serif;
+    76→            -webkit-tap-highlight-color: transparent;
+    77→            display: flex;
+    78→            justify-content: center;
+    79→        }
+    80→
+    81→        h1, h2, h3, h4 {
+    82→            color: var(--text-heading);
+    83→        }
+    84→
+    85→        .app {
+    86→            width: 100%;
+    87→            max-width: 430px;
+    88→            height: 100dvh;
+    89→            background: var(--bg);
+    90→            position: relative;
+    91→            overflow: hidden;
+    92→            display: flex;
+    93→            flex-direction: column;
+    94→        }
+    95→
+    96→        .scroll {
+    97→            flex: 1;
+    98→            overflow-y: auto;
+    99→            overflow-x: hidden;
+   100→            padding: 0 20px 100px;
+   101→            scrollbar-width: none;
+   102→        }
+   103→        .scroll::-webkit-scrollbar { display: none; }
+   104→
+   105→        .tab-content { display: none; animation: fadeIn 0.3s ease-out; }
+   106→        .tab-content.active { display: block; }
+   107→        .state-view { display: none; }
+   108→        .state-view.active { display: flex; animation: fadeIn 0.35s ease-out; }
+   109→
+   110→        @keyframes fadeIn {
+   111→            from { opacity: 0; transform: translateY(12px); }
+   112→            to { opacity: 1; transform: translateY(0); }
+   113→        }
+   114→
+   115→        /* Dynamic Hero Card */
+   116→        .hero-card {
+   117→            background: linear-gradient(145deg, var(--hero-grad-start) 0%, var(--hero-grad-end) 100%);
+   118→            position: relative;
+   119→            overflow: hidden;
+   120→            border: 1px solid rgba(255,255,255,0.06);
+   121→            transition: background 0.6s ease;
+   122→        }
+   123→        
+   124→        .hero-card::before {
+   125→            content: '';
+   126→            position: absolute;
+   127→            top: -40%;
+   128→            right: -20%;
+   129→            width: 300px;
+   130→            height: 300px;
+   131→            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+   132→            pointer-events: none;
+   133→        }
+   134→
+   135→        /* Crisp White Sparkline overlay */
+   136→        .sparkline {
+   137→            stroke: rgba(255, 255, 255, 0.7);
+   138→            stroke-width: 1.5;
+   139→            fill: none;
+   140→            stroke-linecap: round;
+   141→            stroke-linejoin: round;
+   142→            transition: d 0.5s ease;
+   143→        }
+   144→        .sparkline-fill {
+   145→            fill: url(#sparkGradient);
+   146→            stroke: none;
+   147→            transition: d 0.5s ease;
+   148→        }
+   149→
+   150→        /* UI Components */
+   151→        .glass-nav {
+   152→            background: rgba(9, 9, 11, 0.85);
+   153→            backdrop-filter: blur(20px) saturate(1.2);
+   154→            -webkit-backdrop-filter: blur(20px) saturate(1.2);
+   155→            border-top: 1px solid rgba(255,255,255,0.06);
+   156→        }
+   157→
+   158→        .glass-card { background: var(--surface); border: 1px solid var(--border); }
+   159→
+   160→        /* Dynamic Alert Card */
+   161→        #insightCard {
+   162→            background: var(--alert-bg);
+   163→            border-color: var(--alert-border);
+   164→            transition: all 0.5s ease;
+   165→        }
+   166→        #insightIcon {
+   167→            background: var(--icon-bg);
+   168→            transition: all 0.5s ease;
+   169→        }
+   170→        #headerStatus { color: var(--accent); transition: color 0.5s ease; }
+   171→
+   172→        /* Toggle */
+   173→        .toggle {
+   174→            appearance: none;
+   175→            width: 44px;
+   176→            height: 26px;
+   177→            background: var(--surface-raised);
+   178→            border-radius: 999px;
+   179→            position: relative;
+   180→            cursor: pointer;
+   181→            transition: background 0.3s;
+   182→            border: 1px solid var(--border);
+   183→        }
+   184→        .toggle::after {
+   185→            content: '';
+   186→            position: absolute;
+   187→            top: 2px;
+   188→            left: 2px;
+   189→            width: 20px;
+   190→            height: 20px;
+   191→            background: #e4e4e7;
+   192→            border-radius: 50%;
+   193→            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+   194→        }
+   195→        .toggle:checked { background: var(--accent); border-color: var(--accent); }
+   196→        .toggle:checked::after { transform: translateX(18px); background: #ffffff; }
+   197→
+   198→        /* Spinner & Toast */
+   199→        .spinner {
+   200→            width: 32px;
+   201→            height: 32px;
+   202→            border: 2px solid var(--surface-raised);
+   203→            border-top-color: var(--accent);
+   204→            border-radius: 50%;
+   205→            animation: spin 0.7s linear infinite;
+   206→        }
+   207→        @keyframes spin { to { transform: rotate(360deg); } }
+   208→
+   209→        #toast {
+   210→            position: fixed;
+   211→            top: 16px;
+   212→            left: 50%;
+   213→            transform: translateX(-50%) translateY(-20px);
+   214→            background: var(--surface-raised);
+   215→            border: 1px solid var(--border);
+   216→            padding: 12px 20px;
+   217→            border-radius: 14px;
+   218→            font-size: 13px;
+   219→            font-weight: 500;
+   220→            opacity: 0;
+   221→            pointer-events: none;
+   222→            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+   223→            z-index: 100;
+   224→            white-space: nowrap;
+   225→            color: var(--text-heading);
+   226→            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+   227→        }
+   228→        #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+   229→
+   230→        .nav-btn { color: var(--text-muted); transition: color 0.2s; }
+   231→        .nav-btn.active { color: var(--accent); }
+   232→        
+   233→        .reading-item { transition: background 0.2s, transform 0.15s, border-color 0.2s; }
+   234→        .reading-item:active { transform: scale(0.98); background: var(--surface-raised); }
+   235→        .status-dot { box-shadow: 0 0 8px var(--accent); transition: background 0.5s, box-shadow 0.5s; }
+   236→    </style>
+   237→</head>
+   238→<body data-theme="safe">
+   239→
+   240→<div class="app">
+   241→    <div id="toast">Notification</div>
+   242→
+   243→    <!-- Header -->
+   244→    <header class="px-5 pt-14 pb-3 flex justify-between items-center shrink-0">
+   245→        <div class="flex items-center gap-3">
+   246→            <div class="w-2 h-2 rounded-full status-dot" style="background: var(--accent);"></div>
+   247→            <div>
+   248→                <h1 class="text-[11px] font-bold tracking-[0.2em] uppercase" style="color: var(--text-heading)">Grain Monitor</h1>
+   249→                <p id="headerStatus" class="text-[10px] mt-0.5 font-medium tracking-wide">Offline</p>
+   250→            </div>
+   251→        </div>
+   252→        <div class="flex items-center gap-2 text-text-dim">
+   253→            <i id="batteryIcon" class="ph-fill ph-battery-high text-base"></i>
+   254→            <span id="batteryLevel" class="text-[11px] font-bold">--</span>
+   255→        </div>
+   256→    </header>
+   257→
+   258→    <main class="scroll" id="mainScroll">
+   259→
+   260→        <!-- HOME -->
+   261→        <div id="tab-home" class="tab-content active">
+   262→
+   263→            <!-- Disconnected -->
+   264→            <div id="state-disconnected" class="state-view active flex-col items-center justify-center min-h-[65vh]">
+   265→                <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 glass-card">
+   266→                    <i class="ph-bold ph-bluetooth text-2xl text-text-dim"></i>
+   267→                </div>
+   268→                <h2 class="text-lg font-bold mb-2 tracking-tight">No Device</h2>
+   269→                <p class="text-sm text-text-dim mb-8 text-center max-w-[220px] leading-relaxed">Connect your GRAIN-01 probe to begin monitoring moisture levels.</p>
+   270→                <button onclick="simulateConnection()" class="bg-[#e4e4e7] text-[#09090b] font-bold px-8 py-3.5 rounded-xl text-sm active:scale-95 transition-transform tracking-wide">
+   271→                    CONNECT
+   272→                </button>
+   273→            </div>
+   274→
+   275→            <!-- Connecting -->
+   276→            <div id="state-connecting" class="state-view flex-col items-center justify-center min-h-[65vh]">
+   277→                <div class="spinner mb-5"></div>
+   278→                <h2 class="text-base font-bold mb-1 tracking-tight">Pairing</h2>
+   279→                <p class="text-sm text-text-dim">GRAIN-01</p>
+   280→            </div>
+   281→
+   282→            <!-- Connected Dashboard -->
+   283→            <div id="state-connected" class="state-view flex-col gap-4">
+   284→
+   285→                <!-- HERO: Moisture -->
+   286→                <div class="hero-card rounded-3xl p-6 relative shadow-xl">
+   287→                    <div class="relative z-10">
+   288→                        <div class="flex justify-between items-start mb-6">
+   289→                            <div class="flex items-center gap-2">
+   290→                                <span class="text-[10px] font-bold tracking-[0.15em] uppercase text-white/80">Moisture</span>
+   291→                                <span class="text-[10px] text-white/50 tracking-wide">GRAIN-01</span>
+   292→                            </div>
+   293→                            <span id="heroBadge" class="text-[9px] font-bold tracking-[0.2em] uppercase px-3 py-1.5 rounded-full bg-black/25 text-white/90 border border-white/20 backdrop-blur-md">
+   294→                                STABLE
+   295→                            </span>
+   296→                        </div>
+   297→
+   298→                        <div class="flex items-baseline gap-2 mb-2">
+   299→                            <span id="heroValue" class="text-7xl font-bold tracking-tight text-white">12.8</span>
+   300→                            <span class="text-2xl font-semibold text-white/60">%</span>
+   301→                        </div>
+   302→
+   303→                        <!-- Sparkline Chart (Now White for contrast) -->
+   304→                        <div class="mt-4 h-16 relative">
+   305→                            <svg viewBox="0 0 300 60" class="w-full h-full" preserveAspectRatio="none">
+   306→                                <defs>
+   307→                                    <linearGradient id="sparkGradient" x1="0" y1="0" x2="0" y2="1">
+   308→                                        <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25"/>
+   309→                                        <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+   310→                                    </linearGradient>
+   311→                                </defs>
+   312→                                <path id="sparkFill" class="sparkline-fill" d=""/>
+   313→                                <path id="sparkPath" class="sparkline" d=""/>
+   314→                            </svg>
+   315→                            <div class="flex justify-between text-[9px] text-white/50 tracking-wide mt-1">
+   316→                                <span>10:00</span>
+   317→                                <span>12:00</span>
+   318→                                <span>14:00</span>
+   319→                                <span>16:00</span>
+   320→                            </div>
+   321→                        </div>
+   322→                    </div>
+   323→                </div>
+   324→
+   325→                <!-- Metric Pills Row -->
+   326→                <div class="grid grid-cols-3 gap-3">
+   327→                    <div class="glass-card rounded-2xl p-4">
+   328→                        <div class="text-[9px] font-bold tracking-[0.15em] uppercase text-text-dim mb-2">Temp</div>
+   329→                        <div class="flex items-baseline gap-1" style="color: var(--text-heading)">
+   330→                            <span id="tempValue" class="text-2xl font-bold">28</span>
+   331→                            <span class="text-xs text-text-dim font-medium">°C</span>
+   332→                        </div>
+   333→                    </div>
+   334→                    <div class="glass-card rounded-2xl p-4">
+   335→                        <div class="text-[9px] font-bold tracking-[0.15em] uppercase text-text-dim mb-2">Probe</div>
+   336→                        <div class="flex items-baseline gap-1" style="color: var(--text-heading)">
+   337→                            <span class="text-2xl font-bold">82</span>
+   338→                            <span class="text-xs text-text-dim font-medium">%</span>
+   339→                        </div>
+   340→                    </div>
+   341→                    <div class="glass-card rounded-2xl p-4">
+   342→                        <div class="text-[9px] font-bold tracking-[0.15em] uppercase text-text-dim mb-2">Grain</div>
+   343→                        <div class="text-lg font-bold tracking-tight" style="color: var(--text-heading)">Wheat</div>
+   344→                    </div>
+   345→                </div>
+   346→
+   347→                <!-- Insight Alert (Now controlled purely via CSS variables) -->
+   348→                <div id="insightCard" class="rounded-2xl p-5 border">
+   349→                    <div class="flex items-start gap-4">
+   350→                        <div id="insightIcon" class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
+   351→                            <!-- Icon dynamically updated in JS -->
+   352→                        </div>
+   353→                        <div>
+   354→                            <h3 id="insightTitle" class="font-bold text-sm mb-1 tracking-tight" style="color: var(--text-heading)">Storage is Safe</h3>
+   355→                            <p id="insightText" class="text-xs text-text-dim leading-relaxed">Readings stable for 72 hours. No action required.</p>
+   356→                        </div>
+   357→                    </div>
+   358→                </div>
+   359→
+   360→                <!-- Recent Readings Section -->
+   361→                <div class="mt-2">
+   362→                    <div class="flex justify-between items-center mb-3 px-1">
+   363→                        <h3 class="text-[10px] font-bold tracking-[0.2em] uppercase text-text-muted">Recent Readings</h3>
+   364→                        <button onclick="switchTab('history')" class="text-[10px] font-bold tracking-wider uppercase text-text-dim hover:text-[var(--text-heading)] transition-colors">
+   365→                            Show More
+   366→                        </button>
+   367→                    </div>
+   368→
+   369→                    <div class="flex flex-col gap-2">
+   370→                        <div class="reading-item glass-card rounded-2xl p-4 flex items-center gap-4 cursor-pointer">
+   371→                            <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold bg-[#F9731622] text-[#F97316]">
+   372→                                31
+   373→                            </div>
+   374→                            <div class="flex-1 min-w-0">
+   375→                                <div class="flex items-center gap-2 mb-0.5">
+   376→                                    <span class="text-xs font-semibold" style="color: var(--text-heading)">Today</span>
+   377→                                    <span class="w-1 h-1 rounded-full bg-border"></span>
+   378→                                    <span class="text-[10px] text-text-dim">10:24</span>
+   379→                                </div>
+   380→                                <div class="text-sm font-bold" style="color: var(--text-heading)">12.8% <span class="text-text-dim font-normal text-xs ml-1">/ 28°C</span></div>
+   381→                            </div>
+   382→                            <div class="w-1.5 h-1.5 rounded-full shrink-0 shadow-[0_0_6px_#F97316] bg-[#F97316]"></div>
+   383→                        </div>
+   384→
+   385→                        <div class="reading-item glass-card rounded-2xl p-4 flex items-center gap-4 cursor-pointer">
+   386→                            <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold bg-[#F59E0B22] text-[#F59E0B]">
+   387→                                30
+   388→                            </div>
+   389→                            <div class="flex-1 min-w-0">
+   390→                                <div class="flex items-center gap-2 mb-0.5">
+   391→                                    <span class="text-xs font-semibold" style="color: var(--text-heading)">Yesterday</span>
+   392→                                    <span class="w-1 h-1 rounded-full bg-border"></span>
+   393→                                    <span class="text-[10px] text-text-dim">09:15</span>
+   394→                                </div>
+   395→                                <div class="text-sm font-bold" style="color: var(--text-heading)">14.1% <span class="text-text-dim font-normal text-xs ml-1">/ 30°C</span></div>
+   396→                            </div>
+   397→                            <div class="w-1.5 h-1.5 rounded-full shrink-0 shadow-[0_0_6px_#F59E0B] bg-[#F59E0B]"></div>
+   398→                        </div>
+   399→                    </div>
+   400→                </div>
+   401→            </div>
+   402→        </div>
+   403→
+   404→        <!-- HISTORY -->
+   405→        <div id="tab-history" class="tab-content">
+   406→            <div class="pt-2 pb-6">
+   407→                <h2 class="text-2xl font-bold tracking-tight mb-1">History</h2>
+   408→                <p class="text-sm text-text-dim">Past 7 days of readings</p>
+   409→            </div>
+   410→
+   411→            <div class="flex flex-col gap-2">
+   412→                <div class="reading-item glass-card rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-surface-raised">
+   413→                    <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold bg-[#F9731622] text-[#F97316]">31</div>
+   414→                    <div class="flex-1 min-w-0">
+   415→                        <div class="flex items-center gap-2 mb-0.5">
+   416→                            <span class="text-xs font-semibold" style="color: var(--text-heading)">Today</span>
+   417→                            <span class="w-1 h-1 rounded-full bg-border"></span>
+   418→                            <span class="text-[10px] text-text-dim">10:24 AM</span>
+   419→                        </div>
+   420→                        <div class="text-sm font-bold" style="color: var(--text-heading)">12.8% <span class="text-text-dim font-normal text-xs ml-1">/ 28°C</span></div>
+   421→                    </div>
+   422→                    <div class="w-2 h-2 rounded-full shrink-0 bg-[#F97316]"></div>
+   423→                </div>
+   424→
+   425→                <div class="reading-item glass-card rounded-2xl p-4 flex items-center gap-4 cursor-pointer hover:bg-surface-raised">
+   426→                    <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold bg-[#F59E0B22] text-[#F59E0B]">30</div>
+   427→                    <div class="flex-1 min-w-0">
+   428→                        <div class="flex items-center gap-2 mb-0.5">
+   429→                            <span class="text-xs font-semibold" style="color: var(--text-heading)">Yesterday</span>
+   430→                            <span class="w-1 h-1 rounded-full bg-border"></span>
+   431→                            <span class="text-[10px] text-text-dim">09:15 AM</span>
+   432→                        </div>
+   433→                        <div class="text-sm font-bold" style="color: var(--text-heading)">14.1% <span class="text-text-dim font-normal text-xs ml-1">/ 30°C</span></div>
+   434→                    </div>
+   435→                    <div class="w-2 h-2 rounded-full shrink-0 bg-[#F59E0B]"></div>
+   436→                </div>
+   437→            </div>
+   438→
+   439→            <button onclick="showToast('Loading archive...')" class="w-full mt-5 py-4 text-[11px] font-bold tracking-[0.15em] uppercase text-text-dim hover:text-[var(--text-heading)] transition-colors text-center glass-card rounded-2xl hover:bg-surface-raised">
+   440→                Load Full Archive
+   441→            </button>
+   442→        </div>
+   443→
+   444→        <!-- SETTINGS -->
+   445→        <div id="tab-settings" class="tab-content">
+   446→            <div class="pt-2 pb-6">
+   447→                <h2 class="text-2xl font-bold tracking-tight mb-1">Settings</h2>
+   448→                <p class="text-sm text-text-dim">Device & preferences</p>
+   449→            </div>
+   450→
+   451→            <!-- Device -->
+   452→            <div class="glass-card rounded-2xl p-5 mb-6 shadow-sm">
+   453→                <div class="flex items-center gap-4 mb-5">
+   454→                    <div class="w-12 h-12 rounded-xl bg-surface-raised flex items-center justify-center border border-border">
+   455→                        <i class="ph-bold ph-cpu text-xl text-text-dim"></i>
+   456→                    </div>
+   457→                    <div>
+   458→                        <h3 class="font-bold text-sm tracking-tight" style="color: var(--text-heading)">GRAIN-01</h3>
+   459→                        <p class="text-[11px] text-text-dim mt-0.5">FW v1.2.4 • ESP32</p>
+   460→                    </div>
+   461→                </div>
+   462→                <div class="flex gap-3">
+   463→                    <button onclick="showToast('Calibration active')" class="flex-1 bg-[#e4e4e7] text-[#09090b] hover:bg-[#ffffff] font-bold text-xs py-3.5 rounded-xl active:scale-95 transition-all tracking-wide">
+   464→                        CALIBRATE
+   465→                    </button>
+   466→                    <button onclick="disconnectDevice()" class="px-4 bg-surface-raised hover:bg-danger/10 text-danger font-bold text-xs py-3.5 rounded-xl active:scale-95 transition-all border border-border hover:border-danger/20">
+   467→                        <i class="ph-bold ph-power"></i>
+   468→                    </button>
+   469→                </div>
+   470→            </div>
+   471→
+   472→            <!-- Theme Simulation -->
+   473→            <p class="text-[10px] font-bold tracking-[0.2em] uppercase text-text-muted mb-3 px-1">Simulate State</p>
+   474→            <div class="glass-card rounded-2xl p-2 flex gap-2 mb-6">
+   475→                <button onclick="setCondition('safe')" class="flex-1 py-3 rounded-xl text-[11px] font-bold tracking-wide uppercase text-accent hover:bg-accent/10 active:scale-95 transition-all">Safe</button>
+   476→                <button onclick="setCondition('warning')" class="flex-1 py-3 rounded-xl text-[11px] font-bold tracking-wide uppercase text-warn hover:bg-warn/10 active:scale-95 transition-all">Warn</button>
+   477→                <button onclick="setCondition('critical')" class="flex-1 py-3 rounded-xl text-[11px] font-bold tracking-wide uppercase text-danger hover:bg-danger/10 active:scale-95 transition-all">Critical</button>
+   478→            </div>
+   479→
+   480→            <!-- Preferences -->
+   481→            <p class="text-[10px] font-bold tracking-[0.2em] uppercase text-text-muted mb-3 px-1">Preferences</p>
+   482→            <div class="glass-card rounded-2xl overflow-hidden py-1">
+   483→                <label class="flex justify-between items-center px-5 py-4 cursor-pointer hover:bg-surface-raised transition-colors">
+   484→                    <span class="text-sm font-medium" style="color: var(--text-heading)">Push Alerts</span>
+   485→                    <input type="checkbox" checked class="toggle" onchange="showToast(this.checked ? 'Alerts on' : 'Alerts off')">
+   486→                </label>
+   487→                <label class="flex justify-between items-center px-5 py-4 cursor-pointer hover:bg-surface-raised transition-colors">
+   488→                    <span class="text-sm font-medium" style="color: var(--text-heading)">Auto-sync</span>
+   489→                    <input type="checkbox" checked class="toggle" onchange="showToast('Sync updated')">
+   490→                </label>
+   491→                <button onclick="showToast('Exporting PDF...')" class="w-full flex justify-between items-center px-5 py-4 hover:bg-surface-raised transition-colors text-left">
+   492→                    <span class="text-sm font-medium" style="color: var(--text-heading)">Export Report</span>
+   493→                    <i class="ph-bold ph-download-simple text-text-dim"></i>
+   494→                </button>
+   495→            </div>
+   496→
+   497→            <div class="mt-8 text-center pb-4">
+   498→                <p class="text-[10px] text-text-muted">Grain Monitor v1.0</p>
+   499→            </div>
+   500→        </div>
+   501→    </main>
+   502→
+   503→    <!-- Bottom Nav -->
+   504→    <nav class="glass-nav shrink-0 px-6 pb-8 pt-3">
+   505→        <div class="flex justify-around items-center">
+   506→            <button onclick="switchTab('home')" class="nav-btn active flex flex-col items-center gap-1 px-6 py-1 active:scale-95 transition-transform" data-tab="home">
+   507→                <i class="ph-fill ph-house text-2xl"></i>
+   508→            </button>
+   509→            <button onclick="switchTab('history')" class="nav-btn flex flex-col items-center gap-1 px-6 py-1 active:scale-95 transition-transform" data-tab="history">
+   510→                <i class="ph-bold ph-clock-counter-clockwise text-2xl"></i>
+   511→            </button>
+   512→            <button onclick="switchTab('settings')" class="nav-btn flex flex-col items-center gap-1 px-6 py-1 active:scale-95 transition-transform" data-tab="settings">
+   513→                <i class="ph-bold ph-gear text-2xl"></i>
+   514→            </button>
+   515→        </div>
+   516→    </nav>
+   517→</div>
+   518→
+   519→<script>
+   520→    let isConnected = false;
+   521→    let toastTimer;
+   522→    let currentTheme = 'safe';
+   523→
+   524→    const sparkData = {
+   525→        safe: [45, 42, 48, 44, 46, 43, 47, 45, 44, 46, 43, 45],
+   526→        warning: [45, 48, 52, 55, 58, 56, 60, 62, 59, 63, 61, 64],
+   527→        critical: [45, 55, 65, 72, 78, 82, 85, 88, 86, 89, 87, 90]
+   528→    };
+   529→
+   530→    function drawSparkline(data) {
+   531→        const width = 300, height = 60, padding = 4;
+   532→        const max = Math.max(...data), min = Math.min(...data);
+   533→        const range = max - min || 1;
+   534→
+   535→        let path = '';
+   536→        let fillPath = '';
+   537→
+   538→        data.forEach((val, i) => {
+   539→            const x = (i / (data.length - 1)) * width;
+   540→            const y = height - padding - ((val - min) / range) * (height - padding * 2);
+   541→            path += (i === 0 ? 'M' : 'L') + x + ',' + y;
+   542→            if (i === 0) fillPath = 'M' + x + ',' + (height) + ' L' + x + ',' + y;
+   543→            else fillPath += ' L' + x + ',' + y;
+   544→        });
+   545→        fillPath += ' L' + width + ',' + height + ' Z';
+   546→
+   547→        document.getElementById('sparkPath').setAttribute('d', path);
+   548→        document.getElementById('sparkFill').setAttribute('d', fillPath);
+   549→    }
+   550→
+   551→    function showToast(msg) {
+   552→        const t = document.getElementById('toast');
+   553→        t.textContent = msg;
+   554→        t.classList.add('show');
+   555→        clearTimeout(toastTimer);
+   556→        toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+   557→    }
+   558→
+   559→    function switchTab(id) {
+   560→        document.getElementById('mainScroll').scrollTop = 0;
+   561→        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+   562→        document.getElementById('tab-' + id).classList.add('active');
+   563→        document.querySelectorAll('.nav-btn').forEach(b => {
+   564→            const icon = b.querySelector('i');
+   565→            if (b.dataset.tab === id) {
+   566→                b.classList.add('active');
+   567→                icon.classList.replace('ph-bold', 'ph-fill');
+   568→            } else {
+   569→                b.classList.remove('active');
+   570→                icon.classList.replace('ph-fill', 'ph-bold');
+   571→            }
+   572→        });
+   573→    }
+   574→
+   575→    function simulateConnection() {
+   576→        document.getElementById('state-disconnected').classList.remove('active');
+   577→        document.getElementById('state-connecting').classList.add('active');
+   578→        document.getElementById('headerStatus').textContent = 'Pairing...';
+   579→        document.getElementById('headerStatus').style.color = 'var(--warn)';
+   580→
+   581→        setTimeout(() => {
+   582→            isConnected = true;
+   583→            document.getElementById('state-connecting').classList.remove('active');
+   584→            document.getElementById('state-connected').classList.add('active');
+   585→            document.getElementById('batteryLevel').textContent = '82';
+   586→            document.getElementById('batteryIcon').style.color = 'var(--accent)';
+   587→            showToast('GRAIN-01 connected');
+   588→            setCondition('safe');
+   589→        }, 1500);
+   590→    }
+   591→
+   592→    function disconnectDevice() {
+   593→        isConnected = false;
+   594→        switchTab('home');
+   595→        document.getElementById('state-connected').classList.remove('active');
+   596→        document.getElementById('state-connecting').classList.remove('active');
+   597→        document.getElementById('state-disconnected').classList.add('active');
+   598→        document.getElementById('headerStatus').textContent = 'Offline';
+   599→        document.getElementById('headerStatus').style.color = '';
+   600→        document.getElementById('batteryLevel').textContent = '--';
+   601→        document.getElementById('batteryIcon').style.color = '';
+   602→        showToast('Device disconnected');
+   603→    }
+   604→
+   605→    function setCondition(state) {
+   606→        if (!isConnected) {
+   607→            isConnected = true;
+   608→            document.getElementById('state-disconnected').classList.remove('active');
+   609→            document.getElementById('state-connected').classList.add('active');
+   610→            document.getElementById('batteryLevel').textContent = '82';
+   611→            document.getElementById('batteryIcon').style.color = 'var(--accent)';
+   612→        }
+   613→
+   614→        currentTheme = state;
+   615→        document.body.setAttribute('data-theme', state);
+   616→        drawSparkline(sparkData[state]);
+   617→
+   618→        const heroValue = document.getElementById('heroValue');
+   619→        const heroBadge = document.getElementById('heroBadge');
+   620→        const tempValue = document.getElementById('tempValue');
+   621→        const insightTitle = document.getElementById('insightTitle');
+   622→        const insightText = document.getElementById('insightText');
+   623→        const headerStatus = document.getElementById('headerStatus');
+   624→        const iconContainer = document.getElementById('insightIcon');
+   625→
+   626→        if (state === 'safe') {
+   627→            headerStatus.textContent = 'Safe';
+   628→            heroValue.textContent = '12.8';
+   629→            heroBadge.textContent = 'STABLE';
+   630→            tempValue.textContent = '28';
+   631→            insightTitle.textContent = 'Storage is Safe';
+   632→            insightText.textContent = 'Readings stable for 72 hours. No action required.';
+   633→            iconContainer.innerHTML = '<i class="ph-fill ph-check-circle text-lg" style="color: var(--accent);"></i>';
+   634→        } else if (state === 'warning') {
+   635→            headerStatus.textContent = 'Warning';
+   636→            heroValue.textContent = '14.5';
+   637→            heroBadge.textContent = 'RISING';
+   638→            tempValue.textContent = '30';
+   639→            insightTitle.textContent = 'Temperature Rising';
+   640→            insightText.textContent = 'Grain is dry but ambient temp is elevated. Ensure ventilation.';
+   641→            iconContainer.innerHTML = '<i class="ph-fill ph-warning text-lg" style="color: var(--accent);"></i>';
+   642→        } else if (state === 'critical') {
+   643→            headerStatus.textContent = 'Critical';
+   644→            heroValue.textContent = '17.2';
+   645→            heroBadge.textContent = 'CRITICAL';
+   646→            tempValue.textContent = '32';
+   647→            insightTitle.textContent = 'Fungi Risk Detected';
+   648→            insightText.textContent = 'Moisture critically high. Dry grain immediately to prevent spoilage.';
+   649→            iconContainer.innerHTML = '<i class="ph-fill ph-warning-circle text-lg" style="color: var(--accent);"></i>';
+   650→        }
+   651→    }
+   652→
+   653→    // Init display
+   654→    drawSparkline(sparkData.safe);
+   655→</script>
+   656→
+   657→</body>
+   658→</html>
+   659→
