@@ -3,9 +3,11 @@
 import { useGrainStore } from '@/lib/grain-store';
 import { getDiscoverContent } from '@/lib/discover-content';
 import { YoutubeLogo, ArrowSquareOut, PlayCircle } from '@phosphor-icons/react/dist/ssr';
+import { t } from '@/lib/i18n';
 
 export function DiscoverTab() {
   const { decision, settings, deviceState } = useGrainStore();
+  const lang = settings.language as 'en' | 'hi' | 'mr' | 'hinglish';
 
   const grainType = settings.grainType;
   const condition = decision?.state || 'safe';
@@ -13,25 +15,32 @@ export function DiscoverTab() {
 
   const isConnected = deviceState !== 'disconnected' && deviceState !== 'connecting';
 
+  const conditionLabel =
+    condition === 'safe'
+      ? t('discover.condition_normal', lang)
+      : condition === 'warn'
+        ? t('discover.condition_elevated', lang)
+        : t('discover.condition_critical', lang);
+
   return (
     <div className="pt-2 pb-6 grain-fade-in">
-      <h2 className="text-2xl font-bold tracking-tight mb-1" style={{ color: '#f4f4f5' }}>
-        Discover
+      <h2 className="text-2xl font-bold tracking-tight mb-1" style={{ color: 'var(--gm-text-primary)' }}>
+        {t('discover.title', lang)}
       </h2>
-      <p className="text-sm mb-5" style={{ color: '#a1a1aa' }}>
+      <p className="text-sm mb-5" style={{ color: 'var(--gm-text-secondary)' }}>
         {isConnected
-          ? `Content for {grainType} · ${condition === 'safe' ? 'Normal' : condition === 'warn' ? 'Elevated' : 'Critical'} condition`
-          : 'Connect a probe for personalised recommendations'}
+          ? `${grainType} · ${conditionLabel}`
+          : t('discover.disconnected_desc', lang)}
       </p>
 
       {isConnected && (
         <div className="grain-insight-card mb-5">
-          <p className="text-xs leading-relaxed" style={{ color: '#a1a1aa' }}>
+          <p className="text-xs leading-relaxed" style={{ color: 'var(--gm-text-secondary)' }}>
             {condition === 'critical'
-              ? 'Your current readings are critical. These resources focus on emergency response and damage prevention.'
+              ? t('discover.connected_desc_critical', lang)
               : condition === 'warn'
-                ? 'Readings are elevated. These resources help you understand and respond to changing conditions.'
-                : 'Conditions are stable. Use this time to learn and prepare for seasonal changes.'}
+                ? t('discover.connected_desc_warn', lang)
+                : t('discover.connected_desc_safe', lang)}
           </p>
         </div>
       )}
@@ -61,18 +70,18 @@ export function DiscoverTab() {
             )}
             <div className="p-4">
               <div className="flex items-start justify-between gap-3 mb-2">
-                <h3 className="text-sm font-bold tracking-tight leading-snug" style={{ color: '#f4f4f5' }}>
+                <h3 className="text-sm font-bold tracking-tight leading-snug" style={{ color: 'var(--gm-text-primary)' }}>
                   {video.title}
                 </h3>
-                <ArrowSquareOut size={16} weight="bold" style={{ color: '#71717a', flexShrink: 0, marginTop: 2 }} />
+                <ArrowSquareOut size={16} weight="bold" style={{ color: 'var(--gm-text-tertiary)', flexShrink: 0, marginTop: 2 }} />
               </div>
               <div className="flex items-center gap-2 mb-2">
                 <YoutubeLogo size={14} weight="fill" style={{ color: '#EF4444' }} />
-                <span className="text-[11px]" style={{ color: '#71717a' }}>
+                <span className="text-[11px]" style={{ color: 'var(--gm-text-tertiary)' }}>
                   {video.source}
                 </span>
               </div>
-              <p className="text-[11px] leading-relaxed" style={{ color: '#a1a1aa' }}>
+              <p className="text-[11px] leading-relaxed" style={{ color: 'var(--gm-text-secondary)' }}>
                 {video.why}
               </p>
             </div>
@@ -83,10 +92,10 @@ export function DiscoverTab() {
       {videos.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 grain-card">
-            <YoutubeLogo size={24} weight="bold" style={{ color: '#71717a' }} />
+            <YoutubeLogo size={24} weight="bold" style={{ color: 'var(--gm-text-tertiary)' }} />
           </div>
-          <p className="text-sm" style={{ color: '#a1a1aa' }}>
-            No recommendations available for this combination yet.
+          <p className="text-sm" style={{ color: 'var(--gm-text-secondary)' }}>
+            {t('discover.no_results', lang)}
           </p>
         </div>
       )}

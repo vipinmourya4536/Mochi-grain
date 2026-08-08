@@ -55,3 +55,41 @@ Stage Summary:
 - Grain profiles auto-apply on selection, re-simulate if connected
 - Dummy engine ready for drop-in replacement with real Mochi engine
 - Discover shows real YouTube videos with proper thumbnails
+
+---
+Task ID: 3
+Agent: Main
+Task: Add glass morphism, floating pill nav, accent colors, light mode, i18n language system
+
+Work Log:
+- Created comprehensive i18n translation system (src/lib/i18n.ts) with 4 languages: English, Hindi (हिन्दी), Marathi (मराठी), Hinglish. ~100 translation keys per language.
+- Created language selector component (src/components/grain/language-selector.tsx) with glass morphism panel, save-tick for Hindi/Hinglish that saves + reloads, sessionStorage-based BLE state preservation across reload.
+- Added AccentColor type ('orange'|'green'|'purple'|'blue'|'teal') and AppTheme type ('dark'|'light') to grain-types.ts
+- Added accentColor and theme and language fields to AppSettings with defaults (orange, dark, en)
+- Completely rewrote globals.css with liquid glass design system:
+  - CSS custom properties for 5 accent colors in both dark and light modes
+  - Grain theme safe state now uses accent color instead of fixed orange
+  - Full light mode with inverted surfaces, borders, and text colors
+  - Floating pill bottom nav with backdrop-blur, border-radius 999px, shimmer gradient
+  - Glass header with backdrop-blur and highlight gradient
+  - Glass cards with blur and subtle highlight
+  - Custom range input styling with accent color
+  - Language panel with slide-down animation and glass background
+  - Accent color picker dots with ring selection indicator
+  - grain-separator utility class
+- Redesigned header: glass morphism background, language button, translated labels
+- Redesigned bottom nav: floating pill shape, icon + label, active state with accent background pill, positioned absolutely with bottom margin
+- Updated ALL components (14 files) to use i18n t() function and CSS custom properties instead of hardcoded colors
+- Settings tab now has: Theme toggle (dark/light with sun/moon icon), Accent color picker (5 colors with dot selector), all existing settings translated
+- Updated page.tsx with data-accent and data-theme attributes on grain-app div, auto-reconnect after language reload
+
+Stage Summary:
+- Liquid glass effects on header, cards, nav, and all UI surfaces
+- Floating pill bottom navigation with labels and active accent pill
+- 5 selectable accent colors (orange, green, purple, blue, teal) that dynamically theme the entire app
+- Full light mode support with properly inverted glass effects
+- 4-language i18n system (English, Hindi, Marathi, Hinglish) with native script labels
+- Hindi and Hinglish require explicit save tick button before reload
+- BLE connection auto-restores after language change reload via sessionStorage
+- All translations verified working across all tabs
+- Clean lint, zero runtime errors

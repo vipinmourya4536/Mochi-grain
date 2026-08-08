@@ -8,6 +8,8 @@ import {
   BatteryLow,
   BatteryMedium,
 } from '@phosphor-icons/react/dist/ssr';
+import { t } from '@/lib/i18n';
+import { LanguageSelector } from './language-selector';
 
 function BatteryIndicator({ level, accentColor }: { level: number; accentColor: string }) {
   const Icon =
@@ -26,7 +28,7 @@ function BatteryIndicator({ level, accentColor }: { level: number; accentColor: 
       />
       <span
         className="text-[11px] font-bold"
-        style={{ color: level < 20 ? '#EF4444' : '#a1a1aa' }}
+        style={{ color: level < 20 ? '#EF4444' : 'var(--gm-text-tertiary)' }}
       >
         {level}%
       </span>
@@ -35,13 +37,14 @@ function BatteryIndicator({ level, accentColor }: { level: number; accentColor: 
 }
 
 export function Header() {
-  const { deviceState, deviceInfo, statusBadge, riskTheme } = useGrainStore();
+  const { deviceState, deviceInfo, statusBadge, riskTheme, settings } = useGrainStore();
+  const lang = settings.language as 'en' | 'hi' | 'mr' | 'hinglish';
 
   const statusLabel =
     deviceState === 'disconnected'
-      ? 'Offline'
+      ? t('status.offline', lang)
       : deviceState === 'connecting'
-        ? 'Pairing...'
+        ? t('status.pairing', lang)
         : statusBadge;
 
   const accentColor =
@@ -49,28 +52,33 @@ export function Header() {
       ? '#EF4444'
       : riskTheme === 'warn'
         ? '#F59E0B'
-        : '#F97316';
+        : 'var(--gm-accent)';
 
   return (
-    <header className="px-5 pt-14 pb-3 flex justify-between items-center shrink-0">
-      <div className="flex items-center gap-3">
-        <div className="w-2 h-2 rounded-full grain-status-dot" />
-        <div>
-          <h1
-            className="text-[11px] font-bold tracking-[0.2em] uppercase"
-            style={{ color: '#f4f4f5' }}
-          >
-            Grain Monitor
-          </h1>
-          <p
-            className="text-[10px] mt-0.5 font-medium tracking-wide transition-colors duration-500"
-            style={{ color: accentColor }}
-          >
-            {statusLabel}
-          </p>
+    <>
+      <header className="grain-glass-header px-5 pt-14 pb-3 flex justify-between items-center shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-2 h-2 rounded-full grain-status-dot" />
+          <div>
+            <h1
+              className="text-[11px] font-bold tracking-[0.2em] uppercase"
+              style={{ color: 'var(--gm-text-primary)' }}
+            >
+              {t('app.title', lang)}
+            </h1>
+            <p
+              className="text-[10px] mt-0.5 font-medium tracking-wide transition-colors duration-500"
+              style={{ color: accentColor }}
+            >
+              {statusLabel}
+            </p>
+          </div>
         </div>
-      </div>
-      {deviceInfo && <BatteryIndicator level={deviceInfo.battery} accentColor={accentColor} />}
-    </header>
+        <div className="flex items-center gap-2.5">
+          {deviceInfo && <BatteryIndicator level={deviceInfo.battery} accentColor={accentColor} />}
+          <LanguageSelector />
+        </div>
+      </header>
+    </>
   );
 }

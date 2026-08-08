@@ -89,6 +89,10 @@ export interface GrainThresholds {
   tempCritical: number;
 }
 
+export type AccentColor = 'orange' | 'green' | 'purple' | 'blue' | 'teal';
+
+export type AppTheme = 'dark' | 'light';
+
 export interface AppSettings {
   autoReconnect: boolean;
   pushAlerts: boolean;
@@ -97,6 +101,9 @@ export interface AppSettings {
   thresholds: GrainThresholds;
   historyRetention: number; // days
   wakeOnConnect: boolean;
+  accentColor: AccentColor;
+  theme: AppTheme;
+  language: string; // AppLanguage code
 }
 
 export const DEFAULT_THRESHOLDS: GrainThresholds = {
@@ -129,6 +136,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   thresholds: GRAIN_PROFILES.wheat,
   historyRetention: 90,
   wakeOnConnect: true,
+  accentColor: 'orange',
+  theme: 'dark',
+  language: 'en',
 };
 
 /* Grain label map */

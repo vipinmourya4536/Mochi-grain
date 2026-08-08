@@ -8,9 +8,11 @@ import {
   Moon,
   ArrowsClockwise,
 } from '@phosphor-icons/react/dist/ssr';
+import { t } from '@/lib/i18n';
 
 export function InsightCard() {
-  const { decision, deviceState } = useGrainStore();
+  const { decision, deviceState, settings } = useGrainStore();
+  const lang = settings.language as 'en' | 'hi' | 'mr' | 'hinglish';
 
   // Handle non-connected states
   if (deviceState === 'sleeping') {
@@ -21,11 +23,11 @@ export function InsightCard() {
             <Moon size={20} weight="fill" style={{ color: 'var(--gm-accent)' }} />
           </div>
           <div>
-            <h3 className="font-bold text-sm mb-1 tracking-tight" style={{ color: '#f4f4f5' }}>
-              Probe Sleeping
+            <h3 className="font-bold text-sm mb-1 tracking-tight" style={{ color: 'var(--gm-text-primary)' }}>
+              {t('insight.probe_sleeping', lang)}
             </h3>
-            <p className="text-xs leading-relaxed" style={{ color: '#a1a1aa' }}>
-              The probe is sleeping to save power. Readings will resume on wake.
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--gm-text-secondary)' }}>
+              {t('insight.probe_sleeping_desc', lang)}
             </p>
           </div>
         </div>
@@ -41,11 +43,11 @@ export function InsightCard() {
             <ArrowsClockwise size={20} weight="fill" style={{ color: 'var(--gm-accent)' }} className="grain-pulse" />
           </div>
           <div>
-            <h3 className="font-bold text-sm mb-1 tracking-tight" style={{ color: '#f4f4f5' }}>
-              Syncing History
+            <h3 className="font-bold text-sm mb-1 tracking-tight" style={{ color: 'var(--gm-text-primary)' }}>
+              {t('insight.syncing_history', lang)}
             </h3>
-            <p className="text-xs leading-relaxed" style={{ color: '#a1a1aa' }}>
-              Retrieving stored readings from the probe. This may take a moment.
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--gm-text-secondary)' }}>
+              {t('insight.syncing_history_desc', lang)}
             </p>
           </div>
         </div>
@@ -64,10 +66,10 @@ export function InsightCard() {
 
   const title =
     decision.state === 'critical'
-      ? 'Action Required'
+      ? t('insight.action_required', lang)
       : decision.state === 'warn'
-        ? 'Attention Needed'
-        : 'Storage is Safe';
+        ? t('insight.attention', lang)
+        : t('insight.storage_safe', lang);
 
   return (
     <div className="grain-insight-card grain-fade-in">
@@ -76,13 +78,13 @@ export function InsightCard() {
           <IconComponent size={20} weight="fill" style={{ color: 'var(--gm-accent)' }} />
         </div>
         <div>
-          <h3 className="font-bold text-sm mb-1 tracking-tight" style={{ color: '#f4f4f5' }}>
+          <h3 className="font-bold text-sm mb-1 tracking-tight" style={{ color: 'var(--gm-text-primary)' }}>
             {title}
           </h3>
-          <p className="text-xs leading-relaxed" style={{ color: '#a1a1aa' }}>
+          <p className="text-xs leading-relaxed" style={{ color: 'var(--gm-text-secondary)' }}>
             {decision.message}
           </p>
-          <p className="text-[10px] mt-2 leading-relaxed" style={{ color: '#71717a' }}>
+          <p className="text-[10px] mt-2 leading-relaxed" style={{ color: 'var(--gm-text-tertiary)' }}>
             {decision.action}
           </p>
         </div>

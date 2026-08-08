@@ -4,10 +4,20 @@ import { useGrainStore } from '@/lib/grain-store';
 import { isSimulating } from '@/lib/bluetooth';
 import {
   Cpu, DownloadSimple, ArrowClockwise, Trash, Power, Wrench,
+  Sun, Moon, Palette,
 } from '@phosphor-icons/react/dist/ssr';
-import { GRAIN_LABELS, GRAIN_PROFILES, type GrainType } from '@/lib/grain-types';
+import { GRAIN_LABELS, type GrainType, type AccentColor } from '@/lib/grain-types';
+import { t } from '@/lib/i18n';
 
 const GRAIN_OPTIONS: GrainType[] = ['wheat', 'rice', 'corn', 'barley', 'soybean', 'sorghum', 'oats', 'millet', 'other'];
+
+const ACCENT_COLORS: { value: AccentColor; color: string; labelKey: string }[] = [
+  { value: 'orange', color: '#F97316', labelKey: 'accent.orange' },
+  { value: 'green', color: '#22C55E', labelKey: 'accent.green' },
+  { value: 'purple', color: '#A855F7', labelKey: 'accent.purple' },
+  { value: 'blue', color: '#3B82F6', labelKey: 'accent.blue' },
+  { value: 'teal', color: '#14B8A6', labelKey: 'accent.teal' },
+];
 
 export function SettingsTab() {
   const {
@@ -17,30 +27,109 @@ export function SettingsTab() {
     hasDevice,
   } = useGrainStore();
 
-  // Show probe controls whenever we have a device (even during syncing/connecting after first connect)
+  const lang = settings.language as 'en' | 'hi' | 'mr' | 'hinglish';
   const hasConnection = hasDevice;
   const simRunning = isSimulating();
+  const isLight = settings.theme === 'light';
 
   return (
     <div className="pt-2 pb-6 grain-fade-in">
-      <h2 className="text-2xl font-bold tracking-tight mb-1" style={{ color: '#f4f4f5' }}>
-        Settings
+      <h2 className="text-2xl font-bold tracking-tight mb-1" style={{ color: 'var(--gm-text-primary)' }}>
+        {t('settings.title', lang)}
       </h2>
-      <p className="text-sm mb-6" style={{ color: '#a1a1aa' }}>
-        Device & preferences
+      <p className="text-sm mb-6" style={{ color: 'var(--gm-text-secondary)' }}>
+        {t('settings.desc', lang)}
       </p>
 
-      {/* Device Card */}
-      <div className="grain-card p-5 mb-6 shadow-sm">
+      {/* ─── Theme Toggle (Dark/Light) ─── */}
+      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('theme.title', lang)}
+      </p>
+      <div className="grain-card overflow-hidden mb-6">
+        <button
+          onClick={() => updateSettings({ theme: isLight ? 'dark' : 'light' })}
+          className="w-full flex justify-between items-center px-5 py-4 text-left"
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: 'var(--gm-accent-dim)' }}
+            >
+              {isLight
+                ? <Moon size={18} weight="bold" style={{ color: 'var(--gm-accent)' }} />
+                : <Sun size={18} weight="bold" style={{ color: 'var(--gm-accent)' }} />}
+            </div>
+            <div>
+              <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>
+                {isLight ? t('theme.light', lang) : t('theme.dark', lang)}
+              </span>
+              <p className="text-[10px] mt-0.5" style={{ color: 'var(--gm-text-tertiary)' }}>
+                Tap to switch
+              </p>
+            </div>
+          </div>
+          <div className="w-11 h-6 rounded-full relative" style={{ background: isLight ? 'var(--gm-accent)' : 'var(--gm-toggle-bg)', border: `1px solid ${isLight ? 'var(--gm-accent)' : 'var(--gm-toggle-border)'}` }}>
+            <div
+              className="w-5 h-5 rounded-full absolute top-0.5 transition-all"
+              style={{
+                left: isLight ? '22px' : '2px',
+                background: isLight ? '#fff' : 'var(--gm-toggle-thumb)',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+              }}
+            />
+          </div>
+        </button>
+      </div>
+
+      {/* ─── Accent Color Picker ───*/}
+      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('accent.title', lang)}
+      </p>
+      <div className="grain-card p-4 mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: 'var(--gm-accent-dim)' }}
+            >
+              <Palette size={18} weight="bold" style={{ color: 'var(--gm-accent)' }} />
+            </div>
+            <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>
+              {t('accent.title', lang)}
+            </span>
+          </div>
+        </div>
+        <div className="flex justify-between mt-4 px-1">
+          {ACCENT_COLORS.map((a) => (
+            <div key={a.value} className="flex flex-col items-center gap-1.5">
+              <button
+                onClick={() => updateSettings({ accentColor: a.value })}
+                className={`grain-accent-dot ${settings.accentColor === a.value ? 'selected' : ''}`}
+                style={{ background: a.color }}
+                aria-label={t(a.labelKey, lang)}
+              />
+              <span className="text-[9px] font-medium" style={{ color: settings.accentColor === a.value ? 'var(--gm-accent)' : 'var(--gm-text-tertiary)' }}>
+                {t(a.labelKey, lang)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ─── Device Card ─── */}
+      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('settings.device', lang)}
+      </p>
+      <div className="grain-card p-5 mb-6">
         <div className="flex items-center gap-4 mb-5">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: '#27272a', border: '1px solid #3f3f46' }}>
-            <Cpu size={22} weight="bold" style={{ color: '#a1a1aa' }} />
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'var(--gm-toggle-bg)', border: '1px solid var(--gm-toggle-border)' }}>
+            <Cpu size={22} weight="bold" style={{ color: 'var(--gm-text-secondary)' }} />
           </div>
           <div>
-            <h3 className="font-bold text-sm tracking-tight" style={{ color: '#f4f4f5' }}>
+            <h3 className="font-bold text-sm tracking-tight" style={{ color: 'var(--gm-text-primary)' }}>
               {deviceInfo?.name || 'GRAIN-01'}
             </h3>
-            <p className="text-[11px] mt-0.5" style={{ color: '#a1a1aa' }}>
+            <p className="text-[11px] mt-0.5" style={{ color: 'var(--gm-text-secondary)' }}>
               {deviceInfo?.firmware || 'FW v1.2.4'} · {deviceInfo?.platform || 'ESP32'}
             </p>
           </div>
@@ -52,9 +141,9 @@ export function SettingsTab() {
               await sendProbeCommand('calibrate');
             }}
             className="flex-1 font-bold text-xs py-3.5 rounded-xl active:scale-95 transition-all tracking-wide"
-            style={{ background: '#e4e4e7', color: '#09090b' }}
+            style={{ background: 'var(--gm-btn-primary-bg)', color: 'var(--gm-btn-primary-text)' }}
           >
-            CALIBRATE
+            {t('settings.calibrate', lang)}
           </button>
           {hasConnection ? (
             <button
@@ -73,9 +162,9 @@ export function SettingsTab() {
               onClick={() => simulateConnect()}
               className="px-4 py-3.5 rounded-xl active:scale-95 transition-all font-bold text-xs"
               style={{
-                background: '#27272a',
-                color: '#a1a1aa',
-                border: '1px solid #3f3f46',
+                background: 'var(--gm-toggle-bg)',
+                color: 'var(--gm-text-secondary)',
+                border: '1px solid var(--gm-toggle-border)',
               }}
             >
               <ArrowClockwise size={18} weight="bold" />
@@ -84,43 +173,43 @@ export function SettingsTab() {
         </div>
       </div>
 
-      {/* Probe Commands – visible whenever device has been connected */}
+      {/* ─── Probe Controls ───*/}
       {hasConnection && (
         <>
-          <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: '#71717a' }}>
-            Probe Controls
+          <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
+            {t('settings.probe_controls', lang)}
           </p>
           <div className="grain-card overflow-hidden mb-6">
             <button
               onClick={syncProbeHistory}
               className="w-full flex justify-between items-center px-5 py-4 transition-colors text-left"
-              style={{ color: '#f4f4f5' }}
+              style={{ color: 'var(--gm-text-primary)' }}
             >
               <div className="flex items-center gap-3">
-                <ArrowClockwise size={18} weight="bold" style={{ color: '#a1a1aa' }} />
-                <span className="text-sm font-medium">Sync History</span>
+                <ArrowClockwise size={18} weight="bold" style={{ color: 'var(--gm-text-secondary)' }} />
+                <span className="text-sm font-medium">{t('settings.sync_history', lang)}</span>
               </div>
-              <span className="text-[11px]" style={{ color: '#71717a' }}>Pull old readings</span>
+              <span className="text-[11px]" style={{ color: 'var(--gm-text-tertiary)' }}>{t('settings.sync_history_desc', lang)}</span>
             </button>
-            <div style={{ height: 1, background: '#27272a' }} />
+            <div className="grain-separator" />
             <button
               onClick={() => sendProbeCommand('wake')}
               className="w-full flex justify-between items-center px-5 py-4 transition-colors text-left"
-              style={{ color: '#f4f4f5' }}
+              style={{ color: 'var(--gm-text-primary)' }}
             >
               <div className="flex items-center gap-3">
-                <Wrench size={18} weight="bold" style={{ color: '#a1a1aa' }} />
-                <span className="text-sm font-medium">Wake Probe</span>
+                <Wrench size={18} weight="bold" style={{ color: 'var(--gm-text-secondary)' }} />
+                <span className="text-sm font-medium">{t('settings.wake_probe', lang)}</span>
               </div>
-              <span className="text-[11px]" style={{ color: '#71717a' }}>Exit sleep mode</span>
+              <span className="text-[11px]" style={{ color: 'var(--gm-text-tertiary)' }}>{t('settings.wake_probe_desc', lang)}</span>
             </button>
           </div>
         </>
       )}
 
-      {/* Simulation Controls */}
-      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: '#71717a' }}>
-        Demo States
+      {/* ─── Simulation / Demo States ───*/}
+      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('settings.demo_states', lang)}
       </p>
       <div className="grain-card p-2 flex gap-2 mb-6">
         {(['safe', 'warn', 'critical'] as const).map((mode) => (
@@ -135,17 +224,18 @@ export function SettingsTab() {
             }}
             className="flex-1 py-3 rounded-xl text-[11px] font-bold tracking-wide uppercase active:scale-95 transition-all"
             style={{
-              color: mode === 'safe' ? '#F97316' : mode === 'warn' ? '#F59E0B' : '#EF4444',
+              color: mode === 'safe' ? 'var(--gm-accent)' : mode === 'warn' ? '#F59E0B' : '#EF4444',
+              background: mode === 'safe' ? 'var(--gm-accent-dim)' : mode === 'warn' ? 'rgba(245, 158, 11, 0.08)' : 'rgba(239, 68, 68, 0.08)',
             }}
           >
-            {mode === 'critical' ? 'Critical' : mode.charAt(0).toUpperCase() + mode.slice(1)}
+            {mode === 'critical' ? t('settings.critical', lang) : mode === 'warn' ? t('settings.warn', lang) : t('settings.safe', lang)}
           </button>
         ))}
       </div>
 
-      {/* Grain Type – selecting grain updates calibration profile */}
-      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: '#71717a' }}>
-        Grain Type
+      {/* ─── Grain Type ───*/}
+      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('settings.grain_type', lang)}
       </p>
       <div className="grain-card p-2 flex flex-wrap gap-2 mb-6">
         {GRAIN_OPTIONS.map((g) => {
@@ -157,7 +247,7 @@ export function SettingsTab() {
               className="px-3 py-2 rounded-xl text-[11px] font-bold tracking-wide transition-all"
               style={{
                 background: isActive ? 'var(--gm-accent)' : 'transparent',
-                color: isActive ? '#fff' : '#a1a1aa',
+                color: isActive ? '#fff' : 'var(--gm-text-secondary)',
               }}
             >
               {GRAIN_LABELS[g]}
@@ -166,19 +256,19 @@ export function SettingsTab() {
         })}
       </div>
 
-      {/* Thresholds – these come from the grain profile */}
-      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: '#71717a' }}>
-        Moisture Thresholds (%)
+      {/* ─── Thresholds ───*/}
+      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('settings.thresholds', lang)}
       </p>
-      <p className="text-[10px] mb-2 px-1" style={{ color: '#71717a' }}>
-        Auto-set from grain profile. Drag to fine-tune.
+      <p className="text-[10px] mb-2 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('settings.thresholds_desc', lang)}
       </p>
       <div className="grain-card p-4 mb-6">
         <div className="space-y-4">
           <div>
             <div className="flex justify-between mb-1">
-              <span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: '#F97316' }}>Safe</span>
-              <span className="text-sm font-bold" style={{ color: '#f4f4f5' }}>&lt; {settings.thresholds.safe}%</span>
+              <span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: 'var(--gm-accent)' }}>{t('settings.safe', lang)}</span>
+              <span className="text-sm font-bold" style={{ color: 'var(--gm-text-primary)' }}>&lt; {settings.thresholds.safe}%</span>
             </div>
             <input
               type="range" min="8" max="25" step="0.5"
@@ -186,13 +276,13 @@ export function SettingsTab() {
               onChange={(e) => updateSettings({
                 thresholds: { ...settings.thresholds, safe: parseFloat(e.target.value) }
               })}
-              className="w-full accent-orange-500 h-1.5"
+              className="w-full grain-range h-1.5"
             />
           </div>
           <div>
             <div className="flex justify-between mb-1">
-              <span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: '#F59E0B' }}>Warning</span>
-              <span className="text-sm font-bold" style={{ color: '#f4f4f5' }}>&gt; {settings.thresholds.warn}%</span>
+              <span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: '#F59E0B' }}>{t('settings.warn', lang)}</span>
+              <span className="text-sm font-bold" style={{ color: 'var(--gm-text-primary)' }}>&gt; {settings.thresholds.warn}%</span>
             </div>
             <input
               type="range" min="8" max="30" step="0.5"
@@ -200,13 +290,13 @@ export function SettingsTab() {
               onChange={(e) => updateSettings({
                 thresholds: { ...settings.thresholds, warn: parseFloat(e.target.value) }
               })}
-              className="w-full accent-amber-500 h-1.5"
+              className="w-full grain-range h-1.5"
             />
           </div>
           <div>
             <div className="flex justify-between mb-1">
-              <span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: '#EF4444' }}>Critical</span>
-              <span className="text-sm font-bold" style={{ color: '#f4f4f5' }}>&gt; {settings.thresholds.critical}%</span>
+              <span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: '#EF4444' }}>{t('settings.critical', lang)}</span>
+              <span className="text-sm font-bold" style={{ color: 'var(--gm-text-primary)' }}>&gt; {settings.thresholds.critical}%</span>
             </div>
             <input
               type="range" min="10" max="35" step="0.5"
@@ -214,45 +304,45 @@ export function SettingsTab() {
               onChange={(e) => updateSettings({
                 thresholds: { ...settings.thresholds, critical: parseFloat(e.target.value) }
               })}
-              className="w-full accent-red-500 h-1.5"
+              className="w-full grain-range h-1.5"
             />
           </div>
         </div>
       </div>
 
-      {/* Preferences */}
-      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: '#71717a' }}>
-        Preferences
+      {/* ─── Preferences ───*/}
+      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('settings.preferences', lang)}
       </p>
       <div className="grain-card overflow-hidden mb-6">
         <label className="flex justify-between items-center px-5 py-4 cursor-pointer">
-          <span className="text-sm font-medium" style={{ color: '#f4f4f5' }}>Push Alerts</span>
+          <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.push_alerts', lang)}</span>
           <input
             type="checkbox"
             checked={settings.pushAlerts}
             onChange={(e) => {
               updateSettings({ pushAlerts: e.target.checked });
-              showToast(e.target.checked ? 'Alerts enabled' : 'Alerts disabled');
+              showToast(e.target.checked ? t('toast.alerts_on', lang) : t('toast.alerts_off', lang));
             }}
             className="grain-toggle"
           />
         </label>
-        <div style={{ height: 1, background: '#27272a' }} />
+        <div className="grain-separator" />
         <label className="flex justify-between items-center px-5 py-4 cursor-pointer">
-          <span className="text-sm font-medium" style={{ color: '#f4f4f5' }}>Auto-sync</span>
+          <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.auto_sync', lang)}</span>
           <input
             type="checkbox"
             checked={settings.autoSync}
             onChange={(e) => {
               updateSettings({ autoSync: e.target.checked });
-              showToast(e.target.checked ? 'Auto-sync on' : 'Auto-sync off');
+              showToast(e.target.checked ? t('toast.autosync_on', lang) : t('toast.autosync_off', lang));
             }}
             className="grain-toggle"
           />
         </label>
-        <div style={{ height: 1, background: '#27272a' }} />
+        <div className="grain-separator" />
         <label className="flex justify-between items-center px-5 py-4 cursor-pointer">
-          <span className="text-sm font-medium" style={{ color: '#f4f4f5' }}>Auto-reconnect</span>
+          <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.auto_reconnect', lang)}</span>
           <input
             type="checkbox"
             checked={settings.autoReconnect}
@@ -262,9 +352,9 @@ export function SettingsTab() {
             className="grain-toggle"
           />
         </label>
-        <div style={{ height: 1, background: '#27272a' }} />
+        <div className="grain-separator" />
         <label className="flex justify-between items-center px-5 py-4 cursor-pointer">
-          <span className="text-sm font-medium" style={{ color: '#f4f4f5' }}>Wake on Connect</span>
+          <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.wake_on_connect', lang)}</span>
           <input
             type="checkbox"
             checked={settings.wakeOnConnect}
@@ -276,9 +366,9 @@ export function SettingsTab() {
         </label>
       </div>
 
-      {/* Export */}
-      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: '#71717a' }}>
-        Data
+      {/* ─── Export / Data ───*/}
+      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('settings.data', lang)}
       </p>
       <div className="grain-card overflow-hidden mb-6">
         <button
@@ -292,60 +382,60 @@ export function SettingsTab() {
               a.download = `grain-readings-${new Date().toISOString().split('T')[0]}.csv`;
               a.click();
               URL.revokeObjectURL(url);
-              showToast('CSV exported');
+              showToast(t('toast.csv_exported', lang));
             } catch {
-              showToast('Export failed');
+              showToast(t('toast.export_failed', lang));
             }
           }}
           className="w-full flex justify-between items-center px-5 py-4 text-left"
-          style={{ color: '#f4f4f5' }}
+          style={{ color: 'var(--gm-text-primary)' }}
         >
           <div className="flex items-center gap-3">
-            <DownloadSimple size={18} weight="bold" style={{ color: '#a1a1aa' }} />
-            <span className="text-sm font-medium">Export CSV</span>
+            <DownloadSimple size={18} weight="bold" style={{ color: 'var(--gm-text-secondary)' }} />
+            <span className="text-sm font-medium">{t('settings.export_csv', lang)}</span>
           </div>
-          <span className="text-[11px]" style={{ color: '#71717a' }}>Download</span>
+          <span className="text-[11px]" style={{ color: 'var(--gm-text-tertiary)' }}>{t('settings.download', lang)}</span>
         </button>
-        <div style={{ height: 1, background: '#27272a' }} />
+        <div className="grain-separator" />
         <button
           onClick={() => {
             clearHistory();
-            showToast('History cleared');
+            showToast(t('toast.history_cleared', lang));
           }}
           className="w-full flex justify-between items-center px-5 py-4 text-left"
           style={{ color: '#EF4444' }}
         >
           <div className="flex items-center gap-3">
             <Trash size={18} weight="bold" style={{ color: '#EF4444' }} />
-            <span className="text-sm font-medium">Clear History</span>
+            <span className="text-sm font-medium">{t('settings.clear_history', lang)}</span>
           </div>
-          <span className="text-[11px]" style={{ color: '#71717a' }}>Local only</span>
+          <span className="text-[11px]" style={{ color: 'var(--gm-text-tertiary)' }}>{t('settings.local_only', lang)}</span>
         </button>
       </div>
 
-      {/* About */}
-      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: '#71717a' }}>
-        About
+      {/* ─── About ───*/}
+      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('settings.about', lang)}
       </p>
       <div className="grain-card overflow-hidden mb-8">
         <div className="flex justify-between items-center px-5 py-4">
-          <span className="text-sm font-medium" style={{ color: '#f4f4f5' }}>App Version</span>
-          <span className="text-[11px]" style={{ color: '#a1a1aa' }}>v1.0.0</span>
+          <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.app_version', lang)}</span>
+          <span className="text-[11px]" style={{ color: 'var(--gm-text-secondary)' }}>v1.0.0</span>
         </div>
-        <div style={{ height: 1, background: '#27272a' }} />
+        <div className="grain-separator" />
         <div className="flex justify-between items-center px-5 py-4">
-          <span className="text-sm font-medium" style={{ color: '#f4f4f5' }}>Engine</span>
-          <span className="text-[11px]" style={{ color: '#a1a1aa' }}>Mochi Decision v1.0 (placeholder)</span>
+          <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.engine', lang)}</span>
+          <span className="text-[11px]" style={{ color: 'var(--gm-text-secondary)' }}>Mochi Decision v1.0</span>
         </div>
-        <div style={{ height: 1, background: '#27272a' }} />
+        <div className="grain-separator" />
         <div className="flex justify-between items-center px-5 py-4">
-          <span className="text-sm font-medium" style={{ color: '#f4f4f5' }}>Probe Firmware</span>
-          <span className="text-[11px]" style={{ color: '#a1a1aa' }}>{deviceInfo?.firmware || '--'}</span>
+          <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.probe_firmware', lang)}</span>
+          <span className="text-[11px]" style={{ color: 'var(--gm-text-secondary)' }}>{deviceInfo?.firmware || '--'}</span>
         </div>
       </div>
 
       <div className="text-center pb-4">
-        <p className="text-[10px]" style={{ color: '#71717a' }}>
+        <p className="text-[10px]" style={{ color: 'var(--gm-text-tertiary)' }}>
           Grain Monitor v1.0 · Built for ESP32
         </p>
       </div>
