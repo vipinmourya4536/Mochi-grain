@@ -70,7 +70,9 @@ export async function getRecentReadings(deviceId: string, count = 20): Promise<R
 /* ── History Entries (reading + decision) ── */
 export async function saveHistoryEntry(entry: HistoryEntry): Promise<void> {
   const db = await getDB();
-  await db.put('history', entry);
+  // Ensure top-level id for keyPath
+  const record = { ...entry, id: entry.reading.id };
+  await db.put('history', record);
 }
 
 export async function getHistoryEntries(deviceId?: string, limit = 100): Promise<HistoryEntry[]> {

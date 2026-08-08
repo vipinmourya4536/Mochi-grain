@@ -2,10 +2,10 @@
 
 import { useGrainStore } from '@/lib/grain-store';
 import { getDiscoverContent } from '@/lib/discover-content';
-import { YouTubeLogo, ArrowSquareOut } from '@phosphor-icons/react/dist/ssr';
+import { YoutubeLogo, ArrowSquareOut } from '@phosphor-icons/react/dist/ssr';
 
 export function DiscoverTab() {
-  const { decision, settings, deviceInfo, deviceState } = useGrainStore();
+  const { decision, settings, deviceState } = useGrainStore();
 
   const grainType = settings.grainType;
   const condition = decision?.state || 'safe';
@@ -52,7 +52,7 @@ export function DiscoverTab() {
                     {video.title}
                   </h3>
                   <div className="flex items-center gap-2">
-                    <YouTubeLogo size={14} weight="fill" style={{ color: '#EF4444' }} />
+                    <YoutubeLogo size={14} weight="fill" style={{ color: '#EF4444' }} />
                     <span className="text-[11px]" style={{ color: '#71717a' }}>
                       {video.source}
                     </span>
@@ -71,7 +71,7 @@ export function DiscoverTab() {
       {videos.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 grain-card">
-            <YouTubeLogo size={24} weight="bold" style={{ color: '#71717a' }} />
+            <YoutubeLogo size={24} weight="bold" style={{ color: '#71717a' }} />
           </div>
           <p className="text-sm" style={{ color: '#a1a1aa' }}>
             No recommendations available for this combination yet.

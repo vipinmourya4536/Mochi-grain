@@ -1,10 +1,10 @@
 'use client';
 
 import { useGrainStore } from '@/lib/grain-store';
-import { Moon, BatteryWarningLow } from '@phosphor-icons/react/dist/ssr';
+import { Moon, BatteryWarning } from '@phosphor-icons/react/dist/ssr';
 
 export function SleepingView() {
-  const { currentReading, deviceInfo } = useGrainStore();
+  const { deviceInfo } = useGrainStore();
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[65vh] grain-fade-in">
@@ -48,12 +48,12 @@ export function SleepingView() {
 }
 
 export function LowBatteryView() {
-  const { currentReading, deviceInfo } = useGrainStore();
+  const { deviceInfo } = useGrainStore();
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[65vh] grain-fade-in">
       <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6" style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.25)' }}>
-        <BatteryWarningLow size={28} weight="bold" style={{ color: '#EF4444' }} />
+        <BatteryWarning size={28} weight="bold" style={{ color: '#EF4444' }} />
       </div>
       <h2 className="text-lg font-bold mb-2 tracking-tight" style={{ color: '#f4f4f5' }}>
         Low Battery

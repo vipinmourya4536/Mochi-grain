@@ -8,18 +8,34 @@ import {
   BatteryLow,
   BatteryMedium,
 } from '@phosphor-icons/react/dist/ssr';
-import type { Icon } from '@phosphor-icons/react';
 
-function getBatteryIcon(level: number): Icon {
-  if (level > 75) return BatteryFull;
-  if (level > 50) return BatteryHigh;
-  if (level > 25) return BatteryMedium;
-  if (level > 10) return BatteryLow;
-  return BatteryCharging;
+function BatteryIndicator({ level, accentColor }: { level: number; accentColor: string }) {
+  const Icon =
+    level > 75 ? BatteryFull :
+    level > 50 ? BatteryHigh :
+    level > 25 ? BatteryMedium :
+    level > 10 ? BatteryLow :
+    BatteryCharging;
+
+  return (
+    <div className="flex items-center gap-2">
+      <Icon
+        size={18}
+        weight="fill"
+        style={{ color: level < 20 ? '#EF4444' : accentColor }}
+      />
+      <span
+        className="text-[11px] font-bold"
+        style={{ color: level < 20 ? '#EF4444' : '#a1a1aa' }}
+      >
+        {level}%
+      </span>
+    </div>
+  );
 }
 
 export function Header() {
-  const { deviceState, deviceInfo, decision, statusBadge, riskTheme } = useGrainStore();
+  const { deviceState, deviceInfo, statusBadge, riskTheme } = useGrainStore();
 
   const statusLabel =
     deviceState === 'disconnected'
@@ -34,9 +50,6 @@ export function Header() {
       : riskTheme === 'warn'
         ? '#F59E0B'
         : '#F97316';
-
-  const BatteryIcon = deviceInfo ? getBatteryIcon(deviceInfo.battery) : BatteryFull;
-  const batteryLevel = deviceInfo?.battery;
 
   return (
     <header className="px-5 pt-14 pb-3 flex justify-between items-center shrink-0">
@@ -57,21 +70,7 @@ export function Header() {
           </p>
         </div>
       </div>
-      {deviceInfo && (
-        <div className="flex items-center gap-2">
-          <BatteryIcon
-            size={18}
-            weight="fill"
-            style={{ color: batteryLevel! < 20 ? '#EF4444' : accentColor }}
-          />
-          <span
-            className="text-[11px] font-bold"
-            style={{ color: batteryLevel! < 20 ? '#EF4444' : '#a1a1aa' }}
-          >
-            {batteryLevel}{'%'}
-          </span>
-        </div>
-      )}
+      {deviceInfo && <BatteryIndicator level={deviceInfo.battery} accentColor={accentColor} />}
     </header>
   );
 }

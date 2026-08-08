@@ -4,8 +4,8 @@ import { useGrainStore } from '@/lib/grain-store';
 import { GRAIN_LABELS } from '@/lib/grain-types';
 import type { HistoryEntry } from '@/lib/grain-types';
 import { X, TrendUp, TrendDown, Minus, ArrowClockwise, Trash } from '@phosphor-icons/react/dist/ssr';
-import { SparklineChart } from '../sparkline-chart';
-import { format, formatDistanceToNow } from 'date-fns';
+
+import { format } from 'date-fns';
 
 function getDotColor(state: string): string {
   switch (state) {

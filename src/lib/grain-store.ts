@@ -227,7 +227,8 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
   },
 
   loadHistory: async () => {
-    const entries = await getHistoryEntries(get().deviceInfo?.id);
+    const deviceId = get().deviceInfo?.id;
+    const entries = await getHistoryEntries(deviceId || undefined);
     set({ historyEntries: entries });
   },
 
@@ -256,17 +257,13 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
   handleReading: (reading: Reading) => {
     const { settings } = get();
 
-    // Save to IndexedDB
-    saveReading(reading);
-
-    // Get recent history for engine evaluation
-    getRecentReadings(reading.deviceId, 20).then((recent) => {
+    // Save to IndexedDB, then evaluate, then save history, then refresh list
+    saveReading(reading).then(() =>
+      getRecentReadings(reading.deviceId, 20)
+    ).then((recent) => {
       const allRecent = [reading, ...recent];
       const decision = evaluate(reading, allRecent, settings.thresholds);
       const badge = getStatusBadge(decision, get().deviceState);
-
-      // Save history entry
-      saveHistoryEntry({ reading, decision });
 
       // Update sparkline
       const sparkline = allRecent.slice(0, 12).reverse().map((r) => r.moisture);
@@ -284,14 +281,15 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
         riskTheme: decision.state,
         sparklineData: sparkline,
         deviceInfo: updatedInfo,
-        // If battery is low, override device state
         deviceState: reading.battery < 15 ? 'low-battery' : get().deviceState,
       });
 
-      // Refresh history in background
-      getHistoryEntries(reading.deviceId, 50).then((entries) => {
-        set({ historyEntries: entries });
-      });
+      // Save history entry, then refresh list
+      return saveHistoryEntry({ reading, decision }).then(() =>
+        getHistoryEntries(reading.deviceId, 50)
+      );
+    }).then((entries) => {
+      if (entries) set({ historyEntries: entries });
     });
   },
 }));
