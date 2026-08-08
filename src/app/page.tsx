@@ -75,6 +75,7 @@ export default function GrainMonitorPage() {
       data-grain-theme={riskTheme}
       data-accent={settings.accentColor}
       data-theme={settings.theme}
+      style={{ '--gm-glass-opacity': settings.glassOpacity } as React.CSSProperties}
     >
       <Header />
       <Toast />

@@ -104,6 +104,7 @@ export interface AppSettings {
   accentColor: AccentColor;
   theme: AppTheme;
   language: string; // AppLanguage code
+  glassOpacity: number; // 0.3–1.0, controls glassmorphism blur intensity
 }
 
 export const DEFAULT_THRESHOLDS: GrainThresholds = {
@@ -139,6 +140,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   accentColor: 'orange',
   theme: 'dark',
   language: 'en',
+  glassOpacity: 0.75,
 };
 
 /* Grain label map */

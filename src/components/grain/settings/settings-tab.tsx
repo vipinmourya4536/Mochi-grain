@@ -1,13 +1,14 @@
 'use client';
 
+import { useState, useCallback, useEffect } from 'react';
 import { useGrainStore } from '@/lib/grain-store';
 import { isSimulating } from '@/lib/bluetooth';
 import {
   Cpu, DownloadSimple, ArrowClockwise, Trash, Power, Wrench,
-  Sun, Moon, Palette,
+  Sun, Moon, Palette, Drop,
 } from '@phosphor-icons/react/dist/ssr';
 import { GRAIN_LABELS, type GrainType, type AccentColor } from '@/lib/grain-types';
-import { t } from '@/lib/i18n';
+import { t, LANGUAGE_OPTIONS, type AppLanguage } from '@/lib/i18n';
 
 const GRAIN_OPTIONS: GrainType[] = ['wheat', 'rice', 'corn', 'barley', 'soybean', 'sorghum', 'oats', 'millet', 'other'];
 
@@ -27,10 +28,55 @@ export function SettingsTab() {
     hasDevice,
   } = useGrainStore();
 
-  const lang = settings.language as 'en' | 'hi' | 'mr' | 'hinglish';
+  const lang = settings.language as AppLanguage;
   const hasConnection = hasDevice;
   const simRunning = isSimulating();
   const isDark = settings.theme === 'dark';
+
+  // Language selection state
+  const [pendingLang, setPendingLang] = useState<AppLanguage | null>(null);
+
+  const applyAndReload = useCallback((code: AppLanguage) => {
+    // Save current connection state for auto-reconnect after reload
+    if (deviceState !== 'disconnected' && deviceState !== 'connecting') {
+      const reloadState = {
+        trigger: 'language_change' as const,
+        deviceState,
+        deviceInfo,
+        simRunning: isSimulating(),
+      };
+      try {
+        sessionStorage.setItem('grain_reload_state', JSON.stringify(reloadState));
+      } catch { /* ignore */ }
+    }
+    updateSettings({ language: code });
+    setTimeout(() => { window.location.reload(); }, 200);
+  }, [deviceState, deviceInfo, updateSettings]);
+
+  const handleSelectLanguage = useCallback((code: AppLanguage) => {
+    const option = LANGUAGE_OPTIONS.find(o => o.code === code);
+    if (!option) return;
+    if (option.needsSave) {
+      setPendingLang(code);
+    } else {
+      applyAndReload(code);
+    }
+  }, [applyAndReload]);
+
+  const handleSavePending = useCallback(() => {
+    if (pendingLang) {
+      showToast(t('language.saved', lang));
+      applyAndReload(pendingLang);
+    }
+  }, [pendingLang, lang, showToast, applyAndReload]);
+
+  // Glass opacity labels
+  const getOpacityLabel = (v: number) => {
+    if (v <= 0.4) return t('glass.subtle', lang);
+    if (v <= 0.65) return t('glass.medium', lang);
+    if (v <= 0.85) return t('glass.strong', lang);
+    return t('glass.max', lang);
+  };
 
   return (
     <div className="pt-2 pb-6 grain-fade-in">
@@ -81,6 +127,44 @@ export function SettingsTab() {
         </button>
       </div>
 
+      {/* ─── Glass Effect Opacity ─── */}
+      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('glass.title', lang)}
+      </p>
+      <div className="grain-card p-4 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: 'var(--gm-accent-dim)' }}
+            >
+              <Drop size={18} weight="bold" style={{ color: 'var(--gm-accent)' }} />
+            </div>
+            <div>
+              <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>
+                {t('glass.opacity', lang)}
+              </span>
+              <p className="text-[10px] mt-0.5" style={{ color: 'var(--gm-text-tertiary)' }}>
+                {getOpacityLabel(settings.glassOpacity)} ({Math.round(settings.glassOpacity * 100)}%)
+              </p>
+            </div>
+          </div>
+          <span className="text-lg font-bold" style={{ color: 'var(--gm-accent)' }}>
+            {Math.round(settings.glassOpacity * 100)}%
+          </span>
+        </div>
+        <input
+          type="range" min="0.3" max="1" step="0.05"
+          value={settings.glassOpacity}
+          onChange={(e) => updateSettings({ glassOpacity: parseFloat(e.target.value) })}
+          className="w-full grain-range h-1.5"
+        />
+        <div className="flex justify-between mt-2">
+          <span className="text-[9px]" style={{ color: 'var(--gm-text-tertiary)' }}>{t('glass.subtle', lang)}</span>
+          <span className="text-[9px]" style={{ color: 'var(--gm-text-tertiary)' }}>{t('glass.max', lang)}</span>
+        </div>
+      </div>
+
       {/* ─── Accent Color Picker ───*/}
       <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
         {t('accent.title', lang)}
@@ -114,6 +198,68 @@ export function SettingsTab() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* ─── Language ─── */}
+      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('language.title', lang)}
+      </p>
+      <div className="grain-card p-3 mb-6">
+        <div className="flex flex-col gap-2">
+          {LANGUAGE_OPTIONS.map((option) => {
+            const isActive = lang === option.code;
+            const isPending = pendingLang === option.code;
+            const isHighlighted = isActive || isPending;
+            return (
+              <div key={option.code} className="flex items-center gap-2">
+                <button
+                  onClick={() => handleSelectLanguage(option.code)}
+                  className="grain-lang-option flex-1"
+                  style={isHighlighted ? {
+                    borderColor: 'var(--gm-accent)',
+                    background: 'var(--gm-accent-dim)',
+                  } : {}}
+                >
+                  <span
+                    className="text-sm font-bold"
+                    style={{ color: isHighlighted ? 'var(--gm-accent)' : 'var(--gm-text-primary)' }}
+                  >
+                    {option.native}
+                  </span>
+                  <span className="text-[11px]" style={{ color: 'var(--gm-text-tertiary)' }}>
+                    {option.label}
+                  </span>
+                  {isActive && (
+                    <span className="text-[9px] font-bold tracking-wider uppercase ml-auto" style={{ color: 'var(--gm-accent)' }}>
+                      {t('language.current', lang)}
+                    </span>
+                  )}
+                </button>
+
+                {/* Save button for Hindi and Hinglish */}
+                {option.needsSave && isPending && (
+                  <button
+                    onClick={handleSavePending}
+                    className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 active:scale-90 transition-all"
+                    style={{
+                      background: 'var(--gm-accent)',
+                      color: '#ffffff',
+                      boxShadow: '0 4px 12px var(--gm-accent-glow)',
+                    }}
+                    aria-label={t('language.save', lang)}
+                  >
+                    ✓
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        {pendingLang && (
+          <p className="text-[11px] mt-3 text-center" style={{ color: 'var(--gm-text-tertiary)' }}>
+            Tap <span style={{ color: 'var(--gm-accent)', fontWeight: 700 }}>✓</span> to save & reload
+          </p>
+        )}
       </div>
 
       {/* ─── Device Card ─── */}
@@ -346,9 +492,7 @@ export function SettingsTab() {
           <input
             type="checkbox"
             checked={settings.autoReconnect}
-            onChange={(e) => {
-              updateSettings({ autoReconnect: e.target.checked });
-            }}
+            onChange={(e) => { updateSettings({ autoReconnect: e.target.checked }); }}
             className="grain-toggle"
           />
         </label>
@@ -358,9 +502,7 @@ export function SettingsTab() {
           <input
             type="checkbox"
             checked={settings.wakeOnConnect}
-            onChange={(e) => {
-              updateSettings({ wakeOnConnect: e.target.checked });
-            }}
+            onChange={(e) => { updateSettings({ wakeOnConnect: e.target.checked }); }}
             className="grain-toggle"
           />
         </label>
@@ -425,7 +567,7 @@ export function SettingsTab() {
         <div className="grain-separator" />
         <div className="flex justify-between items-center px-5 py-4">
           <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.engine', lang)}</span>
-          <span className="text-[11px]" style={{ color: 'var(--gm-text-secondary)' }}>Mochi Decision v1.0</span>
+          <span className="text-[11px]" style={{ color: 'var(--gm-text-secondary)' }}>Dummy Decision v0.1</span>
         </div>
         <div className="grain-separator" />
         <div className="flex justify-between items-center px-5 py-4">

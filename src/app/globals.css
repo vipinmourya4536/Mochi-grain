@@ -122,7 +122,7 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   GRAIN MONITOR DESIGN SYSTEM
+   GRAIN MONITOR DESIGN SYSTEM – LIQUID GLASS
    ═══════════════════════════════════════════════════════════════ */
 
 /* ─── App Shell: Dark mode is the DEFAULT ─── */
@@ -140,15 +140,14 @@
 
   /* Dark mode (default) color tokens */
   --gm-bg: #09090b;
+  --gm-bg-r: 9; --gm-bg-g: 9; --gm-bg-b: 11;
   --gm-text-primary: #f4f4f5;
   --gm-text-secondary: #a1a1aa;
   --gm-text-tertiary: #71717a;
-  --gm-surface: rgba(24, 24, 27, 0.8);
   --gm-surface-solid: #18181b;
   --gm-surface-hover: #27272a;
   --gm-border: rgba(255, 255, 255, 0.07);
   --gm-border-hover: rgba(255, 255, 255, 0.14);
-  --gm-glass-bg: rgba(9, 9, 11, 0.75);
   --gm-glass-border: rgba(255, 255, 255, 0.09);
   --gm-glass-highlight: rgba(255, 255, 255, 0.05);
   --gm-separator: #27272a;
@@ -157,15 +156,22 @@
   --gm-toggle-thumb: #e4e4e7;
   --gm-btn-primary-bg: #e4e4e7;
   --gm-btn-primary-text: #09090b;
-  --gm-toast-bg: rgba(39, 39, 42, 0.95);
   --gm-toast-border: #3f3f46;
   --gm-toast-text: #f4f4f5;
+
+  /* Glass opacity – controlled by slider (0.3–1.0) */
+  --gm-glass-opacity: 0.75;
 
   /* Default accent = orange */
   --gm-accent: #F97316;
   --gm-accent-rgb: 249, 115, 22;
   --gm-accent-dim: rgba(249, 115, 22, 0.15);
   --gm-accent-glow: rgba(249, 115, 22, 0.3);
+
+  /* Computed glass backgrounds use --gm-glass-opacity */
+  --gm-glass-bg: rgba(var(--gm-bg-r), var(--gm-bg-g), var(--gm-bg-b), var(--gm-glass-opacity));
+  --gm-surface: rgba(24, 24, 27, calc(var(--gm-glass-opacity) * 0.85));
+  --gm-toast-bg: rgba(39, 39, 42, calc(var(--gm-glass-opacity) + 0.2));
 
   background: var(--gm-bg);
   color: #d4d4d8;
@@ -174,15 +180,14 @@
 /* ─── Light mode override ─── */
 .grain-app[data-theme="light"] {
   --gm-bg: #f5f5f7;
+  --gm-bg-r: 245; --gm-bg-g: 245; --gm-bg-b: 247;
   --gm-text-primary: #18181b;
   --gm-text-secondary: #52525b;
   --gm-text-tertiary: #a1a1aa;
-  --gm-surface: rgba(255, 255, 255, 0.8);
   --gm-surface-solid: #ffffff;
   --gm-surface-hover: #f0f0f2;
   --gm-border: rgba(0, 0, 0, 0.07);
   --gm-border-hover: rgba(0, 0, 0, 0.14);
-  --gm-glass-bg: rgba(245, 245, 247, 0.8);
   --gm-glass-border: rgba(0, 0, 0, 0.09);
   --gm-glass-highlight: rgba(255, 255, 255, 0.7);
   --gm-separator: #e4e4e7;
@@ -191,9 +196,13 @@
   --gm-toggle-thumb: #ffffff;
   --gm-btn-primary-bg: #18181b;
   --gm-btn-primary-text: #f4f4f5;
-  --gm-toast-bg: rgba(255, 255, 255, 0.95);
   --gm-toast-border: #e4e4e7;
   --gm-toast-text: #18181b;
+
+  --gm-glass-bg: rgba(var(--gm-bg-r), var(--gm-bg-g), var(--gm-bg-b), var(--gm-glass-opacity));
+  --gm-surface: rgba(255, 255, 255, calc(var(--gm-glass-opacity) * 0.85));
+  --gm-toast-bg: rgba(255, 255, 255, calc(var(--gm-glass-opacity) + 0.15));
+
   background: var(--gm-bg);
   color: #3f3f46;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
@@ -287,11 +296,11 @@
    LIQUID GLASS EFFECTS
    ═══════════════════════════════════════════════════════════════ */
 
-/* Glass Header */
+/* Glass Header – heavy blur for strong glass feel */
 .grain-glass-header {
   background: var(--gm-glass-bg);
-  backdrop-filter: blur(20px) saturate(1.3);
-  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  backdrop-filter: blur(calc(12px + var(--gm-glass-opacity) * 20px)) saturate(calc(1.1 + var(--gm-glass-opacity) * 0.4));
+  -webkit-backdrop-filter: blur(calc(12px + var(--gm-glass-opacity) * 20px)) saturate(calc(1.1 + var(--gm-glass-opacity) * 0.4));
   border-bottom: 1px solid var(--gm-glass-border);
   position: relative;
   z-index: 20;
@@ -305,23 +314,26 @@
   pointer-events: none;
 }
 
-/* Glass Card */
+/* Glass Card – liquid glass with variable intensity */
 .grain-card {
   background: var(--gm-surface);
-  backdrop-filter: blur(12px) saturate(1.1);
-  -webkit-backdrop-filter: blur(12px) saturate(1.1);
-  border: 1px solid var(--gm-border);
+  backdrop-filter: blur(calc(8px + var(--gm-glass-opacity) * 16px)) saturate(calc(1.05 + var(--gm-glass-opacity) * 0.3));
+  -webkit-backdrop-filter: blur(calc(8px + var(--gm-glass-opacity) * 16px)) saturate(calc(1.05 + var(--gm-glass-opacity) * 0.3));
+  border: 1px solid var(--gm-glass-border);
   border-radius: 1rem;
   position: relative;
   overflow: hidden;
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color 0.2s, background 0.2s, backdrop-filter 0.3s;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, calc(var(--gm-glass-opacity) * 0.15)),
+    inset 0 1px 0 var(--gm-glass-highlight);
 }
 .grain-card::before {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 50%);
+  background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 40%, transparent 70%, rgba(255,255,255,0.02) 100%);
   pointer-events: none;
 }
 
@@ -348,7 +360,7 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   FLOATING PILL BOTTOM NAV
+   FLOATING PILL BOTTOM NAV – WIDENED
    ═══════════════════════════════════════════════════════════════ */
 
 .grain-floating-nav {
@@ -357,22 +369,22 @@
   left: 50%;
   transform: translateX(-50%);
   z-index: 30;
-  width: calc(100% - 48px);
-  max-width: 260px;
+  width: calc(100% - 32px);
+  max-width: 360px;
 }
 .grain-floating-nav-inner {
   background: var(--gm-glass-bg);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(calc(14px + var(--gm-glass-opacity) * 18px)) saturate(calc(1.2 + var(--gm-glass-opacity) * 0.4));
+  -webkit-backdrop-filter: blur(calc(14px + var(--gm-glass-opacity) * 18px)) saturate(calc(1.2 + var(--gm-glass-opacity) * 0.4));
   border: 1px solid var(--gm-glass-border);
   border-radius: 999px;
-  padding: 5px 4px;
+  padding: 6px 6px;
   display: flex;
   justify-content: space-around;
   align-items: center;
   position: relative;
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 8px 32px rgba(0, 0, 0, calc(var(--gm-glass-opacity) * 0.35)),
     0 2px 8px rgba(0, 0, 0, 0.15),
     inset 0 1px 0 var(--gm-glass-highlight);
   overflow: hidden;
@@ -382,7 +394,7 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 40%, transparent 60%, rgba(255,255,255,0.02) 100%);
+  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 40%, transparent 60%, rgba(255,255,255,0.02) 100%);
   pointer-events: none;
 }
 .grain-nav-btn {
@@ -392,7 +404,7 @@
   flex-direction: column;
   align-items: center;
   gap: 1px;
-  padding: 7px 12px;
+  padding: 8px 14px;
   cursor: pointer;
   border: none;
   background: none;
@@ -423,7 +435,7 @@
 .grain-sparkline-fill { fill: url(#grainSparkGradient); stroke: none; transition: d 0.5s ease; }
 
 /* ═══════════════════════════════════════════════════════════════
-   INSIGHT CARD
+   INSIGHT CARD – liquid glass
    ═══════════════════════════════════════════════════════════════ */
 
 .grain-insight-card {
@@ -433,12 +445,15 @@
   border: 1px solid;
   padding: 1.25rem;
   transition: all 0.5s ease;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(calc(8px + var(--gm-glass-opacity) * 12px)) saturate(1.1);
+  -webkit-backdrop-filter: blur(calc(8px + var(--gm-glass-opacity) * 12px)) saturate(1.1);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, calc(var(--gm-glass-opacity) * 0.12));
 }
 .grain-insight-icon {
   background: var(--gm-icon-bg);
   transition: all 0.5s ease;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -488,12 +503,12 @@
 @keyframes grain-spin { to { transform: rotate(360deg); } }
 
 /* ═══════════════════════════════════════════════════════════════
-   TOAST
+   TOAST – liquid glass
    ═══════════════════════════════════════════════════════════════ */
 
 .grain-toast {
   position: fixed; top: 16px; left: 50%; transform: translateX(-50%) translateY(-20px);
-  background: var(--gm-toast-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  background: var(--gm-toast-bg); backdrop-filter: blur(calc(12px + var(--gm-glass-opacity) * 12px)); -webkit-backdrop-filter: blur(calc(12px + var(--gm-glass-opacity) * 12px));
   border: 1px solid var(--gm-toast-border); padding: 12px 20px; border-radius: 14px;
   font-size: 13px; font-weight: 500; opacity: 0; pointer-events: none;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); z-index: 100;
@@ -502,7 +517,7 @@
 .grain-toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* ═══════════════════════════════════════════════════════════════
-   READING ITEM
+   READING ITEM – liquid glass on hover/tap
    ═══════════════════════════════════════════════════════════════ */
 
 .grain-reading-item { transition: background 0.2s, transform 0.15s, border-color 0.2s; cursor: pointer; }
@@ -518,26 +533,56 @@
 .grain-pulse { animation: grain-pulse 1.5s ease-in-out infinite; }
 
 /* ═══════════════════════════════════════════════════════════════
-   BADGE
+   BADGE – liquid glass
    ═══════════════════════════════════════════════════════════════ */
 
 .grain-badge {
   font-size: 9px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
   padding: 6px 12px; border-radius: 999px;
   background: rgba(0,0,0,0.25); color: rgba(255,255,255,0.9);
-  border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.2);
+  backdrop-filter: blur(calc(6px + var(--gm-glass-opacity) * 8px));
+  -webkit-backdrop-filter: blur(calc(6px + var(--gm-glass-opacity) * 8px));
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   DISCOVER CARD
+   DISCOVER CARD – liquid glass
    ═══════════════════════════════════════════════════════════════ */
 
-.grain-discover-card { background: var(--gm-surface); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--gm-border); border-radius: 1rem; overflow: hidden; transition: border-color 0.2s, transform 0.15s; cursor: pointer; position: relative; }
+.grain-discover-card {
+  background: var(--gm-surface);
+  backdrop-filter: blur(calc(8px + var(--gm-glass-opacity) * 16px)) saturate(calc(1.05 + var(--gm-glass-opacity) * 0.3));
+  -webkit-backdrop-filter: blur(calc(8px + var(--gm-glass-opacity) * 16px)) saturate(calc(1.05 + var(--gm-glass-opacity) * 0.3));
+  border: 1px solid var(--gm-glass-border);
+  border-radius: 1rem;
+  overflow: hidden;
+  transition: border-color 0.2s, transform 0.15s;
+  cursor: pointer;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, calc(var(--gm-glass-opacity) * 0.15));
+}
 .grain-discover-card:hover { border-color: var(--gm-border-hover); }
 .grain-discover-card:active { transform: scale(0.98); }
 
 /* ═══════════════════════════════════════════════════════════════
-   SCROLLBAR, SEPARATOR, LANGUAGE PANEL, ACCENT DOTS, RANGE
+   LANGUAGE PANEL – liquid glass overlay
+   ═══════════════════════════════════════════════════════════════ */
+
+.grain-lang-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: flex-start; justify-content: center; padding-top: 60px; }
+.grain-lang-panel {
+  width: calc(100% - 40px); max-width: 380px;
+  background: var(--gm-surface-solid);
+  backdrop-filter: blur(calc(16px + var(--gm-glass-opacity) * 16px)) saturate(calc(1.3 + var(--gm-glass-opacity) * 0.4));
+  -webkit-backdrop-filter: blur(calc(16px + var(--gm-glass-opacity) * 16px)) saturate(calc(1.3 + var(--gm-glass-opacity) * 0.4));
+  border: 1px solid var(--gm-glass-border);
+  border-radius: 1.5rem; padding: 1.5rem;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.3);
+  animation: grain-slide-down 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes grain-slide-down { from { opacity: 0; transform: translateY(-12px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+/* ═══════════════════════════════════════════════════════════════
+   UTILITY CLASSES
    ═══════════════════════════════════════════════════════════════ */
 
 .grain-custom-scroll { scrollbar-width: thin; scrollbar-color: var(--gm-toggle-border) transparent; }
@@ -547,10 +592,6 @@
 
 .grain-separator { height: 1px; background: var(--gm-separator); }
 
-.grain-lang-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: flex-start; justify-content: center; padding-top: 60px; }
-.grain-lang-panel { width: calc(100% - 40px); max-width: 380px; background: var(--gm-surface-solid); backdrop-filter: blur(24px) saturate(1.5); -webkit-backdrop-filter: blur(24px) saturate(1.5); border: 1px solid var(--gm-border); border-radius: 1.5rem; padding: 1.5rem; box-shadow: 0 24px 64px rgba(0,0,0,0.3); animation: grain-slide-down 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
-@keyframes grain-slide-down { from { opacity: 0; transform: translateY(-12px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
-
 .grain-accent-dot { width: 32px; height: 32px; border-radius: 50%; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; border: 2.5px solid transparent; }
 .grain-accent-dot:active { transform: scale(0.9); }
 .grain-accent-dot.selected { border-color: var(--gm-text-primary); box-shadow: 0 0 0 3px var(--gm-accent-dim); }
@@ -558,3 +599,21 @@
 .grain-range { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 999px; background: var(--gm-toggle-bg); outline: none; }
 .grain-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--gm-accent); cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.2); border: 2px solid var(--gm-surface-solid); }
 .grain-range::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--gm-accent); cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.2); border: 2px solid var(--gm-surface-solid); }
+
+/* ─── Language inline selector (for settings) ─── */
+.grain-lang-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: 1px solid var(--gm-border);
+  background: var(--gm-surface);
+}
+.grain-lang-option.active {
+  border-color: var(--gm-accent);
+  background: var(--gm-accent-dim);
+}
+.grain-lang-option:active { transform: scale(0.98); }

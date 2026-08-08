@@ -9,7 +9,6 @@ import {
   BatteryMedium,
 } from '@phosphor-icons/react/dist/ssr';
 import { t } from '@/lib/i18n';
-import { LanguageSelector } from './language-selector';
 
 function BatteryIndicator({ level, accentColor }: { level: number; accentColor: string }) {
   const Icon =
@@ -63,30 +62,27 @@ export function Header() {
     : {};
 
   return (
-    <>
-      <header className="grain-glass-header px-5 pt-14 pb-3 flex justify-between items-center shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full grain-status-dot" style={dotStyle} />
-          <div>
-            <h1
-              className="text-[11px] font-bold tracking-[0.2em] uppercase"
-              style={{ color: 'var(--gm-text-primary)' }}
-            >
-              {t('app.title', lang)}
-            </h1>
-            <p
-              className="text-[10px] mt-0.5 font-medium tracking-wide transition-colors duration-500"
-              style={{ color: statusColor }}
-            >
-              {statusLabel}
-            </p>
-          </div>
+    <header className="grain-glass-header px-5 pt-14 pb-3 flex justify-between items-center shrink-0">
+      <div className="flex items-center gap-3">
+        <div className="w-2 h-2 rounded-full grain-status-dot" style={dotStyle} />
+        <div>
+          <h1
+            className="text-[11px] font-bold tracking-[0.2em] uppercase"
+            style={{ color: 'var(--gm-text-primary)' }}
+          >
+            {t('app.title', lang)}
+          </h1>
+          <p
+            className="text-[10px] mt-0.5 font-medium tracking-wide transition-colors duration-500"
+            style={{ color: statusColor }}
+          >
+            {statusLabel}
+          </p>
         </div>
-        <div className="flex items-center gap-2.5">
-          {deviceInfo && <BatteryIndicator level={deviceInfo.battery} accentColor={statusColor} />}
-          <LanguageSelector />
-        </div>
-      </header>
-    </>
+      </div>
+      <div className="flex items-center gap-2.5">
+        {deviceInfo && <BatteryIndicator level={deviceInfo.battery} accentColor={statusColor} />}
+      </div>
+    </header>
   );
 }

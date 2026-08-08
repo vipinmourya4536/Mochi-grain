@@ -146,6 +146,15 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'language.title': 'Language',
     'language.save': 'Save & Reload',
     'language.saved': 'Language saved. Reloading...',
+    'language.current': 'Current',
+
+    // Glass
+    'glass.title': 'Glass Effect',
+    'glass.opacity': 'Opacity',
+    'glass.subtle': 'Subtle',
+    'glass.medium': 'Medium',
+    'glass.strong': 'Strong',
+    'glass.max': 'Maximum',
 
     // Accent themes
     'accent.title': 'Accent Color',
@@ -310,6 +319,15 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'language.title': 'भाषा',
     'language.save': 'सहेजें और रीलोड',
     'language.saved': 'भाषा सहेजी गई। रीलोड हो रहा है...',
+    'language.current': 'वर्तमान',
+
+    // Glass
+    'glass.title': 'ग्लास प्रभाव',
+    'glass.opacity': 'अपारदर्शिता',
+    'glass.subtle': 'हल्का',
+    'glass.medium': 'मध्यम',
+    'glass.strong': 'मजबूत',
+    'glass.max': 'अधिकतम',
 
     // Accent themes
     'accent.title': 'एक्सेंट रंग',
@@ -474,6 +492,15 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'language.title': 'भाषा',
     'language.save': 'जतन करा आणि रीलोड',
     'language.saved': 'भाषा जतन केली. रीलोड होत आहे...',
+    'language.current': 'सध्याची',
+
+    // Glass
+    'glass.title': 'ग्लास प्रभाव',
+    'glass.opacity': 'पारदर्शकता',
+    'glass.subtle': 'हलके',
+    'glass.medium': 'मध्यम',
+    'glass.strong': 'जास्त',
+    'glass.max': 'अधिकतम',
 
     // Accent themes
     'accent.title': 'अॅक्सेंट रंग',
@@ -638,6 +665,15 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'language.title': 'Language',
     'language.save': 'Save & Reload',
     'language.saved': 'Language saved. Reloading...',
+    'language.current': 'Current',
+
+    // Glass
+    'glass.title': 'Glass Effect',
+    'glass.opacity': 'Opacity',
+    'glass.subtle': 'Subtle',
+    'glass.medium': 'Medium',
+    'glass.strong': 'Strong',
+    'glass.max': 'Maximum',
 
     // Accent themes
     'accent.title': 'Accent Color',

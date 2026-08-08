@@ -93,3 +93,38 @@ Stage Summary:
 - BLE connection auto-restores after language change reload via sessionStorage
 - All translations verified working across all tabs
 - Clean lint, zero runtime errors
+
+---
+Task ID: 4
+Agent: Main
+Task: Move language to settings, widen pill nav, add glass opacity control, liquid glass throughout
+
+Work Log:
+- Moved language selector from header.tsx to settings-tab.tsx as inline section with grain-lang-option styling
+- Removed LanguageSelector import and component from header.tsx
+- Widened floating pill nav: changed max-width from 260px to 360px, increased padding from 5px 4px to 6px 6px, increased nav button padding
+- Added glassOpacity (0.3–1.0, default 0.75) to AppSettings in grain-types.ts
+- Added --gm-glass-opacity CSS variable driven by settings.glassOpacity via inline style on .grain-app
+- Rewrote globals.css glass effects to use --gm-glass-opacity:
+  - Glass backgrounds computed: var(--gm-glass-bg) uses rgba with var(--gm-glass-opacity)
+  - Backdrop blur scales with opacity: calc(12px + var(--gm-glass-opacity) * 20px)
+  - Saturation scales with opacity: calc(1.1 + var(--gm-glass-opacity) * 0.4)
+  - Cards, nav, header, toast, badge, discover cards, insight card, language panel all use computed glass values
+  - Added box-shadow with glass-intensity-aware alpha to cards
+  - Added grain-lang-option class for inline language buttons in settings
+- Added glass effect section in settings tab with:
+  - Drop icon, opacity label with percentage
+  - Range slider (0.3–1.0, step 0.05) with Subtle/Medium/Strong/Maximum labels
+  - Real-time update via updateSettings({ glassOpacity })
+- Added i18n keys for all 4 languages: glass.title, glass.opacity, glass.subtle, glass.medium, glass.strong, glass.max, language.current
+- Updated page.tsx to pass --gm-glass-opacity CSS variable
+- Renamed engine label in About section to 'Dummy Decision v0.1'
+- Verified via Agent Browser: all 4 tabs render correctly, settings shows language selector inline, glass opacity slider works, nav is wider, zero console errors
+
+Stage Summary:
+- Language selector moved to Settings tab only (not in header anymore)
+- Pill navigation widened from 260px to 360px max-width
+- Glass opacity control slider in Settings with 5 labels (Subtle/Medium/Strong/Maximum)
+- Liquid glass effect applied throughout entire app via computed CSS variables
+- All glass surfaces (header, cards, nav, toast, badge, insight, discover) dynamically respond to opacity slider
+- Clean lint, zero runtime errors, all tabs verified
