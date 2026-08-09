@@ -176,3 +176,29 @@ Stage Summary:
 - Header right side: battery % circle + language code circle button
 - Language selector overlay opens from header (same as previous version)
 - Settings basic view: only Theme + Language (fast load)
+
+---
+Task ID: 7
+Agent: Main
+Task: Remove big language box from settings, language button only on settings page, battery on all pages
+
+Work Log:
+- Updated header.tsx to be tab-aware: reads activeTab from store
+  - On non-settings tabs (home, history, discover): shows battery % circle only (no language button)
+  - On settings tab: shows battery % circle + LanguageSelector button side by side
+  - Battery always shown first (left), language button second (right) when on settings
+- Removed entire language section from settings-tab.tsx (the big card with 4 language options)
+- Cleaned up unused imports/state in settings-tab.tsx: removed useCallback, LANGUAGE_OPTIONS, pendingLang state, handleSelectLanguage, handleSavePending, applyAndReload functions
+- Settings basic view now shows only: Theme toggle + Advanced Settings collapsible
+- Verified via Agent Browser + VLM screenshot analysis on all 4 pages:
+  - Home: battery 87% circle visible, NO language button ✅
+  - History: battery 87% circle visible, NO language button ✅
+  - Discover: battery 87% circle visible, NO language button ✅
+  - Settings: battery 87% circle + EN language button visible side by side ✅
+  - Settings: no big language box, only Theme + Advanced Settings ✅
+
+Stage Summary:
+- Language toggle button (EN/हि/मरा/Hi) only appears on Settings page header
+- Battery % circle appears on ALL pages when device is connected
+- Big language selector card completely removed from settings content
+- Settings page is now cleaner: Theme toggle + Advanced Settings only

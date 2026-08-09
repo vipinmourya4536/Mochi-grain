@@ -1,6 +1,6 @@
 'use client';
 
-import { useGrainStore } from '@/lib/grain-store';
+import { useGrainStore, type TabId } from '@/lib/grain-store';
 import { t } from '@/lib/i18n';
 import { LanguageSelector } from '@/components/grain/language-selector';
 
@@ -9,7 +9,7 @@ const LANG_SHORT: Record<string, string> = {
 };
 
 export function Header() {
-  const { deviceState, deviceInfo, statusBadge, riskTheme, settings } = useGrainStore();
+  const { deviceState, deviceInfo, statusBadge, riskTheme, settings, activeTab } = useGrainStore();
   const lang = settings.language as 'en' | 'hi' | 'mr' | 'hinglish';
 
   const statusLabel =
@@ -35,6 +35,7 @@ export function Header() {
     : {};
 
   const battery = deviceInfo?.battery;
+  const isSettings = activeTab === 'settings';
 
   return (
     <header className="grain-glass-header px-5 pt-14 pb-3 flex justify-between items-center shrink-0">
@@ -57,9 +58,9 @@ export function Header() {
         </div>
       </div>
 
-      {/* Right: battery circle + language button */}
+      {/* Right: context-aware buttons */}
       <div className="flex items-center gap-2.5">
-        {/* Battery in a circle */}
+        {/* Battery circle – always shown when available */}
         {battery != null && (
           <div
             className="flex items-center justify-center"
@@ -82,8 +83,8 @@ export function Header() {
           </div>
         )}
 
-        {/* Language quick-toggle button */}
-        <LanguageSelector />
+        {/* Language toggle – ONLY on Settings page */}
+        {isSettings && <LanguageSelector />}
       </div>
     </header>
   );

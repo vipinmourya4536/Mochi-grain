@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useGrainStore } from '@/lib/grain-store';
 import { isSimulating } from '@/lib/bluetooth';
 import {
@@ -8,7 +8,7 @@ import {
   Sun, Moon, CaretDown, SlidersHorizontal, Palette,
 } from '@phosphor-icons/react/dist/ssr';
 import { GRAIN_LABELS, type GrainType, type AccentColor } from '@/lib/grain-types';
-import { t, LANGUAGE_OPTIONS, type AppLanguage } from '@/lib/i18n';
+import { t, type AppLanguage } from '@/lib/i18n';
 
 const GRAIN_OPTIONS: GrainType[] = ['wheat', 'rice', 'corn', 'barley', 'soybean', 'sorghum', 'oats', 'millet', 'other'];
 
@@ -22,49 +22,12 @@ const ACCENT_COLORS: { value: AccentColor; color: string; labelKey: string }[] =
 
 export function SettingsTab() {
   const {
-    deviceInfo, deviceState, settings, updateSettings,
-    hasDevice, showToast,
+    settings, updateSettings,
   } = useGrainStore();
 
   const lang = settings.language as AppLanguage;
   const isDark = settings.theme === 'dark';
   const [advancedOpen, setAdvancedOpen] = useState(false);
-
-  // Language selection state
-  const [pendingLang, setPendingLang] = useState<AppLanguage | null>(null);
-
-  const applyAndReload = useCallback((code: AppLanguage) => {
-    if (deviceState !== 'disconnected' && deviceState !== 'connecting') {
-      const reloadState = {
-        trigger: 'language_change' as const,
-        deviceState,
-        deviceInfo,
-        simRunning: isSimulating(),
-      };
-      try {
-        sessionStorage.setItem('grain_reload_state', JSON.stringify(reloadState));
-      } catch { /* ignore */ }
-    }
-    updateSettings({ language: code });
-    setTimeout(() => { window.location.reload(); }, 200);
-  }, [deviceState, deviceInfo, updateSettings]);
-
-  const handleSelectLanguage = useCallback((code: AppLanguage) => {
-    const option = LANGUAGE_OPTIONS.find(o => o.code === code);
-    if (!option) return;
-    if (option.needsSave) {
-      setPendingLang(code);
-    } else {
-      applyAndReload(code);
-    }
-  }, [applyAndReload]);
-
-  const handleSavePending = useCallback(() => {
-    if (pendingLang) {
-      showToast(t('language.saved', lang));
-      applyAndReload(pendingLang);
-    }
-  }, [pendingLang, lang, showToast, applyAndReload]);
 
   return (
     <div className="pt-2 pb-6 grain-fade-in">
@@ -115,67 +78,6 @@ export function SettingsTab() {
             />
           </div>
         </button>
-      </div>
-
-      {/* ─── Language ─── */}
-      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
-        {t('language.title', lang)}
-      </p>
-      <div className="grain-card p-3 mb-6">
-        <div className="flex flex-col gap-2">
-          {LANGUAGE_OPTIONS.map((option) => {
-            const isActive = lang === option.code;
-            const isPending = pendingLang === option.code;
-            const isHighlighted = isActive || isPending;
-            return (
-              <div key={option.code} className="flex items-center gap-2">
-                <button
-                  onClick={() => handleSelectLanguage(option.code)}
-                  className="grain-lang-option flex-1"
-                  style={isHighlighted ? {
-                    borderColor: 'var(--gm-accent)',
-                    background: 'var(--gm-accent-dim)',
-                  } : {}}
-                >
-                  <span
-                    className="text-sm font-bold"
-                    style={{ color: isHighlighted ? 'var(--gm-accent)' : 'var(--gm-text-primary)' }}
-                  >
-                    {option.native}
-                  </span>
-                  <span className="text-[11px]" style={{ color: 'var(--gm-text-tertiary)' }}>
-                    {option.label}
-                  </span>
-                  {isActive && (
-                    <span className="text-[9px] font-bold tracking-wider uppercase ml-auto" style={{ color: 'var(--gm-accent)' }}>
-                      {t('language.current', lang)}
-                    </span>
-                  )}
-                </button>
-
-                {option.needsSave && isPending && (
-                  <button
-                    onClick={handleSavePending}
-                    className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 active:scale-90 transition-all"
-                    style={{
-                      background: 'var(--gm-accent)',
-                      color: '#ffffff',
-                      boxShadow: '0 4px 12px var(--gm-accent-glow)',
-                    }}
-                    aria-label={t('language.save', lang)}
-                  >
-                    ✓
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        {pendingLang && (
-          <p className="text-[11px] mt-3 text-center" style={{ color: 'var(--gm-text-tertiary)' }}>
-            Tap <span style={{ color: 'var(--gm-accent)', fontWeight: 700 }}>✓</span> to save & reload
-          </p>
-        )}
       </div>
 
       {/* ═══ ADVANCED SETTINGS (collapsed) ═══ */}
