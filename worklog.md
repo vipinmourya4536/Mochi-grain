@@ -150,3 +150,29 @@ Stage Summary:
 - Settings tab loads fast: basic settings (theme, glass, accent, language) render immediately, advanced content lazy-mounted on expand
 - Language selector confirmed in settings tab only
 - Clean lint, zero runtime errors
+---
+Task ID: 6
+Agent: Main
+Task: Remove opacity slider, solid nav, accent to advanced, swap tabs, header redesign
+
+Work Log:
+- Removed Glass Effect / Opacity slider section entirely from settings-tab.tsx
+- Simplified page.tsx: removed glassOpacity state dependency, computeGlassVars now uses fixed 0.75 opacity, only reacts to isDark
+- Added .grain-nav-solid CSS class: overrides nav background to var(--gm-surface-solid), disables backdrop-filter with !important
+- Applied grain-nav-solid class to nav inner element in bottom-nav.tsx
+- Moved Accent Color picker from basic settings to AdvancedSettingsContent (lazy-rendered)
+- Swapped Discover and History tab order: now Home → History → Discover → Settings
+- Redesigned header.tsx: removed BatteryIndicator component, replaced with circular badge showing battery % (36px circle with accent-dim bg)
+- Added language-selector.tsx to header right side: circular button showing language short code (EN/हि/मरा/Hi)
+- Updated language-selector.tsx trigger button: changed from Translate icon in square to language code text in circle (36px diameter)
+- Clean lint, zero errors
+- Verified via Agent Browser: battery circle + EN button in header, tab order swapped, nav solid, no opacity slider, accent in advanced, language overlay works from header
+
+Stage Summary:
+- Opacity slider completely removed
+- Nav bar 100% opaque solid background in both themes
+- Accent colors moved to Advanced Settings (collapsed by default)
+- Tab order: Home, History, Discover, Settings
+- Header right side: battery % circle + language code circle button
+- Language selector overlay opens from header (same as previous version)
+- Settings basic view: only Theme + Language (fast load)

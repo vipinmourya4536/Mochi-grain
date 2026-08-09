@@ -64,19 +64,26 @@ export function LanguageSelector() {
     }
   }, [pendingLang, lang, showToast, applyAndReload]);
 
+  const shortCode = lang === 'hinglish' ? 'Hi' : lang === 'hi' ? 'हि' : lang === 'mr' ? 'मरा' : 'EN';
+
   if (!open) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90"
+        className="flex items-center justify-center transition-all active:scale-90"
         style={{
+          width: 36,
+          height: 36,
+          borderRadius: '50%',
           background: 'var(--gm-surface)',
-          border: '1px solid var(--gm-border)',
+          border: '1.5px solid var(--gm-glass-border)',
           color: 'var(--gm-text-secondary)',
         }}
         aria-label="Change language"
       >
-        <Translate size={16} weight="bold" />
+        <span className="text-[10px] font-bold" style={{ color: 'var(--gm-text-primary)' }}>
+          {shortCode}
+        </span>
       </button>
     );
   }

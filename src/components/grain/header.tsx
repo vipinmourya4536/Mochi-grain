@@ -1,39 +1,12 @@
 'use client';
 
 import { useGrainStore } from '@/lib/grain-store';
-import {
-  BatteryCharging,
-  BatteryFull,
-  BatteryHigh,
-  BatteryLow,
-  BatteryMedium,
-} from '@phosphor-icons/react/dist/ssr';
 import { t } from '@/lib/i18n';
+import { LanguageSelector } from '@/components/grain/language-selector';
 
-function BatteryIndicator({ level, accentColor }: { level: number; accentColor: string }) {
-  const Icon =
-    level > 75 ? BatteryFull :
-    level > 50 ? BatteryHigh :
-    level > 25 ? BatteryMedium :
-    level > 10 ? BatteryLow :
-    BatteryCharging;
-
-  return (
-    <div className="flex items-center gap-2">
-      <Icon
-        size={18}
-        weight="fill"
-        style={{ color: level < 20 ? '#EF4444' : accentColor }}
-      />
-      <span
-        className="text-[11px] font-bold"
-        style={{ color: level < 20 ? '#EF4444' : 'var(--gm-text-tertiary)' }}
-      >
-        {level}%
-      </span>
-    </div>
-  );
-}
+const LANG_SHORT: Record<string, string> = {
+  en: 'EN', hi: 'हि', mr: 'मरा', hinglish: 'Hi',
+};
 
 export function Header() {
   const { deviceState, deviceInfo, statusBadge, riskTheme, settings } = useGrainStore();
@@ -61,8 +34,11 @@ export function Header() {
     ? { background: 'var(--gm-dot-offline, #71717a)', boxShadow: '0 0 8px var(--gm-dot-offline, #71717a)' }
     : {};
 
+  const battery = deviceInfo?.battery;
+
   return (
     <header className="grain-glass-header px-5 pt-14 pb-3 flex justify-between items-center shrink-0">
+      {/* Left: status dot + title */}
       <div className="flex items-center gap-3">
         <div className="w-2 h-2 rounded-full grain-status-dot" style={dotStyle} />
         <div>
@@ -80,8 +56,34 @@ export function Header() {
           </p>
         </div>
       </div>
+
+      {/* Right: battery circle + language button */}
       <div className="flex items-center gap-2.5">
-        {deviceInfo && <BatteryIndicator level={deviceInfo.battery} accentColor={statusColor} />}
+        {/* Battery in a circle */}
+        {battery != null && (
+          <div
+            className="flex items-center justify-center"
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              background: battery < 20
+                ? 'rgba(239, 68, 68, 0.12)'
+                : 'var(--gm-accent-dim)',
+              border: `1.5px solid ${battery < 20 ? 'rgba(239,68,68,0.3)' : 'var(--gm-glass-border)'}`,
+            }}
+          >
+            <span
+              className="text-[10px] font-bold"
+              style={{ color: battery < 20 ? '#EF4444' : 'var(--gm-accent)' }}
+            >
+              {battery}%
+            </span>
+          </div>
+        )}
+
+        {/* Language quick-toggle button */}
+        <LanguageSelector />
       </div>
     </header>
   );

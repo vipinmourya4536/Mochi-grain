@@ -11,8 +11,8 @@ import { t } from '@/lib/i18n';
 
 const TABS: { id: TabId; icon: typeof House; labelKey: string }[] = [
   { id: 'home', icon: House, labelKey: 'nav.home' },
-  { id: 'discover', icon: Compass, labelKey: 'nav.discover' },
   { id: 'history', icon: ClockCounterClockwise, labelKey: 'nav.history' },
+  { id: 'discover', icon: Compass, labelKey: 'nav.discover' },
   { id: 'settings', icon: Gear, labelKey: 'nav.settings' },
 ];
 
@@ -22,7 +22,7 @@ export function BottomNav() {
 
   return (
     <nav className="grain-floating-nav shrink-0">
-      <div className="grain-floating-nav-inner">
+      <div className="grain-floating-nav-inner grain-nav-solid">
         {TABS.map(({ id, icon: Icon, labelKey }) => {
           const isActive = activeTab === id;
           return (

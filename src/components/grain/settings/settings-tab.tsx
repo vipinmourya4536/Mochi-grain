@@ -5,7 +5,7 @@ import { useGrainStore } from '@/lib/grain-store';
 import { isSimulating } from '@/lib/bluetooth';
 import {
   Cpu, DownloadSimple, ArrowClockwise, Trash, Power, Wrench,
-  Sun, Moon, Palette, Drop, CaretDown, SlidersHorizontal,
+  Sun, Moon, CaretDown, SlidersHorizontal, Palette,
 } from '@phosphor-icons/react/dist/ssr';
 import { GRAIN_LABELS, type GrainType, type AccentColor } from '@/lib/grain-types';
 import { t, LANGUAGE_OPTIONS, type AppLanguage } from '@/lib/i18n';
@@ -22,15 +22,11 @@ const ACCENT_COLORS: { value: AccentColor; color: string; labelKey: string }[] =
 
 export function SettingsTab() {
   const {
-    deviceInfo, deviceState, settings, updateSettings, selectGrainType,
-    disconnectProbe, sendProbeCommand, simulateConnect,
-    switchDemoMode, syncProbeHistory, clearHistory,
+    deviceInfo, deviceState, settings, updateSettings,
     hasDevice, showToast,
   } = useGrainStore();
 
   const lang = settings.language as AppLanguage;
-  const hasConnection = hasDevice;
-  const simRunning = isSimulating();
   const isDark = settings.theme === 'dark';
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
@@ -70,13 +66,6 @@ export function SettingsTab() {
     }
   }, [pendingLang, lang, showToast, applyAndReload]);
 
-  const getOpacityLabel = (v: number) => {
-    if (v <= 0.4) return t('glass.subtle', lang);
-    if (v <= 0.65) return t('glass.medium', lang);
-    if (v <= 0.85) return t('glass.strong', lang);
-    return t('glass.max', lang);
-  };
-
   return (
     <div className="pt-2 pb-6 grain-fade-in">
       <h2 className="text-2xl font-bold tracking-tight mb-1" style={{ color: 'var(--gm-text-primary)' }}>
@@ -86,9 +75,9 @@ export function SettingsTab() {
         {t('settings.desc', lang)}
       </p>
 
-      {/* ═══ BASIC SETTINGS (always visible, fast render) ═══ */}
+      {/* ═══ BASIC SETTINGS ═══ */}
 
-      {/* ─── Theme Toggle (Dark/Light) ─── */}
+      {/* ─── Theme Toggle ─── */}
       <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
         {t('theme.title', lang)}
       </p>
@@ -126,79 +115,6 @@ export function SettingsTab() {
             />
           </div>
         </button>
-      </div>
-
-      {/* ─── Glass Effect Opacity ─── */}
-      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
-        {t('glass.title', lang)}
-      </p>
-      <div className="grain-card p-4 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: 'var(--gm-accent-dim)' }}
-            >
-              <Drop size={18} weight="bold" style={{ color: 'var(--gm-accent)' }} />
-            </div>
-            <div>
-              <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>
-                {t('glass.opacity', lang)}
-              </span>
-              <p className="text-[10px] mt-0.5" style={{ color: 'var(--gm-text-tertiary)' }}>
-                {getOpacityLabel(settings.glassOpacity)} ({Math.round(settings.glassOpacity * 100)}%)
-              </p>
-            </div>
-          </div>
-          <span className="text-lg font-bold" style={{ color: 'var(--gm-accent)' }}>
-            {Math.round(settings.glassOpacity * 100)}%
-          </span>
-        </div>
-        <input
-          type="range" min="0.3" max="1" step="0.05"
-          value={settings.glassOpacity}
-          onChange={(e) => updateSettings({ glassOpacity: parseFloat(e.target.value) })}
-          className="w-full grain-range h-1.5"
-        />
-        <div className="flex justify-between mt-2">
-          <span className="text-[9px]" style={{ color: 'var(--gm-text-tertiary)' }}>{t('glass.subtle', lang)}</span>
-          <span className="text-[9px]" style={{ color: 'var(--gm-text-tertiary)' }}>{t('glass.max', lang)}</span>
-        </div>
-      </div>
-
-      {/* ─── Accent Color Picker ───*/}
-      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
-        {t('accent.title', lang)}
-      </p>
-      <div className="grain-card p-4 mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: 'var(--gm-accent-dim)' }}
-            >
-              <Palette size={18} weight="bold" style={{ color: 'var(--gm-accent)' }} />
-            </div>
-            <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>
-              {t('accent.title', lang)}
-            </span>
-          </div>
-        </div>
-        <div className="flex justify-between mt-4 px-1">
-          {ACCENT_COLORS.map((a) => (
-            <div key={a.value} className="flex flex-col items-center gap-1.5">
-              <button
-                onClick={() => updateSettings({ accentColor: a.value })}
-                className={`grain-accent-dot ${settings.accentColor === a.value ? 'selected' : ''}`}
-                style={{ background: a.color }}
-                aria-label={t(a.labelKey, lang)}
-              />
-              <span className="text-[9px] font-medium" style={{ color: settings.accentColor === a.value ? 'var(--gm-accent)' : 'var(--gm-text-tertiary)' }}>
-                {t(a.labelKey, lang)}
-              </span>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* ─── Language ─── */}
@@ -262,7 +178,7 @@ export function SettingsTab() {
         )}
       </div>
 
-      {/* ═══ ADVANCED SETTINGS (collapsed by default, lazy rendered) ═══ */}
+      {/* ═══ ADVANCED SETTINGS (collapsed) ═══ */}
       <button
         className="grain-advanced-toggle mb-4"
         onClick={() => setAdvancedOpen(prev => !prev)}
@@ -288,7 +204,6 @@ export function SettingsTab() {
   );
 }
 
-/** Lazy-rendered advanced settings – only mounts when the section is opened */
 function AdvancedSettingsContent() {
   const {
     deviceInfo, deviceState, settings, updateSettings, selectGrainType,
@@ -303,7 +218,42 @@ function AdvancedSettingsContent() {
 
   return (
     <>
-      {/* ─── Device Card ─── */}
+      {/* ─── Accent Color (now in Advanced) ─── */}
+      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('accent.title', lang)}
+      </p>
+      <div className="grain-card p-4 mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: 'var(--gm-accent-dim)' }}
+            >
+              <Palette size={18} weight="bold" style={{ color: 'var(--gm-accent)' }} />
+            </div>
+            <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>
+              {t('accent.title', lang)}
+            </span>
+          </div>
+        </div>
+        <div className="flex justify-between mt-4 px-1">
+          {ACCENT_COLORS.map((a) => (
+            <div key={a.value} className="flex flex-col items-center gap-1.5">
+              <button
+                onClick={() => updateSettings({ accentColor: a.value })}
+                className={`grain-accent-dot ${settings.accentColor === a.value ? 'selected' : ''}`}
+                style={{ background: a.color }}
+                aria-label={t(a.labelKey, lang)}
+              />
+              <span className="text-[9px] font-medium" style={{ color: settings.accentColor === a.value ? 'var(--gm-accent)' : 'var(--gm-text-tertiary)' }}>
+                {t(a.labelKey, lang)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ─── Device ─── */}
       <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
         {t('settings.device', lang)}
       </p>
@@ -394,7 +344,7 @@ function AdvancedSettingsContent() {
         </>
       )}
 
-      {/* ─── Simulation / Demo States ───*/}
+      {/* ─── Demo States ───*/}
       <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
         {t('settings.demo_states', lang)}
       </p>
@@ -494,48 +444,22 @@ function AdvancedSettingsContent() {
       <div className="grain-card overflow-hidden mb-6">
         <label className="flex justify-between items-center px-5 py-4 cursor-pointer">
           <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.push_alerts', lang)}</span>
-          <input
-            type="checkbox"
-            checked={settings.pushAlerts}
-            onChange={(e) => {
-              updateSettings({ pushAlerts: e.target.checked });
-              showToast(e.target.checked ? t('toast.alerts_on', lang) : t('toast.alerts_off', lang));
-            }}
-            className="grain-toggle"
-          />
+          <input type="checkbox" checked={settings.pushAlerts} onChange={(e) => { updateSettings({ pushAlerts: e.target.checked }); showToast(e.target.checked ? t('toast.alerts_on', lang) : t('toast.alerts_off', lang)); }} className="grain-toggle" />
         </label>
         <div className="grain-separator" />
         <label className="flex justify-between items-center px-5 py-4 cursor-pointer">
           <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.auto_sync', lang)}</span>
-          <input
-            type="checkbox"
-            checked={settings.autoSync}
-            onChange={(e) => {
-              updateSettings({ autoSync: e.target.checked });
-              showToast(e.target.checked ? t('toast.autosync_on', lang) : t('toast.autosync_off', lang));
-            }}
-            className="grain-toggle"
-          />
+          <input type="checkbox" checked={settings.autoSync} onChange={(e) => { updateSettings({ autoSync: e.target.checked }); showToast(e.target.checked ? t('toast.autosync_on', lang) : t('toast.autosync_off', lang)); }} className="grain-toggle" />
         </label>
         <div className="grain-separator" />
         <label className="flex justify-between items-center px-5 py-4 cursor-pointer">
           <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.auto_reconnect', lang)}</span>
-          <input
-            type="checkbox"
-            checked={settings.autoReconnect}
-            onChange={(e) => { updateSettings({ autoReconnect: e.target.checked }); }}
-            className="grain-toggle"
-          />
+          <input type="checkbox" checked={settings.autoReconnect} onChange={(e) => { updateSettings({ autoReconnect: e.target.checked }); }} className="grain-toggle" />
         </label>
         <div className="grain-separator" />
         <label className="flex justify-between items-center px-5 py-4 cursor-pointer">
           <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.wake_on_connect', lang)}</span>
-          <input
-            type="checkbox"
-            checked={settings.wakeOnConnect}
-            onChange={(e) => { updateSettings({ wakeOnConnect: e.target.checked }); }}
-            className="grain-toggle"
-          />
+          <input type="checkbox" checked={settings.wakeOnConnect} onChange={(e) => { updateSettings({ wakeOnConnect: e.target.checked }); }} className="grain-toggle" />
         </label>
       </div>
 
@@ -550,15 +474,11 @@ function AdvancedSettingsContent() {
               const res = await fetch('/api/export?format=csv');
               const blob = await res.blob();
               const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
+              const a = document.createElement('a'); a.href = url;
               a.download = `grain-readings-${new Date().toISOString().split('T')[0]}.csv`;
-              a.click();
-              URL.revokeObjectURL(url);
+              a.click(); URL.revokeObjectURL(url);
               showToast(t('toast.csv_exported', lang));
-            } catch {
-              showToast(t('toast.export_failed', lang));
-            }
+            } catch { showToast(t('toast.export_failed', lang)); }
           }}
           className="w-full flex justify-between items-center px-5 py-4 text-left"
           style={{ color: 'var(--gm-text-primary)' }}
@@ -571,10 +491,7 @@ function AdvancedSettingsContent() {
         </button>
         <div className="grain-separator" />
         <button
-          onClick={() => {
-            clearHistory();
-            showToast(t('toast.history_cleared', lang));
-          }}
+          onClick={() => { clearHistory(); showToast(t('toast.history_cleared', lang)); }}
           className="w-full flex justify-between items-center px-5 py-4 text-left"
           style={{ color: '#EF4444' }}
         >
