@@ -301,7 +301,7 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 64px 20px 130px 20px;
+  padding: 12px 20px 130px 20px;
   scrollbar-width: none;
 }
 .grain-scroll::-webkit-scrollbar { display: none; }
@@ -310,42 +310,15 @@
    LIQUID GLASS EFFECTS
    ═══════════════════════════════════════════════════════════════ */
 
-/* Glass Header – gradient solid top → frosted glass bottom */
+/* Glass Header – clean frosted glass bar */
 .grain-glass-header {
-  position: absolute;
+  position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
   z-index: 20;
-  background: transparent;
+  background: rgba(var(--gm-bg-r, 9), var(--gm-bg-g, 9), var(--gm-bg-b, 11), 0.78);
   backdrop-filter: blur(12px) saturate(1.2);
   -webkit-backdrop-filter: blur(12px) saturate(1.2);
-}
-/* Gradient overlay: top solid → bottom 80% opaque (frosted glass, no readable bleed) */
-.grain-glass-header::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to bottom,
-    var(--gm-bg) 0%,
-    var(--gm-bg) 45%,
-    rgba(var(--gm-bg-r, 9), var(--gm-bg-g, 9), var(--gm-bg-b, 11), 0.88) 70%,
-    rgba(var(--gm-bg-r, 9), var(--gm-bg-g, 9), var(--gm-bg-b, 11), 0.80) 100%
-  );
-  pointer-events: none;
-  z-index: 2;
-}
-/* Subtle bright highlight at bottom edge */
-.grain-glass-header::before {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 8%; right: 8%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
-  pointer-events: none;
-  z-index: 3;
+  border-bottom: 1px solid var(--gm-glass-border);
 }
 
 /* Glass Card – liquid glass with variable intensity */
@@ -652,6 +625,44 @@
   background: var(--gm-accent-dim);
 }
 .grain-lang-option:active { transform: scale(0.98); }
+
+/* ─── Grain Type Dropdown ─── */
+.grain-grain-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: -4px;
+  right: -4px;
+  z-index: 40;
+  background: var(--gm-surface-solid);
+  border: 1px solid var(--gm-glass-border);
+  border-radius: 0.875rem;
+  padding: 6px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.35), 0 4px 12px rgba(0,0,0,0.2);
+  max-height: 280px;
+  overflow-y: auto;
+  animation: grain-slide-down 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.grain-grain-dropdown::-webkit-scrollbar { width: 3px; }
+.grain-grain-dropdown::-webkit-scrollbar-thumb { background: var(--gm-toggle-border); border-radius: 3px; }
+.grain-grain-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gm-text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  text-align: left;
+}
+.grain-grain-option:hover { background: var(--gm-surface-hover); color: var(--gm-text-primary); }
+.grain-grain-option.active { color: var(--gm-accent); }
+.grain-grain-option:active { transform: scale(0.98); }
 
 /* ═══════════════════════════════════════════════════════════════
    ADVANCED SETTINGS COLLAPSIBLE

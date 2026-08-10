@@ -132,9 +132,9 @@ export default function GrainMonitorPage() {
       data-theme={settings.theme}
       style={glassStyle}
     >
-      <Header />
       <Toast />
       <main className="grain-scroll" ref={scrollRef}>
+        <Header />
         {activeTab === 'home' && renderHomeState()}
         {activeTab === 'discover' && <DiscoverTab />}
         {activeTab === 'history' && <HistoryTab />}

@@ -1,0 +1,790 @@
+     1→@import "tailwindcss";
+     2→@import "tw-animate-css";
+     3→
+     4→@custom-variant dark (&:is(.dark *));
+     5→
+     6→@theme inline {
+     7→  --color-background: var(--background);
+     8→  --color-foreground: var(--foreground);
+     9→  --font-sans: var(--font-geist-sans);
+    10→  --font-mono: var(--font-geist-mono);
+    11→  --color-sidebar-ring: var(--sidebar-ring);
+    12→  --color-sidebar-border: var(--sidebar-border);
+    13→  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    14→  --color-sidebar-accent: var(--sidebar-accent);
+    15→  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    16→  --color-sidebar-primary: var(--sidebar-primary);
+    17→  --color-sidebar-foreground: var(--sidebar-foreground);
+    18→  --color-sidebar: var(--sidebar);
+    19→  --color-chart-5: var(--chart-5);
+    20→  --color-chart-4: var(--chart-4);
+    21→  --color-chart-3: var(--chart-3);
+    22→  --color-chart-2: var(--chart-2);
+    23→  --color-chart-1: var(--chart-1);
+    24→  --color-ring: var(--ring);
+    25→  --color-input: var(--input);
+    26→  --color-border: var(--border);
+    27→  --color-destructive: var(--destructive);
+    28→  --color-accent-foreground: var(--accent-foreground);
+    29→  --color-accent: var(--accent);
+    30→  --color-muted-foreground: var(--muted-foreground);
+    31→  --color-muted: var(--muted);
+    32→  --color-secondary-foreground: var(--secondary-foreground);
+    33→  --color-secondary: var(--secondary);
+    34→  --color-primary-foreground: var(--primary-foreground);
+    35→  --color-primary: var(--primary);
+    36→  --color-popover-foreground: var(--popover-foreground);
+    37→  --color-popover: var(--popover);
+    38→  --color-card-foreground: var(--card-foreground);
+    39→  --color-card: var(--card);
+    40→  --radius-sm: calc(var(--radius) - 4px);
+    41→  --radius-md: calc(var(--radius) - 2px);
+    42→  --radius-lg: var(--radius);
+    43→  --radius-xl: calc(var(--radius) + 4px);
+    44→}
+    45→
+    46→:root {
+    47→  --radius: 0.625rem;
+    48→  --background: oklch(1 0 0);
+    49→  --foreground: oklch(0.145 0 0);
+    50→  --card: oklch(1 0 0);
+    51→  --card-foreground: oklch(0.145 0 0);
+    52→  --popover: oklch(1 0 0);
+    53→  --popover-foreground: oklch(0.145 0 0);
+    54→  --primary: oklch(0.205 0 0);
+    55→  --primary-foreground: oklch(0.985 0 0);
+    56→  --secondary: oklch(0.97 0 0);
+    57→  --secondary-foreground: oklch(0.205 0 0);
+    58→  --muted: oklch(0.97 0 0);
+    59→  --muted-foreground: oklch(0.556 0 0);
+    60→  --accent: oklch(0.97 0 0);
+    61→  --accent-foreground: oklch(0.205 0 0);
+    62→  --destructive: oklch(0.577 0.245 27.325);
+    63→  --border: oklch(0.922 0 0);
+    64→  --input: oklch(0.922 0 0);
+    65→  --ring: oklch(0.708 0 0);
+    66→  --chart-1: oklch(0.646 0.222 41.116);
+    67→  --chart-2: oklch(0.6 0.118 184.704);
+    68→  --chart-3: oklch(0.398 0.07 227.392);
+    69→  --chart-4: oklch(0.828 0.189 84.429);
+    70→  --chart-5: oklch(0.769 0.188 70.08);
+    71→  --sidebar: oklch(0.985 0 0);
+    72→  --sidebar-foreground: oklch(0.145 0 0);
+    73→  --sidebar-primary: oklch(0.205 0 0);
+    74→  --sidebar-primary-foreground: oklch(0.985 0 0);
+    75→  --sidebar-accent: oklch(0.97 0 0);
+    76→  --sidebar-accent-foreground: oklch(0.205 0 0);
+    77→  --sidebar-border: oklch(0.922 0 0);
+    78→  --sidebar-ring: oklch(0.708 0 0);
+    79→}
+    80→
+    81→.dark {
+    82→  --background: oklch(0.145 0 0);
+    83→  --foreground: oklch(0.985 0 0);
+    84→  --card: oklch(0.205 0 0);
+    85→  --card-foreground: oklch(0.985 0 0);
+    86→  --popover: oklch(0.205 0 0);
+    87→  --popover-foreground: oklch(0.985 0 0);
+    88→  --primary: oklch(0.922 0 0);
+    89→  --primary-foreground: oklch(0.205 0 0);
+    90→  --secondary: oklch(0.269 0 0);
+    91→  --secondary-foreground: oklch(0.985 0 0);
+    92→  --muted: oklch(0.269 0 0);
+    93→  --muted-foreground: oklch(0.708 0 0);
+    94→  --accent: oklch(0.269 0 0);
+    95→  --accent-foreground: oklch(0.985 0 0);
+    96→  --destructive: oklch(0.704 0.191 22.216);
+    97→  --border: oklch(1 0 0 / 10%);
+    98→  --input: oklch(1 0 0 / 15%);
+    99→  --ring: oklch(0.556 0 0);
+   100→  --chart-1: oklch(0.488 0.243 264.376);
+   101→  --chart-2: oklch(0.696 0.17 162.48);
+   102→  --chart-3: oklch(0.769 0.188 70.08);
+   103→  --chart-4: oklch(0.627 0.265 303.9);
+   104→  --chart-5: oklch(0.645 0.246 16.439);
+   105→  --sidebar: oklch(0.205 0 0);
+   106→  --sidebar-foreground: oklch(0.985 0 0);
+   107→  --sidebar-primary: oklch(0.488 0.243 264.376);
+   108→  --sidebar-primary-foreground: oklch(0.985 0 0);
+   109→  --sidebar-accent: oklch(0.269 0 0);
+   110→  --sidebar-accent-foreground: oklch(0.985 0 0);
+   111→  --sidebar-border: oklch(1 0 0 / 10%);
+   112→  --sidebar-ring: oklch(0.556 0 0);
+   113→}
+   114→
+   115→@layer base {
+   116→  * {
+   117→    @apply border-border outline-ring/50;
+   118→  }
+   119→  body {
+   120→    @apply bg-background text-foreground;
+   121→  }
+   122→}
+   123→
+   124→/* ═══════════════════════════════════════════════════════════════
+   125→   GRAIN MONITOR DESIGN SYSTEM – LIQUID GLASS
+   126→   ═══════════════════════════════════════════════════════════════ */
+   127→
+   128→/* ─── App Shell: Dark mode is the DEFAULT ─── */
+   129→.grain-app {
+   130→  width: 100%;
+   131→  max-width: 430px;
+   132→  height: 100dvh;
+   133→  position: relative;
+   134→  overflow: hidden;
+   135→  display: flex;
+   136→  flex-direction: column;
+   137→  margin: 0 auto;
+   138→  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+   139→  -webkit-tap-highlight-color: transparent;
+   140→
+   141→  /* Dark mode (default) color tokens */
+   142→  --gm-bg: #09090b;
+   143→  --gm-bg-r: 9; --gm-bg-g: 9; --gm-bg-b: 11;
+   144→  --gm-text-primary: #f4f4f5;
+   145→  --gm-text-secondary: #a1a1aa;
+   146→  --gm-text-tertiary: #71717a;
+   147→  --gm-surface-solid: #18181b;
+   148→  --gm-surface-hover: #27272a;
+   149→  --gm-border: rgba(255, 255, 255, 0.07);
+   150→  --gm-border-hover: rgba(255, 255, 255, 0.14);
+   151→  --gm-glass-border: rgba(255, 255, 255, 0.09);
+   152→  --gm-glass-highlight: rgba(255, 255, 255, 0.05);
+   153→  --gm-separator: #27272a;
+   154→  --gm-toggle-bg: #27272a;
+   155→  --gm-toggle-border: #3f3f46;
+   156→  --gm-toggle-thumb: #e4e4e7;
+   157→  --gm-btn-primary-bg: #e4e4e7;
+   158→  --gm-btn-primary-text: #09090b;
+   159→  --gm-toast-border: #3f3f46;
+   160→  --gm-toast-text: #f4f4f5;
+   161→
+   162→  /* Glass opacity – controlled by slider, JS computes derived values */
+   163→  --gm-glass-opacity: 0.75;
+   164→  --gm-blur-header: 28px;
+   165→  --gm-saturate-header: 1.4;
+   166→  --gm-blur-card: 20px;
+   167→  --gm-saturate-card: 1.28;
+   168→  --gm-blur-nav: 27px;
+   169→  --gm-saturate-nav: 1.5;
+   170→  --gm-blur-insight: 17px;
+   171→  --gm-insight-shadow-alpha: 0.09;
+   172→  --gm-blur-toast: 21px;
+   173→  --gm-blur-badge: 12px;
+   174→  --gm-blur-lang: 28px;
+   175→  --gm-saturate-lang: 1.6;
+   176→  --gm-card-shadow: 0 2px 8px rgba(0,0,0,0.11), inset 0 1px 0 var(--gm-glass-highlight);
+   177→  --gm-nav-shadow: 0 8px 32px rgba(0,0,0,0.26), 0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 var(--gm-glass-highlight);
+   178→
+   179→  /* Default accent = orange */
+   180→  --gm-accent: #F97316;
+   181→  --gm-accent-rgb: 249, 115, 22;
+   182→  --gm-accent-dim: rgba(249, 115, 22, 0.15);
+   183→  --gm-accent-glow: rgba(249, 115, 22, 0.3);
+   184→
+   185→  /* Glass backgrounds computed in JS (page.tsx) → fallback defaults */
+   186→  --gm-glass-bg: rgba(var(--gm-bg-r), var(--gm-bg-g), var(--gm-bg-b), 0.75);
+   187→  --gm-surface: rgba(24, 24, 27, 0.64);
+   188→  --gm-toast-bg: rgba(39, 39, 42, 0.95);
+   189→
+   190→  background: var(--gm-bg);
+   191→  color: #d4d4d8;
+   192→}
+   193→
+   194→/* ─── Light mode override ─── */
+   195→.grain-app[data-theme="light"] {
+   196→  --gm-bg: #f5f5f7;
+   197→  --gm-bg-r: 245; --gm-bg-g: 245; --gm-bg-b: 247;
+   198→  --gm-text-primary: #18181b;
+   199→  --gm-text-secondary: #52525b;
+   200→  --gm-text-tertiary: #a1a1aa;
+   201→  --gm-surface-solid: #ffffff;
+   202→  --gm-surface-hover: #f0f0f2;
+   203→  --gm-border: rgba(0, 0, 0, 0.07);
+   204→  --gm-border-hover: rgba(0, 0, 0, 0.14);
+   205→  --gm-glass-border: rgba(0, 0, 0, 0.09);
+   206→  --gm-glass-highlight: rgba(255, 255, 255, 0.7);
+   207→  --gm-separator: #e4e4e7;
+   208→  --gm-toggle-bg: #e4e4e7;
+   209→  --gm-toggle-border: #d4d4d8;
+   210→  --gm-toggle-thumb: #ffffff;
+   211→  --gm-btn-primary-bg: #18181b;
+   212→  --gm-btn-primary-text: #f4f4f5;
+   213→  --gm-toast-border: #e4e4e7;
+   214→  --gm-toast-text: #18181b;
+   215→
+   216→  --gm-glass-bg: rgba(var(--gm-bg-r), var(--gm-bg-g), var(--gm-bg-b), 0.75);
+   217→  --gm-surface: rgba(255, 255, 255, 0.64);
+   218→  --gm-toast-bg: rgba(255, 255, 255, 0.90);
+   219→
+   220→  background: var(--gm-bg);
+   221→  color: #3f3f46;
+   222→  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+   223→}
+   224→
+   225→/* ─── Accent colors (work in both dark and light) ─── */
+   226→.grain-app[data-accent="orange"] {
+   227→  --gm-accent: #F97316;
+   228→  --gm-accent-rgb: 249, 115, 22;
+   229→  --gm-accent-dim: rgba(249, 115, 22, 0.15);
+   230→  --gm-accent-glow: rgba(249, 115, 22, 0.3);
+   231→}
+   232→.grain-app[data-accent="green"] {
+   233→  --gm-accent: #22C55E;
+   234→  --gm-accent-rgb: 34, 197, 94;
+   235→  --gm-accent-dim: rgba(34, 197, 94, 0.15);
+   236→  --gm-accent-glow: rgba(34, 197, 94, 0.3);
+   237→}
+   238→.grain-app[data-accent="purple"] {
+   239→  --gm-accent: #A855F7;
+   240→  --gm-accent-rgb: 168, 85, 247;
+   241→  --gm-accent-dim: rgba(168, 85, 247, 0.15);
+   242→  --gm-accent-glow: rgba(168, 85, 247, 0.3);
+   243→}
+   244→.grain-app[data-accent="blue"] {
+   245→  --gm-accent: #3B82F6;
+   246→  --gm-accent-rgb: 59, 130, 246;
+   247→  --gm-accent-dim: rgba(59, 130, 246, 0.15);
+   248→  --gm-accent-glow: rgba(59, 130, 246, 0.3);
+   249→}
+   250→.grain-app[data-accent="teal"] {
+   251→  --gm-accent: #14B8A6;
+   252→  --gm-accent-rgb: 20, 184, 166;
+   253→  --gm-accent-dim: rgba(20, 184, 166, 0.15);
+   254→  --gm-accent-glow: rgba(20, 184, 166, 0.3);
+   255→}
+   256→
+   257→/* Light mode: slightly less intense accent dim */
+   258→.grain-app[data-theme="light"][data-accent="orange"] { --gm-accent-dim: rgba(249, 115, 22, 0.1); }
+   259→.grain-app[data-theme="light"][data-accent="green"] { --gm-accent-dim: rgba(34, 197, 94, 0.1); }
+   260→.grain-app[data-theme="light"][data-accent="purple"] { --gm-accent-dim: rgba(168, 85, 247, 0.1); }
+   261→.grain-app[data-theme="light"][data-accent="blue"] { --gm-accent-dim: rgba(59, 130, 246, 0.1); }
+   262→.grain-app[data-theme="light"][data-accent="teal"] { --gm-accent-dim: rgba(20, 184, 166, 0.1); }
+   263→
+   264→/* ─── Risk theme states ─── */
+   265→.grain-app[data-grain-theme="safe"] {
+   266→  --gm-hero-start: var(--gm-accent);
+   267→  --gm-hero-end: var(--gm-accent-dim);
+   268→  --gm-alert-bg: var(--gm-accent-dim);
+   269→  --gm-alert-border: rgba(var(--gm-accent-rgb), 0.25);
+   270→  --gm-icon-bg: var(--gm-accent-dim);
+   271→  --gm-dot-color: var(--gm-accent);
+   272→  --gm-badge-bg: rgba(0, 0, 0, 0.25);
+   273→  --gm-badge-text: var(--gm-accent);
+   274→}
+   275→.grain-app[data-grain-theme="warn"] {
+   276→  --gm-hero-start: #F59E0B;
+   277→  --gm-hero-end: rgba(245, 158, 11, 0.15);
+   278→  --gm-alert-bg: rgba(245, 158, 11, 0.06);
+   279→  --gm-alert-border: rgba(245, 158, 11, 0.25);
+   280→  --gm-icon-bg: rgba(245, 158, 11, 0.15);
+   281→  --gm-dot-color: #F59E0B;
+   282→  --gm-badge-bg: rgba(0, 0, 0, 0.25);
+   283→  --gm-badge-text: #FBBF24;
+   284→}
+   285→.grain-app[data-grain-theme="critical"] {
+   286→  --gm-hero-start: #EF4444;
+   287→  --gm-hero-end: rgba(239, 68, 68, 0.15);
+   288→  --gm-alert-bg: rgba(239, 68, 68, 0.08);
+   289→  --gm-alert-border: rgba(239, 68, 68, 0.25);
+   290→  --gm-icon-bg: rgba(239, 68, 68, 0.15);
+   291→  --gm-dot-color: #EF4444;
+   292→  --gm-badge-bg: rgba(0, 0, 0, 0.25);
+   293→  --gm-badge-text: #FCA5A5;
+   294→}
+   295→
+   296→/* ═══════════════════════════════════════════════════════════════
+   297→   SCROLL AREA
+   298→   ═══════════════════════════════════════════════════════════════ */
+   299→
+   300→.grain-scroll {
+   301→  flex: 1;
+   302→  overflow-y: auto;
+   303→  overflow-x: hidden;
+   304→  padding: 64px 20px 130px 20px;
+   305→  scrollbar-width: none;
+   306→}
+   307→.grain-scroll::-webkit-scrollbar { display: none; }
+   308→
+   309→/* ═══════════════════════════════════════════════════════════════
+   310→   LIQUID GLASS EFFECTS
+   311→   ═══════════════════════════════════════════════════════════════ */
+   312→
+   313→/* Glass Header – gradient solid top → frosted glass bottom */
+   314→.grain-glass-header {
+   315→  position: absolute;
+   316→  top: 0;
+   317→  left: 0;
+   318→  right: 0;
+   319→  z-index: 20;
+   320→  background: transparent;
+   321→  backdrop-filter: blur(12px) saturate(1.2);
+   322→  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+   323→}
+   324→/* Gradient overlay: top solid → bottom 80% opaque (frosted glass, no readable bleed) */
+   325→.grain-glass-header::after {
+   326→  content: '';
+   327→  position: absolute;
+   328→  inset: 0;
+   329→  background: linear-gradient(
+   330→    to bottom,
+   331→    var(--gm-bg) 0%,
+   332→    var(--gm-bg) 45%,
+   333→    rgba(var(--gm-bg-r, 9), var(--gm-bg-g, 9), var(--gm-bg-b, 11), 0.88) 70%,
+   334→    rgba(var(--gm-bg-r, 9), var(--gm-bg-g, 9), var(--gm-bg-b, 11), 0.80) 100%
+   335→  );
+   336→  pointer-events: none;
+   337→  z-index: 2;
+   338→}
+   339→/* Subtle bright highlight at bottom edge */
+   340→.grain-glass-header::before {
+   341→  content: '';
+   342→  position: absolute;
+   343→  bottom: 0;
+   344→  left: 8%; right: 8%;
+   345→  height: 1px;
+   346→  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+   347→  pointer-events: none;
+   348→  z-index: 3;
+   349→}
+   350→
+   351→/* Glass Card – liquid glass with variable intensity */
+   352→.grain-card {
+   353→  background: var(--gm-surface);
+   354→  backdrop-filter: blur(var(--gm-blur-card, 20px)) saturate(var(--gm-saturate-card, 1.28));
+   355→  -webkit-backdrop-filter: blur(var(--gm-blur-card, 20px)) saturate(var(--gm-saturate-card, 1.28));
+   356→  border: 1px solid var(--gm-glass-border);
+   357→  border-radius: 1rem;
+   358→  position: relative;
+   359→  overflow: hidden;
+   360→  transition: border-color 0.2s, background 0.2s, backdrop-filter 0.3s;
+   361→  box-shadow: var(--gm-card-shadow, 0 2px 8px rgba(0,0,0,0.11) , inset 0 1px 0 var(--gm-glass-highlight));
+   362→}
+   363→.grain-card::before {
+   364→  content: '';
+   365→  position: absolute;
+   366→  inset: 0;
+   367→  border-radius: inherit;
+   368→  background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 40%, transparent 70%, rgba(255,255,255,0.02) 100%);
+   369→  pointer-events: none;
+   370→}
+   371→
+   372→/* Hero Card */
+   373→.grain-hero-card {
+   374→  background: linear-gradient(145deg, var(--gm-hero-start) 0%, var(--gm-hero-end) 100%);
+   375→  position: relative;
+   376→  overflow: hidden;
+   377→  border: 1px solid rgba(255,255,255,0.08);
+   378→  transition: background 0.6s ease;
+   379→  border-radius: 1.5rem;
+   380→  padding: 1.5rem;
+   381→  box-shadow: 0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.1);
+   382→}
+   383→.grain-hero-card::before {
+   384→  content: '';
+   385→  position: absolute;
+   386→  top: -40%;
+   387→  right: -20%;
+   388→  width: 300px;
+   389→  height: 300px;
+   390→  background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+   391→  pointer-events: none;
+   392→}
+   393→
+   394→/* ═══════════════════════════════════════════════════════════════
+   395→   FLOATING PILL BOTTOM NAV – WIDENED
+   396→   ═══════════════════════════════════════════════════════════════ */
+   397→
+   398→.grain-floating-nav {
+   399→  position: absolute;
+   400→  bottom: 12px;
+   401→  left: 50%;
+   402→  transform: translateX(-50%);
+   403→  z-index: 30;
+   404→  width: calc(100% - 32px);
+   405→  max-width: 360px;
+   406→}
+   407→.grain-floating-nav-inner {
+   408→  background: var(--gm-glass-bg);
+   409→  backdrop-filter: blur(var(--gm-blur-nav, 27px)) saturate(var(--gm-saturate-nav, 1.5));
+   410→  -webkit-backdrop-filter: blur(var(--gm-blur-nav, 27px)) saturate(var(--gm-saturate-nav, 1.5));
+   411→  border: 1px solid var(--gm-glass-border);
+   412→  border-radius: 999px;
+   413→  padding: 6px 6px;
+   414→  display: flex;
+   415→  justify-content: space-around;
+   416→  align-items: center;
+   417→  position: relative;
+   418→  box-shadow: var(--gm-nav-shadow, 0 8px 32px rgba(0,0,0,0.26), 0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 var(--gm-glass-highlight));
+   419→  overflow: hidden;
+   420→}
+   421→/* Solid nav override – 100% opacity, no blur, always opaque */
+   422→.grain-nav-solid {
+   423→  background: var(--gm-surface-solid) !important;
+   424→  backdrop-filter: none !important;
+   425→  -webkit-backdrop-filter: none !important;
+   426→}
+   427→.grain-floating-nav-inner::before {
+   428→  content: '';
+   429→  position: absolute;
+   430→  inset: 0;
+   431→  border-radius: inherit;
+   432→  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 40%, transparent 60%, rgba(255,255,255,0.02) 100%);
+   433→  pointer-events: none;
+   434→}
+   435→.grain-nav-btn {
+   436→  color: var(--gm-text-tertiary);
+   437→  transition: all 0.2s ease;
+   438→  display: flex;
+   439→  flex-direction: column;
+   440→  align-items: center;
+   441→  gap: 1px;
+   442→  padding: 8px 14px;
+   443→  cursor: pointer;
+   444→  border: none;
+   445→  background: none;
+   446→  border-radius: 999px;
+   447→  position: relative;
+   448→  z-index: 1;
+   449→  font-size: 9px;
+   450→  font-weight: 600;
+   451→  letter-spacing: 0.02em;
+   452→}
+   453→.grain-nav-btn.active {
+   454→  color: var(--gm-accent);
+   455→}
+   456→.grain-nav-btn.active::before {
+   457→  content: '';
+   458→  position: absolute;
+   459→  inset: 2px;
+   460→  border-radius: 999px;
+   461→  background: var(--gm-accent-dim);
+   462→  z-index: -1;
+   463→}
+   464→
+   465→/* ═══════════════════════════════════════════════════════════════
+   466→   SPARKLINE
+   467→   ═══════════════════════════════════════════════════════════════ */
+   468→
+   469→.grain-sparkline { stroke: rgba(255,255,255,0.7); stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; transition: d 0.5s ease; }
+   470→.grain-sparkline-fill { fill: url(#grainSparkGradient); stroke: none; transition: d 0.5s ease; }
+   471→
+   472→/* ═══════════════════════════════════════════════════════════════
+   473→   INSIGHT CARD – liquid glass
+   474→   ═══════════════════════════════════════════════════════════════ */
+   475→
+   476→.grain-insight-card {
+   477→  background: var(--gm-alert-bg);
+   478→  border-color: var(--gm-alert-border);
+   479→  border-radius: 1rem;
+   480→  border: 1px solid;
+   481→  padding: 1.25rem;
+   482→  transition: all 0.5s ease;
+   483→  backdrop-filter: blur(var(--gm-blur-insight, 17px)) saturate(1.1);
+   484→  -webkit-backdrop-filter: blur(var(--gm-blur-insight, 17px)) saturate(1.1);
+   485→  box-shadow: 0 2px 12px rgba(0,0,0, var(--gm-insight-shadow-alpha, 0.09));
+   486→}
+   487→.grain-insight-icon {
+   488→  background: var(--gm-icon-bg);
+   489→  transition: all 0.5s ease;
+   490→  backdrop-filter: blur(6px);
+   491→  -webkit-backdrop-filter: blur(6px);
+   492→}
+   493→
+   494→/* ═══════════════════════════════════════════════════════════════
+   495→   STATUS DOT
+   496→   ═══════════════════════════════════════════════════════════════ */
+   497→
+   498→.grain-status-dot {
+   499→  background: var(--gm-dot-color, #71717a);
+   500→  box-shadow: 0 0 8px var(--gm-dot-color, #71717a);
+   501→  transition: background 0.5s, box-shadow 0.5s;
+   502→}
+   503→
+   504→/* ═══════════════════════════════════════════════════════════════
+   505→   TOGGLE SWITCH
+   506→   ═══════════════════════════════════════════════════════════════ */
+   507→
+   508→.grain-toggle {
+   509→  appearance: none;
+   510→  width: 44px;
+   511→  height: 26px;
+   512→  background: var(--gm-toggle-bg);
+   513→  border-radius: 999px;
+   514→  position: relative;
+   515→  cursor: pointer;
+   516→  transition: background 0.3s;
+   517→  border: 1px solid var(--gm-toggle-border);
+   518→  flex-shrink: 0;
+   519→}
+   520→.grain-toggle::after {
+   521→  content: '';
+   522→  position: absolute;
+   523→  top: 2px; left: 2px;
+   524→  width: 20px; height: 20px;
+   525→  background: var(--gm-toggle-thumb);
+   526→  border-radius: 50%;
+   527→  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+   528→  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+   529→}
+   530→.grain-toggle:checked { background: var(--gm-accent); border-color: var(--gm-accent); }
+   531→.grain-toggle:checked::after { transform: translateX(18px); background: #ffffff; }
+   532→
+   533→/* ═══════════════════════════════════════════════════════════════
+   534→   SPINNER
+   535→   ═══════════════════════════════════════════════════════════════ */
+   536→
+   537→.grain-spinner { width: 32px; height: 32px; border: 2px solid var(--gm-toggle-bg); border-top-color: var(--gm-accent); border-radius: 50%; animation: grain-spin 0.7s linear infinite; }
+   538→@keyframes grain-spin { to { transform: rotate(360deg); } }
+   539→
+   540→/* ═══════════════════════════════════════════════════════════════
+   541→   TOAST – liquid glass
+   542→   ═══════════════════════════════════════════════════════════════ */
+   543→
+   544→.grain-toast {
+   545→  position: fixed; top: 16px; left: 50%; transform: translateX(-50%) translateY(-20px);
+   546→  background: var(--gm-toast-bg); backdrop-filter: blur(var(--gm-blur-toast, 21px)); -webkit-backdrop-filter: blur(var(--gm-blur-toast, 21px));
+   547→  border: 1px solid var(--gm-toast-border); padding: 12px 20px; border-radius: 14px;
+   548→  font-size: 13px; font-weight: 500; opacity: 0; pointer-events: none;
+   549→  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); z-index: 100;
+   550→  white-space: nowrap; color: var(--gm-toast-text); box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+   551→}
+   552→.grain-toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+   553→
+   554→/* ═══════════════════════════════════════════════════════════════
+   555→   READING ITEM – liquid glass on hover/tap
+   556→   ═══════════════════════════════════════════════════════════════ */
+   557→
+   558→.grain-reading-item { transition: background 0.2s, transform 0.15s, border-color 0.2s; cursor: pointer; }
+   559→.grain-reading-item:active { transform: scale(0.98); background: var(--gm-surface-hover); }
+   560→
+   561→/* ═══════════════════════════════════════════════════════════════
+   562→   ANIMATIONS
+   563→   ═══════════════════════════════════════════════════════════════ */
+   564→
+   565→@keyframes grain-fade-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+   566→.grain-fade-in { animation: grain-fade-in 0.3s ease-out; }
+   567→@keyframes grain-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+   568→.grain-pulse { animation: grain-pulse 1.5s ease-in-out infinite; }
+   569→
+   570→/* ═══════════════════════════════════════════════════════════════
+   571→   BADGE – liquid glass
+   572→   ═══════════════════════════════════════════════════════════════ */
+   573→
+   574→.grain-badge {
+   575→  font-size: 9px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+   576→  padding: 6px 12px; border-radius: 999px;
+   577→  background: rgba(0,0,0,0.25); color: rgba(255,255,255,0.9);
+   578→  border: 1px solid rgba(255,255,255,0.2);
+   579→  backdrop-filter: blur(var(--gm-blur-badge, 12px));
+   580→  -webkit-backdrop-filter: blur(var(--gm-blur-badge, 12px));
+   581→}
+   582→
+   583→/* ═══════════════════════════════════════════════════════════════
+   584→   DISCOVER CARD – liquid glass
+   585→   ═══════════════════════════════════════════════════════════════ */
+   586→
+   587→.grain-discover-card {
+   588→  background: var(--gm-surface);
+   589→  backdrop-filter: blur(var(--gm-blur-card, 20px)) saturate(var(--gm-saturate-card, 1.28));
+   590→  -webkit-backdrop-filter: blur(var(--gm-blur-card, 20px)) saturate(var(--gm-saturate-card, 1.28));
+   591→  border: 1px solid var(--gm-glass-border);
+   592→  border-radius: 1rem;
+   593→  overflow: hidden;
+   594→  transition: border-color 0.2s, transform 0.15s;
+   595→  cursor: pointer;
+   596→  position: relative;
+   597→  box-shadow: var(--gm-card-shadow, 0 2px 8px rgba(0,0,0,0.11), inset 0 1px 0 var(--gm-glass-highlight));
+   598→}
+   599→.grain-discover-card:hover { border-color: var(--gm-border-hover); }
+   600→.grain-discover-card:active { transform: scale(0.98); }
+   601→
+   602→/* ═══════════════════════════════════════════════════════════════
+   603→   LANGUAGE PANEL – liquid glass overlay
+   604→   ═══════════════════════════════════════════════════════════════ */
+   605→
+   606→.grain-lang-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: flex-start; justify-content: center; padding-top: 60px; }
+   607→.grain-lang-panel {
+   608→  width: calc(100% - 40px); max-width: 380px;
+   609→  background: var(--gm-surface-solid);
+   610→  backdrop-filter: blur(var(--gm-blur-lang, 28px)) saturate(var(--gm-saturate-lang, 1.6));
+   611→  -webkit-backdrop-filter: blur(var(--gm-blur-lang, 28px)) saturate(var(--gm-saturate-lang, 1.6));
+   612→  border: 1px solid var(--gm-glass-border);
+   613→  border-radius: 1.5rem; padding: 1.5rem;
+   614→  box-shadow: 0 24px 64px rgba(0,0,0,0.3);
+   615→  animation: grain-slide-down 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+   616→}
+   617→@keyframes grain-slide-down { from { opacity: 0; transform: translateY(-12px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+   618→
+   619→/* ═══════════════════════════════════════════════════════════════
+   620→   UTILITY CLASSES
+   621→   ═══════════════════════════════════════════════════════════════ */
+   622→
+   623→.grain-custom-scroll { scrollbar-width: thin; scrollbar-color: var(--gm-toggle-border) transparent; }
+   624→.grain-custom-scroll::-webkit-scrollbar { width: 4px; }
+   625→.grain-custom-scroll::-webkit-scrollbar-track { background: transparent; }
+   626→.grain-custom-scroll::-webkit-scrollbar-thumb { background: var(--gm-toggle-border); border-radius: 4px; }
+   627→
+   628→.grain-separator { height: 1px; background: var(--gm-separator); }
+   629→
+   630→.grain-accent-dot { width: 32px; height: 32px; border-radius: 50%; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; border: 2.5px solid transparent; }
+   631→.grain-accent-dot:active { transform: scale(0.9); }
+   632→.grain-accent-dot.selected { border-color: var(--gm-text-primary); box-shadow: 0 0 0 3px var(--gm-accent-dim); }
+   633→
+   634→.grain-range { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 999px; background: var(--gm-toggle-bg); outline: none; }
+   635→.grain-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--gm-accent); cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.2); border: 2px solid var(--gm-surface-solid); }
+   636→.grain-range::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--gm-accent); cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.2); border: 2px solid var(--gm-surface-solid); }
+   637→
+   638→/* ─── Language inline selector (for settings) ─── */
+   639→.grain-lang-option {
+   640→  display: flex;
+   641→  align-items: center;
+   642→  gap: 12px;
+   643→  padding: 12px 16px;
+   644→  border-radius: 12px;
+   645→  transition: all 0.15s ease;
+   646→  cursor: pointer;
+   647→  border: 1px solid var(--gm-border);
+   648→  background: var(--gm-surface);
+   649→}
+   650→.grain-lang-option.active {
+   651→  border-color: var(--gm-accent);
+   652→  background: var(--gm-accent-dim);
+   653→}
+   654→.grain-lang-option:active { transform: scale(0.98); }
+   655→
+   656→/* ═══════════════════════════════════════════════════════════════
+   657→   ADVANCED SETTINGS COLLAPSIBLE
+   658→   ═══════════════════════════════════════════════════════════════ */
+   659→
+   660→.grain-advanced-toggle {
+   661→  display: flex;
+   662→  align-items: center;
+   663→  justify-content: space-between;
+   664→  width: 100%;
+   665→  padding: 14px 16px;
+   666→  border-radius: 12px;
+   667→  background: var(--gm-surface);
+   668→  border: 1px solid var(--gm-glass-border);
+   669→  cursor: pointer;
+   670→  transition: all 0.2s ease;
+   671→  backdrop-filter: blur(var(--gm-blur-card, 20px)) saturate(var(--gm-saturate-card, 1.28));
+   672→  -webkit-backdrop-filter: blur(var(--gm-blur-card, 20px)) saturate(var(--gm-saturate-card, 1.28));
+   673→}
+   674→.grain-advanced-toggle:active {
+   675→  transform: scale(0.98);
+   676→}
+   677→.grain-advanced-content {
+   678→  overflow: hidden;
+   679→  transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+   680→}
+   681→.grain-advanced-content.collapsed {
+   682→  max-height: 0;
+   683→  opacity: 0;
+   684→}
+   685→.grain-advanced-content.expanded {
+   686→  max-height: 2000px;
+   687→  opacity: 1;
+   688→}
+   689→.grain-chevron {
+   690→  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+   691→}
+   692→.grain-chevron.rotated {
+   693→  transform: rotate(180deg);
+   694→}
+   695→
+   696→/* ═══════════════════════════════════════════════════════════════
+   697→   BLUETOOTH GATE – full-screen block until BT enabled
+   698→   ═══════════════════════════════════════════════════════════════ */
+   699→
+   700→.grain-bt-gate {
+   701→  position: fixed;
+   702→  inset: 0;
+   703→  z-index: 200;
+   704→  display: flex;
+   705→  align-items: center;
+   706→  justify-content: center;
+   707→  background: var(--gm-bg);
+   708→  padding: 32px;
+   709→  animation: grain-fade-in 0.4s ease-out;
+   710→}
+   711→.grain-bt-gate-content {
+   712→  display: flex;
+   713→  flex-direction: column;
+   714→  align-items: center;
+   715→  text-align: center;
+   716→  max-width: 320px;
+   717→}
+   718→.grain-bt-icon-wrap {
+   719→  width: 80px;
+   720→  height: 80px;
+   721→  border-radius: 50%;
+   722→  display: flex;
+   723→  align-items: center;
+   724→  justify-content: center;
+   725→  border: 2px solid var(--gm-glass-border);
+   726→  background: var(--gm-accent-dim);
+   727→  margin-bottom: 24px;
+   728→}
+   729→.grain-bt-gate-title {
+   730→  font-size: 1.25rem;
+   731→  font-weight: 700;
+   732→  letter-spacing: -0.02em;
+   733→  margin-bottom: 8px;
+   734→}
+   735→.grain-bt-gate-desc {
+   736→  font-size: 0.8125rem;
+   737→  line-height: 1.6;
+   738→  color: var(--gm-text-secondary);
+   739→}
+   740→.grain-bt-gate-btn {
+   741→  display: flex;
+   742→  align-items: center;
+   743→  justify-content: center;
+   744→  gap: 8px;
+   745→  width: 100%;
+   746→  padding: 14px 24px;
+   747→  border-radius: 14px;
+   748→  font-size: 0.8125rem;
+   749→  font-weight: 700;
+   750→  letter-spacing: 0.04em;
+   751→  cursor: pointer;
+   752→  transition: all 0.2s ease;
+   753→  border: none;
+   754→}
+   755→.grain-bt-gate-btn:active {
+   756→  transform: scale(0.97);
+   757→}
+   758→.grain-bt-gate-btn-primary {
+   759→  background: var(--gm-accent);
+   760→  color: #ffffff;
+   761→  box-shadow: 0 6px 20px var(--gm-accent-glow);
+   762→}
+   763→.grain-bt-gate-btn-primary:active {
+   764→  box-shadow: 0 2px 8px var(--gm-accent-glow);
+   765→}
+   766→.grain-bt-gate-btn-secondary {
+   767→  background: var(--gm-toggle-bg);
+   768→  color: var(--gm-text-secondary);
+   769→  border: 1px solid var(--gm-toggle-border);
+   770→}
+   771→.grain-bt-pulse-ring {
+   772→  position: absolute;
+   773→  inset: -12px;
+   774→  border-radius: 50%;
+   775→  border: 2px solid var(--gm-accent);
+   776→  opacity: 0;
+   777→  animation: grain-bt-pulse 2s ease-out infinite;
+   778→  pointer-events: none;
+   779→}
+   780→@keyframes grain-bt-pulse {
+   781→  0% { opacity: 0.6; transform: scale(0.9); }
+   782→  100% { opacity: 0; transform: scale(1.5); }
+   783→}
+   784→.grain-bt-gate-icon {
+   785→  position: relative;
+   786→  display: flex;
+   787→  align-items: center;
+   788→  justify-content: center;
+   789→}
+   790→

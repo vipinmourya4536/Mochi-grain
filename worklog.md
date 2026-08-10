@@ -299,3 +299,47 @@ Stage Summary:
 - Frosted glass gradient on header: top=solid, bottom=frosted with visible content blur
 - Header floats over scrollable content for the glass effect to work
 - Clean lint, zero errors, both dark and light modes verified
+---
+Task ID: 11
+Agent: Main
+Task: Fix header alignment, implement grain type dropdown
+
+Work Log:
+- Analyzed user screenshot via VLM: header had misalignment issues, grain type was static text
+- Simplified header.tsx: removed status label subtitle (was unused), made single-line compact layout (h-12), reduced battery circle from 36px to 30px, removed second useGrainStore() call bug
+- Replaced complex header glassmorphism (absolute position + ::after gradient overlay + ::before highlight line) with clean sticky frosted glass bar:
+  - position: sticky; top: 0; z-index: 20
+  - background: rgba(var(--gm-bg-r), var(--gm-bg-g), var(--gm-bg-b), 0.78)
+  - backdrop-filter: blur(12px) saturate(1.2)
+  - -webkit-backdrop-filter: blur(12px) saturate(1.2)
+  - border-bottom: 1px solid var(--gm-glass-border)
+  - Removed all ::before and ::after pseudo-elements
+- Moved header inside scroll container for sticky positioning to work correctly
+- Updated scroll padding to 12px 20px 130px 20px (header is inside scroll flow now)
+- Converted grain type card in metric-pills.tsx from static display to interactive dropdown:
+  - Created GrainTypeDropdown component with useState for open/close
+  - Click handler on grain name + chevron SVG toggles dropdown
+  - Pointer event listener on document closes dropdown on outside click
+  - All 9 grain types listed (Wheat, Rice, Corn, Barley, Soybean, Sorghum, Oats, Millet, Other)
+  - Selected grain shows checkmark SVG icon in accent color
+  - Calls store's selectGrainType() which updates thresholds and re-simulates
+- Added dropdown CSS styles to globals.css:
+  - .grain-grain-dropdown: absolute positioned, solid bg, rounded corners, slide-down animation, max-height 280px with custom scrollbar
+  - .grain-grain-option: hover state, active state, accent color for selected item
+- Attempted position:fixed for header to enable backdrop-filter, but discovered Headless Chrome 151 doesn't render backdrop-filter (no GPU compositing). The effect WILL work on real devices.
+- Reverted to position:sticky (proper width constraint within app container)
+- Verified via Agent Browser + VLM:
+  - Header properly aligned, compact, clean ✅
+  - Grain card shows dropdown chevron ✅
+  - Dropdown opens with all 9 grain types ✅
+  - Selecting grain type switches correctly (Wheat→Rice→Corn) ✅
+  - Three metric cards well-aligned in row ✅
+  - No overlap issues ✅
+  - Sticky header stays at top while scrolling ✅
+  - Clean lint, zero runtime errors ✅
+
+Stage Summary:
+- Header: clean compact sticky frosted glass bar (backdrop-filter works on real devices, not headless Chrome)
+- Grain type: interactive dropdown with all 9 types, checkmark for selected, accent color highlight
+- selectGrainType() properly updates thresholds and re-simulates when connected
+- No duplicate useGrainStore() calls, removed unused statusLabel variable
