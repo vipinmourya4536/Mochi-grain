@@ -141,28 +141,6 @@ export function SettingsTab() {
         </div>
       </div>
 
-      {/* ─── Demo States ─── */}
-      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
-        {t('settings.demo_states', lang)}
-      </p>
-      <div className="grain-card p-2 flex gap-2 mb-6">
-        {(['safe', 'warn', 'critical'] as const).map((mode) => (
-          <button
-            key={mode}
-            onClick={() => {
-              if (simRunning) { switchDemoMode(mode); } else { simulateConnect(mode); }
-            }}
-            className="flex-1 py-3 rounded-xl text-[11px] font-bold tracking-wide uppercase active:scale-95 transition-all"
-            style={{
-              color: mode === 'safe' ? 'var(--gm-accent)' : mode === 'warn' ? '#F59E0B' : '#EF4444',
-              background: mode === 'safe' ? 'var(--gm-accent-dim)' : mode === 'warn' ? 'rgba(245, 158, 11, 0.08)' : 'rgba(239, 68, 68, 0.08)',
-            }}
-          >
-            {mode === 'critical' ? t('settings.critical', lang) : mode === 'warn' ? t('settings.warn', lang) : t('settings.safe', lang)}
-          </button>
-        ))}
-      </div>
-
       {/* ─── Grain Type ─── */}
       <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
         {t('settings.grain_type', lang)}
@@ -186,115 +164,7 @@ export function SettingsTab() {
         })}
       </div>
 
-      {/* ═══ ADVANCED SETTINGS (collapsed) ═══ */}
-      <button
-        className="grain-advanced-toggle mb-4"
-        onClick={() => setAdvancedOpen(prev => !prev)}
-      >
-        <div className="flex items-center gap-3">
-          <SlidersHorizontal size={18} weight="bold" style={{ color: 'var(--gm-accent)' }} />
-          <span className="text-sm font-semibold" style={{ color: 'var(--gm-text-primary)' }}>
-            Advanced Settings
-          </span>
-        </div>
-        <CaretDown
-          size={18}
-          weight="bold"
-          className={`grain-chevron ${advancedOpen ? 'rotated' : ''}`}
-          style={{ color: 'var(--gm-text-tertiary)' }}
-        />
-      </button>
-
-      <div className={`grain-advanced-content ${advancedOpen ? 'expanded' : 'collapsed'}`}>
-        {advancedOpen && <AdvancedSettingsContent />}
-      </div>
-    </div>
-  );
-}
-
-function AdvancedSettingsContent() {
-  const {
-    deviceInfo, settings, updateSettings,
-    disconnectProbe, sendProbeCommand,
-    switchDemoMode, syncProbeHistory, clearHistory,
-    hasDevice, showToast,
-  } = useGrainStore();
-
-  const lang = settings.language as AppLanguage;
-  const hasConnection = hasDevice;
-
-  return (
-    <>
-      {/* ─── Accent Color ─── */}
-      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
-        {t('accent.title', lang)}
-      </p>
-      <div className="grain-card p-4 mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: 'var(--gm-accent-dim)' }}
-            >
-              <Palette size={18} weight="bold" style={{ color: 'var(--gm-accent)' }} />
-            </div>
-            <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>
-              {t('accent.title', lang)}
-            </span>
-          </div>
-        </div>
-        <div className="flex justify-between mt-4 px-1">
-          {ACCENT_COLORS.map((a) => (
-            <div key={a.value} className="flex flex-col items-center gap-1.5">
-              <button
-                onClick={() => updateSettings({ accentColor: a.value })}
-                className={`grain-accent-dot ${settings.accentColor === a.value ? 'selected' : ''}`}
-                style={{ background: a.color }}
-                aria-label={t(a.labelKey, lang)}
-              />
-              <span className="text-[9px] font-medium" style={{ color: settings.accentColor === a.value ? 'var(--gm-accent)' : 'var(--gm-text-tertiary)' }}>
-                {t(a.labelKey, lang)}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ─── Probe Controls ───*/}
-      {hasConnection && (
-        <>
-          <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
-            {t('settings.probe_controls', lang)}
-          </p>
-          <div className="grain-card overflow-hidden mb-6">
-            <button
-              onClick={syncProbeHistory}
-              className="w-full flex justify-between items-center px-5 py-4 transition-colors text-left"
-              style={{ color: 'var(--gm-text-primary)' }}
-            >
-              <div className="flex items-center gap-3">
-                <ArrowClockwise size={18} weight="bold" style={{ color: 'var(--gm-text-secondary)' }} />
-                <span className="text-sm font-medium">{t('settings.sync_history', lang)}</span>
-              </div>
-              <span className="text-[11px]" style={{ color: 'var(--gm-text-tertiary)' }}>{t('settings.sync_history_desc', lang)}</span>
-            </button>
-            <div className="grain-separator" />
-            <button
-              onClick={() => sendProbeCommand('wake')}
-              className="w-full flex justify-between items-center px-5 py-4 transition-colors text-left"
-              style={{ color: 'var(--gm-text-primary)' }}
-            >
-              <div className="flex items-center gap-3">
-                <Wrench size={18} weight="bold" style={{ color: 'var(--gm-text-secondary)' }} />
-                <span className="text-sm font-medium">{t('settings.wake_probe', lang)}</span>
-              </div>
-              <span className="text-[11px]" style={{ color: 'var(--gm-text-tertiary)' }}>{t('settings.wake_probe_desc', lang)}</span>
-            </button>
-          </div>
-        </>
-      )}
-
-      {/* ─── Thresholds ───*/}
+      {/* ═══ THRESHOLDS ═══ */}
       <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
         {t('settings.thresholds', lang)}
       </p>
@@ -342,7 +212,7 @@ function AdvancedSettingsContent() {
         </div>
       </div>
 
-      {/* ─── Preferences ───*/}
+      {/* ═══ PREFERENCES ═══ */}
       <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
         {t('settings.preferences', lang)}
       </p>
@@ -368,11 +238,169 @@ function AdvancedSettingsContent() {
         </label>
       </div>
 
-      {/* ─── Export / Data ───*/}
+      {/* ═══ ABOUT ═══ */}
+      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('settings.about', lang)}
+      </p>
+      <div className="grain-card overflow-hidden mb-6">
+        <div className="flex justify-between items-center px-5 py-4">
+          <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.app_version', lang)}</span>
+          <span className="text-[11px]" style={{ color: 'var(--gm-text-secondary)' }}>v1.0.0</span>
+        </div>
+        <div className="grain-separator" />
+        <div className="flex justify-between items-center px-5 py-4">
+          <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.engine', lang)}</span>
+          <span className="text-[11px]" style={{ color: 'var(--gm-text-secondary)' }}>Dummy Decision v0.1</span>
+        </div>
+        <div className="grain-separator" />
+        <div className="flex justify-between items-center px-5 py-4">
+          <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.probe_firmware', lang)}</span>
+          <span className="text-[11px]" style={{ color: 'var(--gm-text-secondary)' }}>{deviceInfo?.firmware || '--'}</span>
+        </div>
+      </div>
+
+      <div className="text-center pb-4">
+        <p className="text-[10px]" style={{ color: 'var(--gm-text-tertiary)' }}>
+          Grain Monitor v1.0 · Built for ESP32
+        </p>
+      </div>
+
+      {/* ═══ ADVANCED SETTINGS (collapsed) ═══ */}
+      <button
+        className="grain-advanced-toggle mb-4"
+        onClick={() => setAdvancedOpen(prev => !prev)}
+      >
+        <div className="flex items-center gap-3">
+          <SlidersHorizontal size={18} weight="bold" style={{ color: 'var(--gm-accent)' }} />
+          <span className="text-sm font-semibold" style={{ color: 'var(--gm-text-primary)' }}>
+            Advanced Settings
+          </span>
+        </div>
+        <CaretDown
+          size={18}
+          weight="bold"
+          className={`grain-chevron ${advancedOpen ? 'rotated' : ''}`}
+          style={{ color: 'var(--gm-text-tertiary)' }}
+        />
+      </button>
+
+      <div className={`grain-advanced-content ${advancedOpen ? 'expanded' : 'collapsed'}`}>
+        {advancedOpen && <AdvancedSettingsContent />}
+      </div>
+    </div>
+  );
+}
+
+function AdvancedSettingsContent() {
+  const {
+    settings, updateSettings,
+    disconnectProbe, sendProbeCommand, simulateConnect,
+    switchDemoMode, syncProbeHistory, clearHistory,
+    hasDevice, showToast,
+  } = useGrainStore();
+
+  const lang = settings.language as AppLanguage;
+  const hasConnection = hasDevice;
+  const simRunning = isSimulating();
+
+  return (
+    <>
+      {/* ─── Accent Color ─── */}
+      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1 mt-4" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('accent.title', lang)}
+      </p>
+      <div className="grain-card p-4 mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: 'var(--gm-accent-dim)' }}
+            >
+              <Palette size={18} weight="bold" style={{ color: 'var(--gm-accent)' }} />
+            </div>
+            <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>
+              {t('accent.title', lang)}
+            </span>
+          </div>
+        </div>
+        <div className="flex justify-between mt-4 px-1">
+          {ACCENT_COLORS.map((a) => (
+            <div key={a.value} className="flex flex-col items-center gap-1.5">
+              <button
+                onClick={() => updateSettings({ accentColor: a.value })}
+                className={`grain-accent-dot ${settings.accentColor === a.value ? 'selected' : ''}`}
+                style={{ background: a.color }}
+                aria-label={t(a.labelKey, lang)}
+              />
+              <span className="text-[9px] font-medium" style={{ color: settings.accentColor === a.value ? 'var(--gm-accent)' : 'var(--gm-text-tertiary)' }}>
+                {t(a.labelKey, lang)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ─── Demo States ─── */}
+      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('settings.demo_states', lang)}
+      </p>
+      <div className="grain-card p-2 flex gap-2 mb-6">
+        {(['safe', 'warn', 'critical'] as const).map((mode) => (
+          <button
+            key={mode}
+            onClick={() => {
+              if (simRunning) { switchDemoMode(mode); } else { simulateConnect(mode); }
+            }}
+            className="flex-1 py-3 rounded-xl text-[11px] font-bold tracking-wide uppercase active:scale-95 transition-all"
+            style={{
+              color: mode === 'safe' ? 'var(--gm-accent)' : mode === 'warn' ? '#F59E0B' : '#EF4444',
+              background: mode === 'safe' ? 'var(--gm-accent-dim)' : mode === 'warn' ? 'rgba(245, 158, 11, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+            }}
+          >
+            {mode === 'critical' ? t('settings.critical', lang) : mode === 'warn' ? t('settings.warn', lang) : t('settings.safe', lang)}
+          </button>
+        ))}
+      </div>
+
+      {/* ─── Probe Controls ─── */}
+      {hasConnection && (
+        <>
+          <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
+            {t('settings.probe_controls', lang)}
+          </p>
+          <div className="grain-card overflow-hidden mb-6">
+            <button
+              onClick={syncProbeHistory}
+              className="w-full flex justify-between items-center px-5 py-4 transition-colors text-left"
+              style={{ color: 'var(--gm-text-primary)' }}
+            >
+              <div className="flex items-center gap-3">
+                <ArrowClockwise size={18} weight="bold" style={{ color: 'var(--gm-text-secondary)' }} />
+                <span className="text-sm font-medium">{t('settings.sync_history', lang)}</span>
+              </div>
+              <span className="text-[11px]" style={{ color: 'var(--gm-text-tertiary)' }}>{t('settings.sync_history_desc', lang)}</span>
+            </button>
+            <div className="grain-separator" />
+            <button
+              onClick={() => sendProbeCommand('wake')}
+              className="w-full flex justify-between items-center px-5 py-4 transition-colors text-left"
+              style={{ color: 'var(--gm-text-primary)' }}
+            >
+              <div className="flex items-center gap-3">
+                <Wrench size={18} weight="bold" style={{ color: 'var(--gm-text-secondary)' }} />
+                <span className="text-sm font-medium">{t('settings.wake_probe', lang)}</span>
+              </div>
+              <span className="text-[11px]" style={{ color: 'var(--gm-text-tertiary)' }}>{t('settings.wake_probe_desc', lang)}</span>
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* ─── Export / Data ─── */}
       <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
         {t('settings.data', lang)}
       </p>
-      <div className="grain-card overflow-hidden mb-6">
+      <div className="grain-card overflow-hidden mb-8">
         <button
           onClick={async () => {
             try {
@@ -406,33 +434,6 @@ function AdvancedSettingsContent() {
           </div>
           <span className="text-[11px]" style={{ color: 'var(--gm-text-tertiary)' }}>{t('settings.local_only', lang)}</span>
         </button>
-      </div>
-
-      {/* ─── About ───*/}
-      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
-        {t('settings.about', lang)}
-      </p>
-      <div className="grain-card overflow-hidden mb-8">
-        <div className="flex justify-between items-center px-5 py-4">
-          <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.app_version', lang)}</span>
-          <span className="text-[11px]" style={{ color: 'var(--gm-text-secondary)' }}>v1.0.0</span>
-        </div>
-        <div className="grain-separator" />
-        <div className="flex justify-between items-center px-5 py-4">
-          <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.engine', lang)}</span>
-          <span className="text-[11px]" style={{ color: 'var(--gm-text-secondary)' }}>Dummy Decision v0.1</span>
-        </div>
-        <div className="grain-separator" />
-        <div className="flex justify-between items-center px-5 py-4">
-          <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.probe_firmware', lang)}</span>
-          <span className="text-[11px]" style={{ color: 'var(--gm-text-secondary)' }}>{deviceInfo?.firmware || '--'}</span>
-        </div>
-      </div>
-
-      <div className="text-center pb-4">
-        <p className="text-[10px]" style={{ color: 'var(--gm-text-tertiary)' }}>
-          Grain Monitor v1.0 · Built for ESP32
-        </p>
       </div>
     </>
   );

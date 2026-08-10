@@ -206,33 +206,35 @@ Stage Summary:
 ---
 Task ID: 8
 Agent: Main
-Task: Move crucial settings to basic area + add Bluetooth force gate
+Task: Move crucial settings to basic area, remove big language box, add Bluetooth force gate
 
 Work Log:
-- Moved 3 crucial sections from AdvancedSettingsContent to SettingsTab basic area:
+- Removed big language selector card from settings-tab.tsx entirely
+- Moved marked sections from AdvancedSettingsContent to SettingsTab basic area:
   - Device card (GRAIN-01 info, Calibrate button, Disconnect/Simulate)
-  - Demo States (Safe/Warning/Critical buttons)
   - Grain Type selector (9 grain options)
-- Advanced Settings now contains only: Accent Color, Probe Controls, Thresholds, Preferences, Data, About
-- Updated SettingsTab to import all necessary store functions (selectGrainType, simulateConnect, switchDemoMode, etc.)
+  - Moisture Thresholds (Safe/Warning/Critical sliders)
+  - Preferences (Push Alerts, Auto-sync, Auto-reconnect, Wake on Connect)
+  - About (App Version, Engine, Probe Firmware)
+- Advanced Settings now contains only: Accent Color, Demo States, Probe Controls, Export/Data
 - Created BluetoothGate component (bluetooth-gate.tsx):
-  - Self-contained: checks BT availability on mount, returns null when available
-  - Uses navigator.bluetooth.getAvailability() with availabilitychanged event listener
-  - Handles 3 states: checking (loading), unavailable (red warning), off (BT icon)
-  - Full-screen fixed overlay at z-index 200 with pulse ring animation
-  - Translated in all 4 languages (bt.gate.* keys already existed in i18n.ts)
-  - "Turn On Bluetooth" / "Check Again" button to re-check availability
-- Added BT gate CSS: .grain-bt-pulse-ring animation, .grain-bt-gate-icon positioning
-- Added BluetoothGate to page.tsx (renders before Header, blocks entire app)
-- Verified via Agent Browser:
-  - BT gate blocks full screen when BT unavailable (confirmed via VLM: only BT message visible)
-  - Settings basic area: Theme → Device → Demo States → Grain Type → Advanced Settings (all visible without expanding)
-  - Advanced Settings button exists and is clickable
+  - Checks navigator.bluetooth.getAvailability() on mount
+  - Handles 3 states: checking (spinner), unavailable (red warning + Continue), off (BT icon + Enable/Check buttons)
+  - Listens for availabilitychanged event to auto-dismiss when BT turns on
+  - Full-screen fixed overlay at z-index 200
+  - Added Continue button for unsupported browsers (allows demo mode access)
+- Added BT gate i18n keys to all 4 languages (bt.gate.title/desc/unsupported/unsupported_desc/check/enable/continue)
+- Added BT gate CSS classes to globals.css (.grain-bt-gate, .grain-bt-gate-content, .grain-bt-icon-wrap, .grain-bt-gate-btn, etc.)
+- Integrated BluetoothGate into page.tsx (renders before Header, conditional on btPassed state)
+- Verified via Agent Browser accessibility tree:
+  - Main settings: THEME → DEVICE → GRAIN TYPE → MOISTURE THRESHOLDS → PREFERENCES → ABOUT → ADVANCED SETTINGS
+  - No Demo States in main area (correctly in Advanced only)
+  - BT gate shows correctly on unsupported browsers
 - Clean lint, zero errors
 
 Stage Summary:
-- Crucial settings (Device, Demo States, Grain Type) immediately accessible without expanding Advanced
-- Advanced Settings: Accent Color, Probe Controls, Thresholds, Preferences, Data, About
-- Bluetooth gate forces user to enable BT before using the app
-- Gate auto-dismisses when BT becomes available (via availabilitychanged event)
-- On unsupported browsers, shows "Not Supported" warning with Chrome/Edge recommendation
+- Settings basic area: Theme, Device, Grain Type, Thresholds, Preferences, About — all immediately accessible
+- Advanced Settings (collapsed): Accent Color, Demo States, Probe Controls, Export CSV, Clear History
+- Bluetooth gate blocks app on launch until BT is enabled or user clicks Continue (unsupported)
+- Gate auto-dismisses via availabilitychanged event when BT turns on
+- All 4 languages have BT gate translations
