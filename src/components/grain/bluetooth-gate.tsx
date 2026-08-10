@@ -1,57 +1,29 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { t, type AppLanguage } from '@/lib/i18n';
 import { useGrainStore } from '@/lib/grain-store';
-import { Bluetooth, WarningCircle, ArrowRight } from '@phosphor-icons/react/dist/ssr';
-
-type BtStatus = 'checking' | 'unavailable' | 'off';
+import { Bluetooth, WarningCircle, ArrowRight, BluetoothSlash } from '@phosphor-icons/react/dist/ssr';
 
 /**
  * Full-screen gate that blocks the app until Bluetooth is available.
- * Checks navigator.bluetooth.getAvailability() and listens for
- * availabilitychanged events to auto-dismiss when BT is turned on.
+ * Uses store state (btAvailable) instead of onPass prop.
+ * Shows clear text instead of blank spinner.
+ * Listens for availabilitychanged events to auto-dismiss when BT is turned on.
  */
-export function BluetoothGate({ onPass }: { onPass: () => void }) {
-  const { settings } = useGrainStore();
+export function BluetoothGate() {
+  const { settings, btAvailable, setBtAvailable } = useGrainStore();
   const lang = settings.language as AppLanguage;
-  const [status, setStatus] = useState<BtStatus>('checking');
+  const checkingRef = useRef(false);
 
   const checkBT = useCallback(async () => {
-    if (typeof navigator === 'undefined' || !('bluetooth' in navigator)) {
-      setStatus('unavailable');
-      return;
-    }
+    if (checkingRef.current) return;
+    checkingRef.current = true;
 
-    const bt = navigator.bluetooth as Bluetooth & {
-      getAvailability?: () => Promise<boolean>;
-    };
-
-    if (typeof bt.getAvailability === 'function') {
-      try {
-        const available = await bt.getAvailability();
-        if (available) {
-          onPass();
-          return;
-        }
-        setStatus('off');
-        return;
-      } catch {
-        setStatus('off');
-        return;
-      }
-    }
-
-    // Fallback: API exists but no getAvailability (older Chrome)
-    onPass();
-  }, [onPass]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const run = async () => {
+    try {
       if (typeof navigator === 'undefined' || !('bluetooth' in navigator)) {
-        if (!cancelled) setStatus('unavailable');
+        // Web Bluetooth not supported — still allow pass for desktop testing
+        setBtAvailable(true);
         return;
       }
 
@@ -60,27 +32,21 @@ export function BluetoothGate({ onPass }: { onPass: () => void }) {
       };
 
       if (typeof bt.getAvailability === 'function') {
-        try {
-          const available = await bt.getAvailability();
-          if (!cancelled) {
-            if (available) {
-              onPass();
-            } else {
-              setStatus('off');
-            }
-          }
-          return;
-        } catch {
-          if (!cancelled) setStatus('off');
-          return;
-        }
+        const available = await bt.getAvailability();
+        setBtAvailable(available);
+      } else {
+        // Fallback: API exists but no getAvailability (older Chrome)
+        setBtAvailable(true);
       }
+    } catch {
+      setBtAvailable(false);
+    } finally {
+      checkingRef.current = false;
+    }
+  }, [setBtAvailable]);
 
-      // Fallback
-      if (!cancelled) onPass();
-    };
-
-    run();
+  useEffect(() => {
+    checkBT();
 
     // Listen for BT adapter state changes
     if (typeof navigator !== 'undefined' && 'bluetooth' in navigator) {
@@ -89,20 +55,17 @@ export function BluetoothGate({ onPass }: { onPass: () => void }) {
         removeEventListener?: (event: string, handler: () => void) => void;
       };
 
-      const handler = () => { run(); };
+      const handler = () => { checkBT(); };
       if (btNav.addEventListener) {
         btNav.addEventListener('availabilitychanged', handler);
       }
       return () => {
-        cancelled = true;
         if (btNav.removeEventListener) {
           btNav.removeEventListener('availabilitychanged', handler);
         }
       };
     }
-
-    return () => { cancelled = true; };
-  }, [onPass]);
+  }, [checkBT]);
 
   const handleEnable = async () => {
     try {
@@ -112,45 +75,44 @@ export function BluetoothGate({ onPass }: { onPass: () => void }) {
         acceptAllDevices: true,
         optionalServices: [],
       });
-      onPass();
+      // If requestDevice succeeds, BT is definitely on
+      setBtAvailable(true);
     } catch {
+      // User cancelled or error — re-check
       checkBT();
     }
   };
 
-  if (status === 'checking') {
-    return (
-      <div className="grain-bt-gate">
-        <div className="grain-bt-gate-content">
-          <div className="grain-spinner" />
-          <p style={{ color: 'var(--gm-text-secondary)', marginTop: 16 }}>
-            {t('bt.gate.title', lang)}...
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // BT is available or unsupported — render nothing, let app show
+  if (btAvailable === true) return null;
 
-  if (status === 'unavailable') {
+  // BT is off — show full-screen gate with text
+  if (btAvailable === false) {
     return (
       <div className="grain-bt-gate">
         <div className="grain-bt-gate-content">
-          <div
-            className="grain-bt-icon-wrap"
-            style={{ background: 'rgba(239, 68, 68, 0.12)', borderColor: 'rgba(239, 68, 68, 0.3)' }}
-          >
-            <WarningCircle size={36} weight="thin" style={{ color: '#EF4444' }} />
+          <div className="grain-bt-icon-wrap">
+            <BluetoothSlash size={36} weight="thin" style={{ color: 'var(--gm-accent)' }} />
           </div>
-          <h2 className="grain-bt-gate-title" style={{ color: '#EF4444' }}>
-            {t('bt.gate.unsupported', lang)}
+          <h2 className="grain-bt-gate-title" style={{ color: 'var(--gm-text-primary)' }}>
+            {t('bt.gate.off_title', lang)}
           </h2>
-          <p className="grain-bt-gate-desc">{t('bt.gate.unsupported_desc', lang)}</p>
+          <p className="grain-bt-gate-desc">
+            {t('bt.gate.desc', lang)}
+          </p>
           <div className="flex flex-col gap-3 w-full mt-8">
             <button
-              onClick={onPass}
+              onClick={handleEnable}
+              className="grain-bt-gate-btn grain-bt-gate-btn-primary"
+            >
+              {t('bt.gate.enable', lang)}
+              <ArrowRight size={18} weight="bold" />
+            </button>
+            <button
+              onClick={checkBT}
               className="grain-bt-gate-btn grain-bt-gate-btn-secondary"
             >
-              {t('bt.gate.continue', lang)}
+              {t('bt.gate.check', lang)}
             </button>
           </div>
         </div>
@@ -158,30 +120,26 @@ export function BluetoothGate({ onPass }: { onPass: () => void }) {
     );
   }
 
-  // status === 'off'
+  // btAvailable === null — still checking, show text immediately (no spinner)
   return (
     <div className="grain-bt-gate">
       <div className="grain-bt-gate-content">
         <div className="grain-bt-icon-wrap">
-          <Bluetooth size={40} weight="thin" style={{ color: 'var(--gm-accent)' }} />
+          <Bluetooth size={36} weight="thin" style={{ color: 'var(--gm-text-secondary)' }} />
         </div>
         <h2 className="grain-bt-gate-title" style={{ color: 'var(--gm-text-primary)' }}>
-          {t('bt.gate.title', lang)}
+          {t('bt.gate.checking_title', lang)}
         </h2>
-        <p className="grain-bt-gate-desc">{t('bt.gate.desc', lang)}</p>
+        <p className="grain-bt-gate-desc">
+          {t('bt.gate.desc', lang)}
+        </p>
         <div className="flex flex-col gap-3 w-full mt-8">
           <button
-            onClick={handleEnable}
+            onClick={checkBT}
             className="grain-bt-gate-btn grain-bt-gate-btn-primary"
           >
-            {t('bt.gate.enable', lang)}
-            <ArrowRight size={18} weight="bold" />
-          </button>
-          <button
-            onClick={checkBT}
-            className="grain-bt-gate-btn grain-bt-gate-btn-secondary"
-          >
             {t('bt.gate.check', lang)}
+            <ArrowRight size={18} weight="bold" />
           </button>
         </div>
       </div>

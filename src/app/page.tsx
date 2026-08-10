@@ -9,6 +9,7 @@ import { BluetoothGate } from '@/components/grain/bluetooth-gate';
 import { DisconnectedView } from '@/components/grain/home/disconnected-view';
 import { ConnectingView } from '@/components/grain/home/connecting-view';
 import { ConnectedView } from '@/components/grain/home/connected-view';
+import { BtOffHero } from '@/components/grain/home/bt-off-hero';
 import { SleepingView, LowBatteryView, SyncingView } from '@/components/grain/home/special-states';
 import { DiscoverTab } from '@/components/grain/discover/discover-tab';
 import { HistoryTab } from '@/components/grain/history/history-tab';
@@ -52,7 +53,7 @@ function computeGlassVars(isDark: boolean) {
 
 export default function GrainMonitorPage() {
   const {
-    activeTab, deviceState, riskTheme, currentReading, settings,
+    activeTab, deviceState, riskTheme, currentReading, settings, btAvailable,
     loadSettings, loadHistory, simulateConnect,
   } = useGrainStore();
 
@@ -85,6 +86,8 @@ export default function GrainMonitorPage() {
   }, [activeTab]);
 
   const renderHomeState = () => {
+    // When BT is off, show BT prompt in the hero card area
+    if (btAvailable === false) return <BtOffHero />;
     if (currentReading) return <ConnectedView />;
     switch (deviceState) {
       case 'disconnected': return <DisconnectedView />;

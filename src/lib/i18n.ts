@@ -188,11 +188,15 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     // Bluetooth Gate
     'bt.gate.title': 'Bluetooth Required',
     'bt.gate.desc': 'This app requires Bluetooth to connect to your GRAIN-01 probe. Please enable Bluetooth to continue.',
+    'bt.gate.off_title': 'Turn on Bluetooth to use app',
+    'bt.gate.checking_title': 'Checking Bluetooth...',
     'bt.gate.unsupported': 'Bluetooth Not Supported',
     'bt.gate.unsupported_desc': 'Your browser does not support Web Bluetooth. Please use Chrome or Edge.',
     'bt.gate.check': 'Check Again',
     'bt.gate.enable': 'Enable Bluetooth',
     'bt.gate.continue': 'Continue',
+    'bt.home_prompt': 'Turn on Bluetooth',
+    'bt.home_prompt_desc': 'Bluetooth is required to connect to your probe',
   },
 
   hi: {
@@ -370,11 +374,15 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     // Bluetooth Gate
     'bt.gate.title': 'ब्लूटूथ आवश्यक',
     'bt.gate.desc': 'इस ऐप को आपके GRAIN-01 प्रोब से कनेक्ट करने के लिए ब्लूटूथ चाहिए। कृपया जारी रखने के लिए ब्लूटूथ चालू करें।',
+    'bt.gate.off_title': 'ऐप का उपयोग करने के लिए ब्लूटूथ चालू करें',
+    'bt.gate.checking_title': 'ब्लूटूथ जांच रहा है...',
     'bt.gate.unsupported': 'ब्लूटूथ समर्थित नहीं',
     'bt.gate.unsupported_desc': 'आपका ब्राउज़र वेब ब्लूटूथ का समर्थन नहीं करता। कृपया Chrome या Edge का उपयोग करें।',
     'bt.gate.check': 'फिर से जांचें',
     'bt.gate.enable': 'ब्लूटूथ चालू करें',
     'bt.gate.continue': 'जारी रखें',
+    'bt.home_prompt': 'ब्लूटूथ चालू करें',
+    'bt.home_prompt_desc': 'प्रोब से कनेक्ट करने के लिए ब्लूटूथ आवश्यक है',
   },
 
   mr: {
@@ -552,11 +560,15 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     // Bluetooth Gate
     'bt.gate.title': 'ब्लूटूथ आवश्यक',
     'bt.gate.desc': 'या अॅपला तुमच्या GRAIN-01 प्रोबशी कनेक्ट होण्यासाठी ब्लूटूथ आवश्यक आहे. कृपया सुरू ठेवण्यासाठी ब्लूटूथ चालू करा.',
+    'bt.gate.off_title': 'अॅप वापरण्यासाठी ब्लूटूथ चालू करा',
+    'bt.gate.checking_title': 'ब्लूटूथ तपासत आहे...',
     'bt.gate.unsupported': 'ब्लूटूथ समर्थित नाही',
     'bt.gate.unsupported_desc': 'तुमचा ब्राउझर वेब ब्लूटूथ समर्थित नाही. कृपया Chrome किंवा Edge वापरा.',
     'bt.gate.check': 'पुन्हा तपासा',
     'bt.gate.enable': 'ब्लूटूथ चालू करा',
     'bt.gate.continue': 'सुरू ठेवा',
+    'bt.home_prompt': 'ब्लूटूथ चालू करा',
+    'bt.home_prompt_desc': 'प्रोबशी कनेक्ट होण्यासाठी ब्लूटूथ आवश्यक आहे',
   },
 
   hinglish: {
@@ -734,11 +746,15 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     // Bluetooth Gate
     'bt.gate.title': 'Bluetooth Zaroori Hai',
     'bt.gate.desc': 'Is app ko aapke GRAIN-01 probe se connect karne ke liye Bluetooth chahiye. Please Bluetooth on karein.',
+    'bt.gate.off_title': 'App use karne ke liye Bluetooth on karein',
+    'bt.gate.checking_title': 'Bluetooth check ho raha hai...',
     'bt.gate.unsupported': 'Bluetooth Supported Nahi Hai',
     'bt.gate.unsupported_desc': 'Aapka browser Web Bluetooth support nahi karta. Please Chrome ya Edge use karein.',
     'bt.gate.check': 'Phir Se Check Karein',
     'bt.gate.enable': 'Bluetooth On Karein',
     'bt.gate.continue': 'Continue',
+    'bt.home_prompt': 'Bluetooth On Karein',
+    'bt.home_prompt_desc': 'Probe se connect karne ke liye Bluetooth zaroori hai',
   },
 };
 

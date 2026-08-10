@@ -1,0 +1,749 @@
+     1→/* ═══════════════════════════════════════════════════
+     2→   Grain Monitor – i18n Translation System
+     3→   Languages: English, Hindi, Marathi, Hinglish
+     4→   ═══════════════════════════════════════════════════ */
+     5→
+     6→export type AppLanguage = 'en' | 'hi' | 'mr' | 'hinglish';
+     7→
+     8→export const LANGUAGE_OPTIONS: { code: AppLanguage; label: string; native: string; needsSave: boolean }[] = [
+     9→  { code: 'en', label: 'English', native: 'English', needsSave: false },
+    10→  { code: 'hi', label: 'Hindi', native: 'हिन्दी', needsSave: true },
+    11→  { code: 'mr', label: 'Marathi', native: 'मराठी', needsSave: false },
+    12→  { code: 'hinglish', label: 'Hinglish', native: 'Hinglish', needsSave: true },
+    13→];
+    14→
+    15→const translations: Record<AppLanguage, Record<string, string>> = {
+    16→  en: {
+    17→    // Header
+    18→    'app.title': 'Grain Monitor',
+    19→    'status.offline': 'Offline',
+    20→    'status.pairing': 'Pairing...',
+    21→    'status.stable': 'STABLE',
+    22→    'status.rising': 'RISING',
+    23→    'status.warning': 'WARNING',
+    24→    'status.critical': 'CRITICAL',
+    25→    'status.sleeping': 'SLEEPING',
+    26→    'status.syncing': 'SYNCING',
+    27→
+    28→    // Navigation
+    29→    'nav.home': 'Home',
+    30→    'nav.discover': 'Discover',
+    31→    'nav.history': 'History',
+    32→    'nav.settings': 'Settings',
+    33→
+    34→    // Disconnected
+    35→    'disconnected.title': 'No Device',
+    36→    'disconnected.desc': 'Connect your GRAIN-01 probe to begin monitoring moisture levels.',
+    37→    'disconnected.connect': 'CONNECT',
+    38→    'disconnected.demo': 'Use Demo Mode',
+    39→
+    40→    // Connecting
+    41→    'connecting.title': 'Pairing',
+    42→    'connecting.subtitle': 'GRAIN-01',
+    43→
+    44→    // Syncing
+    45→    'syncing.title': 'Syncing',
+    46→    'syncing.desc': 'Retrieving history from probe...',
+    47→
+    48→    // Sleeping
+    49→    'sleeping.title': 'Probe Sleeping',
+    50→    'sleeping.desc': 'The probe is in low-power mode to conserve battery. Readings will resume when it wakes.',
+    51→    'sleeping.battery': 'Battery',
+    52→    'sleeping.wake': 'WAKE PROBE',
+    53→
+    54→    // Low Battery
+    55→    'lowbattery.title': 'Low Battery',
+    56→    'lowbattery.desc': 'Probe battery is critically low. Replace or charge the battery soon to avoid data loss.',
+    57→    'lowbattery.level': 'Battery Level',
+    58→
+    59→    // Hero Card
+    60→    'hero.moisture': 'Moisture',
+    61→    'hero.moisture_content': 'moisture content',
+    62→
+    63→    // Metric Pills
+    64→    'metric.temp': 'Temp',
+    65→    'metric.signal': 'Signal',
+    66→    'metric.grain': 'Grain',
+    67→
+    68→    // Insight
+    69→    'insight.probe_sleeping': 'Probe Sleeping',
+    70→    'insight.probe_sleeping_desc': 'The probe is sleeping to save power. Readings will resume on wake.',
+    71→    'insight.syncing_history': 'Syncing History',
+    72→    'insight.syncing_history_desc': 'Retrieving stored readings from the probe. This may take a moment.',
+    73→    'insight.action_required': 'Action Required',
+    74→    'insight.attention': 'Attention Needed',
+    75→    'insight.storage_safe': 'Storage is Safe',
+    76→
+    77→    // Recent Readings
+    78→    'recent.title': 'Recent Readings',
+    79→    'recent.show_more': 'Show More',
+    80→    'recent.today': 'Today',
+    81→    'recent.yesterday': 'Yesterday',
+    82→
+    83→    // Discover
+    84→    'discover.title': 'Discover',
+    85→    'discover.connected_desc_safe': 'Conditions are stable. Use this time to learn and prepare for seasonal changes.',
+    86→    'discover.connected_desc_warn': 'Readings are elevated. These resources help you understand and respond to changing conditions.',
+    87→    'discover.connected_desc_critical': 'Your current readings are critical. These resources focus on emergency response and damage prevention.',
+    88→    'discover.disconnected_desc': 'Connect a probe for personalised recommendations',
+    89→    'discover.condition_normal': 'Normal',
+    90→    'discover.condition_elevated': 'Elevated',
+    91→    'discover.condition_critical': 'Critical',
+    92→    'discover.no_results': 'No recommendations available for this combination yet.',
+    93→
+    94→    // History
+    95→    'history.title': 'History',
+    96→    'history.readings': 'readings stored',
+    97→    'history.reading': 'reading stored',
+    98→    'history.past': 'Past readings',
+    99→    'history.no_history': 'No History Yet',
+   100→    'history.no_history_desc': 'Readings will appear here once you connect your probe.',
+   101→    'history.detail': 'Reading Detail',
+   102→    'history.moisture': 'Moisture',
+   103→    'history.temperature': 'Temperature',
+   104→    'history.battery': 'Battery',
+   105→    'history.signal': 'Signal',
+   106→    'history.grain': 'Grain',
+   107→    'history.rule': 'Rule',
+   108→    'history.confidence': 'Confidence',
+   109→    'history.severity': 'Severity',
+   110→    'history.safe': 'Safe',
+   111→    'history.warning': 'Warning',
+   112→
+   113→    // Settings
+   114→    'settings.title': 'Settings',
+   115→    'settings.desc': 'Device & preferences',
+   116→    'settings.device': 'Device',
+   117→    'settings.calibrate': 'CALIBRATE',
+   118→    'settings.probe_controls': 'Probe Controls',
+   119→    'settings.sync_history': 'Sync History',
+   120→    'settings.sync_history_desc': 'Pull old readings',
+   121→    'settings.wake_probe': 'Wake Probe',
+   122→    'settings.wake_probe_desc': 'Exit sleep mode',
+   123→    'settings.demo_states': 'Demo States',
+   124→    'settings.grain_type': 'Grain Type',
+   125→    'settings.thresholds': 'Moisture Thresholds (%)',
+   126→    'settings.thresholds_desc': 'Auto-set from grain profile. Drag to fine-tune.',
+   127→    'settings.safe': 'Safe',
+   128→    'settings.warn': 'Warning',
+   129→    'settings.critical': 'Critical',
+   130→    'settings.preferences': 'Preferences',
+   131→    'settings.push_alerts': 'Push Alerts',
+   132→    'settings.auto_sync': 'Auto-sync',
+   133→    'settings.auto_reconnect': 'Auto-reconnect',
+   134→    'settings.wake_on_connect': 'Wake on Connect',
+   135→    'settings.data': 'Data',
+   136→    'settings.export_csv': 'Export CSV',
+   137→    'settings.download': 'Download',
+   138→    'settings.clear_history': 'Clear History',
+   139→    'settings.local_only': 'Local only',
+   140→    'settings.about': 'About',
+   141→    'settings.app_version': 'App Version',
+   142→    'settings.engine': 'Engine',
+   143→    'settings.probe_firmware': 'Probe Firmware',
+   144→
+   145→    // Language
+   146→    'language.title': 'Language',
+   147→    'language.save': 'Save & Reload',
+   148→    'language.saved': 'Language saved. Reloading...',
+   149→    'language.current': 'Current',
+   150→
+   151→    // Glass
+   152→    'glass.title': 'Glass Effect',
+   153→    'glass.opacity': 'Opacity',
+   154→    'glass.subtle': 'Subtle',
+   155→    'glass.medium': 'Medium',
+   156→    'glass.strong': 'Strong',
+   157→    'glass.max': 'Maximum',
+   158→
+   159→    // Accent themes
+   160→    'accent.title': 'Accent Color',
+   161→    'accent.orange': 'Orange',
+   162→    'accent.green': 'Green',
+   163→    'accent.purple': 'Purple',
+   164→    'accent.blue': 'Blue',
+   165→    'accent.teal': 'Teal',
+   166→
+   167→    // Theme
+   168→    'theme.title': 'Theme',
+   169→    'theme.dark': 'Dark',
+   170→    'theme.light': 'Light',
+   171→
+   172→    // Toasts
+   173→    'toast.connected': 'connected',
+   174→    'toast.disconnected': 'Device disconnected',
+   175→    'toast.alerts_on': 'Alerts enabled',
+   176→    'toast.alerts_off': 'Alerts disabled',
+   177→    'toast.autosync_on': 'Auto-sync on',
+   178→    'toast.autosync_off': 'Auto-sync off',
+   179→    'toast.csv_exported': 'CSV exported',
+   180→    'toast.export_failed': 'Export failed',
+   181→    'toast.history_cleared': 'History cleared',
+   182→    'toast.connection_failed': 'Connection failed',
+   183→    'toast.command_sent': 'Command sent:',
+   184→    'toast.command_failed': 'Command failed:',
+   185→    'toast.demo': 'Demo:',
+   186→    'toast.history_synced': 'History synchronised',
+   187→
+   188→    // Bluetooth Gate
+   189→    'bt.gate.title': 'Bluetooth Required',
+   190→    'bt.gate.desc': 'This app requires Bluetooth to connect to your GRAIN-01 probe. Please enable Bluetooth to continue.',
+   191→    'bt.gate.unsupported': 'Bluetooth Not Supported',
+   192→    'bt.gate.unsupported_desc': 'Your browser does not support Web Bluetooth. Please use Chrome or Edge.',
+   193→    'bt.gate.check': 'Check Again',
+   194→    'bt.gate.enable': 'Enable Bluetooth',
+   195→    'bt.gate.continue': 'Continue',
+   196→  },
+   197→
+   198→  hi: {
+   199→    // Header
+   200→    'app.title': 'ग्रेन मॉनिटर',
+   201→    'status.offline': 'ऑफलाइन',
+   202→    'status.pairing': 'पेयरिंग...',
+   203→    'status.stable': 'स्थिर',
+   204→    'status.rising': 'बढ़ रहा है',
+   205→    'status.warning': 'चेतावनी',
+   206→    'status.critical': 'गंभीर',
+   207→    'status.sleeping': 'सो रहा है',
+   208→    'status.syncing': 'सिंक हो रहा है',
+   209→
+   210→    // Navigation
+   211→    'nav.home': 'होम',
+   212→    'nav.discover': 'खोजें',
+   213→    'nav.history': 'इतिहास',
+   214→    'nav.settings': 'सेटिंग्स',
+   215→
+   216→    // Disconnected
+   217→    'disconnected.title': 'कोई डिवाइस नहीं',
+   218→    'disconnected.desc': 'नमी स्तर की निगरानी शुरू करने के लिए अपना GRAIN-01 प्रोब कनेक्ट करें।',
+   219→    'disconnected.connect': 'कनेक्ट करें',
+   220→    'disconnected.demo': 'डेमो मोड उपयोग करें',
+   221→
+   222→    // Connecting
+   223→    'connecting.title': 'पेयरिंग',
+   224→    'connecting.subtitle': 'GRAIN-01',
+   225→
+   226→    // Syncing
+   227→    'syncing.title': 'सिंक हो रहा है',
+   228→    'syncing.desc': 'प्रोब से इतिहास पुनर्प्राप्त किया जा रहा है...',
+   229→
+   230→    // Sleeping
+   231→    'sleeping.title': 'प्रोब सो रहा है',
+   232→    'sleeping.desc': 'प्रोब बैटरी बचाने के लिए लो-पावर मोड में है। जागने पर रीडिंग फिर शुरू होगी।',
+   233→    'sleeping.battery': 'बैटरी',
+   234→    'sleeping.wake': 'प्रोब जगाएं',
+   235→
+   236→    // Low Battery
+   237→    'lowbattery.title': 'कम बैटरी',
+   238→    'lowbattery.desc': 'प्रोब बैटरी गंभीर रूप से कम है। डेटा हानि से बचने के लिए जल्दी बैटरी बदलें या चार्ज करें।',
+   239→    'lowbattery.level': 'बैटरी स्तर',
+   240→
+   241→    // Hero Card
+   242→    'hero.moisture': 'नमी',
+   243→    'hero.moisture_content': 'नमी सामग्री',
+   244→
+   245→    // Metric Pills
+   246→    'metric.temp': 'तापमान',
+   247→    'metric.signal': 'सिग्नल',
+   248→    'metric.grain': 'अनाज',
+   249→
+   250→    // Insight
+   251→    'insight.probe_sleeping': 'प्रोब सो रहा है',
+   252→    'insight.probe_sleeping_desc': 'प्रोब बिजली बचाने के लिए सो रहा है। जागने पर रीडिंग फिर शुरू होगी।',
+   253→    'insight.syncing_history': 'इतिहास सिंक हो रहा है',
+   254→    'insight.syncing_history_desc': 'प्रोब से संग्रहीत रीडिंग पुनर्प्राप्त की जा रही है। इसमें कुछ समय लग सकता है।',
+   255→    'insight.action_required': 'कार्रवाई आवश्यक',
+   256→    'insight.attention': 'ध्यान दें',
+   257→    'insight.storage_safe': 'भंडारण सुरक्षित है',
+   258→
+   259→    // Recent Readings
+   260→    'recent.title': 'हालिया रीडिंग',
+   261→    'recent.show_more': 'और देखें',
+   262→    'recent.today': 'आज',
+   263→    'recent.yesterday': 'कल',
+   264→
+   265→    // Discover
+   266→    'discover.title': 'खोजें',
+   267→    'discover.connected_desc_safe': 'स्थिति स्थिर है। मौसमी बदलावों के लिए तैयारी करने का यह समय है।',
+   268→    'discover.connected_desc_warn': 'रीडिंग बढ़ रही है। ये संसाधन बदलती परिस्थितियों को समझने में मदद करेंगे।',
+   269→    'discover.connected_desc_critical': 'आपकी वर्तमान रीडिंग गंभीर है। ये संसाधन आपातकालीन प्रतिक्रिया पर केंद्रित हैं।',
+   270→    'discover.disconnected_desc': 'व्यक्तिगत सिफारिशों के लिए प्रोब कनेक्ट करें',
+   271→    'discover.condition_normal': 'सामान्य',
+   272→    'discover.condition_elevated': 'बढ़ा हुआ',
+   273→    'discover.condition_critical': 'गंभीर',
+   274→    'discover.no_results': 'इस संयोजन के लिए अभी तक कोई सिफारिश उपलब्ध नहीं है।',
+   275→
+   276→    // History
+   277→    'history.title': 'इतिहास',
+   278→    'history.readings': 'रीडिंग संग्रहीत',
+   279→    'history.reading': 'रीडिंग संग्रहीत',
+   280→    'history.past': 'पिछली रीडिंग',
+   281→    'history.no_history': 'अभी तक कोई इतिहास नहीं',
+   282→    'history.no_history_desc': 'प्रोब कनेक्ट करने पर रीडिंग यहां दिखाई देंगी।',
+   283→    'history.detail': 'रीडिंग विवरण',
+   284→    'history.moisture': 'नमी',
+   285→    'history.temperature': 'तापमान',
+   286→    'history.battery': 'बैटरी',
+   287→    'history.signal': 'सिग्नल',
+   288→    'history.grain': 'अनाज',
+   289→    'history.rule': 'नियम',
+   290→    'history.confidence': 'विश्वास',
+   291→    'history.severity': 'गंभीरता',
+   292→    'history.safe': 'सुरक्षित',
+   293→    'history.warning': 'चेतावनी',
+   294→
+   295→    // Settings
+   296→    'settings.title': 'सेटिंग्स',
+   297→    'settings.desc': 'डिवाइस और प्राथमिकताएं',
+   298→    'settings.device': 'डिवाइस',
+   299→    'settings.calibrate': 'कैलिब्रेट',
+   300→    'settings.probe_controls': 'प्रोब नियंत्रण',
+   301→    'settings.sync_history': 'इतिहास सिंक करें',
+   302→    'settings.sync_history_desc': 'पुरानी रीडिंग खींचें',
+   303→    'settings.wake_probe': 'प्रोब जगाएं',
+   304→    'settings.wake_probe_desc': 'स्लीप मोड से बाहर',
+   305→    'settings.demo_states': 'डेमो स्टेट',
+   306→    'settings.grain_type': 'अनाज का प्रकार',
+   307→    'settings.thresholds': 'नमी सीमाएं (%)',
+   308→    'settings.thresholds_desc': 'अनाज प्रोफाइल से स्वचालित। बारीक ट्यूनिंग के लिए खींचें।',
+   309→    'settings.safe': 'सुरक्षित',
+   310→    'settings.warn': 'चेतावनी',
+   311→    'settings.critical': 'गंभीर',
+   312→    'settings.preferences': 'प्राथमिकताएं',
+   313→    'settings.push_alerts': 'पुश अलर्ट',
+   314→    'settings.auto_sync': 'ऑटो-सिंक',
+   315→    'settings.auto_reconnect': 'ऑटो-रीकनेक्ट',
+   316→    'settings.wake_on_connect': 'कनेक्ट पर जगाएं',
+   317→    'settings.data': 'डेटा',
+   318→    'settings.export_csv': 'CSV निर्यात',
+   319→    'settings.download': 'डाउनलोड',
+   320→    'settings.clear_history': 'इतिहास साफ करें',
+   321→    'settings.local_only': 'केवल स्थानीय',
+   322→    'settings.about': 'बारे में',
+   323→    'settings.app_version': 'ऐप संस्करण',
+   324→    'settings.engine': 'इंजन',
+   325→    'settings.probe_firmware': 'प्रोब फर्मवेयर',
+   326→
+   327→    // Language
+   328→    'language.title': 'भाषा',
+   329→    'language.save': 'सहेजें और रीलोड',
+   330→    'language.saved': 'भाषा सहेजी गई। रीलोड हो रहा है...',
+   331→    'language.current': 'वर्तमान',
+   332→
+   333→    // Glass
+   334→    'glass.title': 'ग्लास प्रभाव',
+   335→    'glass.opacity': 'अपारदर्शिता',
+   336→    'glass.subtle': 'हल्का',
+   337→    'glass.medium': 'मध्यम',
+   338→    'glass.strong': 'मजबूत',
+   339→    'glass.max': 'अधिकतम',
+   340→
+   341→    // Accent themes
+   342→    'accent.title': 'एक्सेंट रंग',
+   343→    'accent.orange': 'नारंगी',
+   344→    'accent.green': 'हरा',
+   345→    'accent.purple': 'बैंगनी',
+   346→    'accent.blue': 'नीला',
+   347→    'accent.teal': 'टील',
+   348→
+   349→    // Theme
+   350→    'theme.title': 'थीम',
+   351→    'theme.dark': 'डार्क',
+   352→    'theme.light': 'लाइट',
+   353→
+   354→    // Toasts
+   355→    'toast.connected': 'कनेक्ट हुआ',
+   356→    'toast.disconnected': 'डिवाइस डिस्कनेक्ट हुआ',
+   357→    'toast.alerts_on': 'अलर्ट चालू',
+   358→    'toast.alerts_off': 'अलर्ट बंद',
+   359→    'toast.autosync_on': 'ऑटो-सिंक चालू',
+   360→    'toast.autosync_off': 'ऑटो-सिंक बंद',
+   361→    'toast.csv_exported': 'CSV निर्यात हुआ',
+   362→    'toast.export_failed': 'निर्यात विफल',
+   363→    'toast.history_cleared': 'इतिहास साफ हुआ',
+   364→    'toast.connection_failed': 'कनेक्शन विफल',
+   365→    'toast.command_sent': 'कमांड भेजा गया:',
+   366→    'toast.command_failed': 'कमांड विफल:',
+   367→    'toast.demo': 'डेमो:',
+   368→    'toast.history_synced': 'इतिहास सिंक हुआ',
+   369→
+   370→    // Bluetooth Gate
+   371→    'bt.gate.title': 'ब्लूटूथ आवश्यक',
+   372→    'bt.gate.desc': 'इस ऐप को आपके GRAIN-01 प्रोब से कनेक्ट करने के लिए ब्लूटूथ चाहिए। कृपया जारी रखने के लिए ब्लूटूथ चालू करें।',
+   373→    'bt.gate.unsupported': 'ब्लूटूथ समर्थित नहीं',
+   374→    'bt.gate.unsupported_desc': 'आपका ब्राउज़र वेब ब्लूटूथ का समर्थन नहीं करता। कृपया Chrome या Edge का उपयोग करें।',
+   375→    'bt.gate.check': 'फिर से जांचें',
+   376→    'bt.gate.enable': 'ब्लूटूथ चालू करें',
+   377→    'bt.gate.continue': 'जारी रखें',
+   378→  },
+   379→
+   380→  mr: {
+   381→    // Header
+   382→    'app.title': 'ग्रेन मॉनिटर',
+   383→    'status.offline': 'ऑफलाइन',
+   384→    'status.pairing': 'पेअरिंग...',
+   385→    'status.stable': 'स्थिर',
+   386→    'status.rising': 'वाढत आहे',
+   387→    'status.warning': 'इशारा',
+   388→    'status.critical': 'गंभीर',
+   389→    'status.sleeping': 'झोपेत आहे',
+   390→    'status.syncing': 'सिंक होत आहे',
+   391→
+   392→    // Navigation
+   393→    'nav.home': 'होम',
+   394→    'nav.discover': 'शोधा',
+   395→    'nav.history': 'इतिहास',
+   396→    'nav.settings': 'सेटिंग्ज',
+   397→
+   398→    // Disconnected
+   399→    'disconnected.title': 'कोणतेही डिव्हाइस नाही',
+   400→    'disconnected.desc': 'ओलावा पातळी निरीक्षण सुरू करण्यासाठी तुमचा GRAIN-01 प्रोब कनेक्ट करा.',
+   401→    'disconnected.connect': 'कनेक्ट करा',
+   402→    'disconnected.demo': 'डेमो मोड वापरा',
+   403→
+   404→    // Connecting
+   405→    'connecting.title': 'पेअरिंग',
+   406→    'connecting.subtitle': 'GRAIN-01',
+   407→
+   408→    // Syncing
+   409→    'syncing.title': 'सिंक होत आहे',
+   410→    'syncing.desc': 'प्रोबवरून इतिहास मिळवत आहे...',
+   411→
+   412→    // Sleeping
+   413→    'sleeping.title': 'प्रोब झोपेत आहे',
+   414→    'sleeping.desc': 'प्रोब बॅटरी वाचवण्यासाठी लो-पॉवर मोडमध्ये आहे. जागा झाल्यावर रीडिंग पुन्हा सुरू होईल.',
+   415→    'sleeping.battery': 'बॅटरी',
+   416→    'sleeping.wake': 'प्रोब जागा करा',
+   417→
+   418→    // Low Battery
+   419→    'lowbattery.title': 'कमी बॅटरी',
+   420→    'lowbattery.desc': 'प्रोब बॅटरी गंभीररित्या कमी आहे. डेटा हानी टाळण्यासाठी लवकर बॅटरी बदला किंवा चार्ज करा.',
+   421→    'lowbattery.level': 'बॅटरी पातळी',
+   422→
+   423→    // Hero Card
+   424→    'hero.moisture': 'ओलावा',
+   425→    'hero.moisture_content': 'ओलावा सामग्री',
+   426→
+   427→    // Metric Pills
+   428→    'metric.temp': 'तापमान',
+   429→    'metric.signal': 'सिग्नल',
+   430→    'metric.grain': 'धान्य',
+   431→
+   432→    // Insight
+   433→    'insight.probe_sleeping': 'प्रोब झोपेत आहे',
+   434→    'insight.probe_sleeping_desc': 'प्रोब ऊर्जा वाचवण्यासाठी झोपेत आहे. जागा झाल्यावर रीडिंग पुन्हा सुरू होईल.',
+   435→    'insight.syncing_history': 'इतिहास सिंक होत आहे',
+   436→    'insight.syncing_history_desc': 'प्रोबवरून साठवलेल्या रीडिंग मिळवत आहे. याला काही वेळ लागू शकतो.',
+   437→    'insight.action_required': 'कार्यवाही आवश्यक',
+   438→    'insight.attention': 'लक्ष द्या',
+   439→    'insight.storage_safe': 'साठा सुरक्षित आहे',
+   440→
+   441→    // Recent Readings
+   442→    'recent.title': 'अलीकडील रीडिंग',
+   443→    'recent.show_more': 'अधिक पहा',
+   444→    'recent.today': 'आज',
+   445→    'recent.yesterday': 'काल',
+   446→
+   447→    // Discover
+   448→    'discover.title': 'शोधा',
+   449→    'discover.connected_desc_safe': 'परिस्थिती स्थिर आहे. हंगामी बदलांसाठी तयारी करण्याची ही वेळ आहे.',
+   450→    'discover.connected_desc_warn': 'रीडिंग वाढत आहे. ही संसाधने बदलत्या परिस्थिती समजून घेण्यास मदत करतील.',
+   451→    'discover.connected_desc_critical': 'तुमची सध्याची रीडिंग गंभीर आहे. ही संसाधने आपत्कालीन प्रतिसादावर केंद्रित आहेत.',
+   452→    'discover.disconnected_desc': 'वैयक्तिक शिफारसींसाठी प्रोब कनेक्ट करा',
+   453→    'discover.condition_normal': 'सामान्य',
+   454→    'discover.condition_elevated': 'वाढलेले',
+   455→    'discover.condition_critical': 'गंभीर',
+   456→    'discover.no_results': 'या संयोजनासाठी अद्याप कोणतीही शिफारस उपलब्ध नाही.',
+   457→
+   458→    // History
+   459→    'history.title': 'इतिहास',
+   460→    'history.readings': 'रीडिंग साठवल्या',
+   461→    'history.reading': 'रीडिंग साठवली',
+   462→    'history.past': 'मागील रीडिंग',
+   463→    'history.no_history': 'अद्याप इतिहास नाही',
+   464→    'history.no_history_desc': 'प्रोब कनेक्ट केल्यावर रीडिंग इथे दिसतील.',
+   465→    'history.detail': 'रीडिंग तपशील',
+   466→    'history.moisture': 'ओलावा',
+   467→    'history.temperature': 'तापमान',
+   468→    'history.battery': 'बॅटरी',
+   469→    'history.signal': 'सिग्नल',
+   470→    'history.grain': 'धान्य',
+   471→    'history.rule': 'नियम',
+   472→    'history.confidence': 'विश्वास',
+   473→    'history.severity': 'गंभीरता',
+   474→    'history.safe': 'सुरक्षित',
+   475→    'history.warning': 'इशारा',
+   476→
+   477→    // Settings
+   478→    'settings.title': 'सेटिंग्ज',
+   479→    'settings.desc': 'डिव्हाइस आणि प्राधान्ये',
+   480→    'settings.device': 'डिव्हाइस',
+   481→    'settings.calibrate': 'कॅलिब्रेट',
+   482→    'settings.probe_controls': 'प्रोब नियंत्रण',
+   483→    'settings.sync_history': 'इतिहास सिंक करा',
+   484→    'settings.sync_history_desc': 'जुन्या रीडिंग काढा',
+   485→    'settings.wake_probe': 'प्रोब जागा करा',
+   486→    'settings.wake_probe_desc': 'स्लीप मोडमधून बाहेर',
+   487→    'settings.demo_states': 'डेमो स्टेट',
+   488→    'settings.grain_type': 'धान्याचा प्रकार',
+   489→    'settings.thresholds': 'ओलावा मर्यादा (%)',
+   490→    'settings.thresholds_desc': 'धान्य प्रोफाइलमधून स्वयंचलित. बारीक ट्यूनिंगसाठी ओढा.',
+   491→    'settings.safe': 'सुरक्षित',
+   492→    'settings.warn': 'इशारा',
+   493→    'settings.critical': 'गंभीर',
+   494→    'settings.preferences': 'प्राधान्ये',
+   495→    'settings.push_alerts': 'पुश अलर्ट',
+   496→    'settings.auto_sync': 'ऑटो-सिंक',
+   497→    'settings.auto_reconnect': 'ऑटो-रीकनेक्ट',
+   498→    'settings.wake_on_connect': 'कनेक्ट वर जागा करा',
+   499→    'settings.data': 'डेटा',
+   500→    'settings.export_csv': 'CSV निर्यात',
+   501→    'settings.download': 'डाउनलोड',
+   502→    'settings.clear_history': 'इतिहास साफ करा',
+   503→    'settings.local_only': 'केवळ स्थानिक',
+   504→    'settings.about': 'बद्दल',
+   505→    'settings.app_version': 'ॲप आवृत्ती',
+   506→    'settings.engine': 'इंजिन',
+   507→    'settings.probe_firmware': 'प्रोब फर्मवेअर',
+   508→
+   509→    // Language
+   510→    'language.title': 'भाषा',
+   511→    'language.save': 'जतन करा आणि रीलोड',
+   512→    'language.saved': 'भाषा जतन केली. रीलोड होत आहे...',
+   513→    'language.current': 'सध्याची',
+   514→
+   515→    // Glass
+   516→    'glass.title': 'ग्लास प्रभाव',
+   517→    'glass.opacity': 'पारदर्शकता',
+   518→    'glass.subtle': 'हलके',
+   519→    'glass.medium': 'मध्यम',
+   520→    'glass.strong': 'जास्त',
+   521→    'glass.max': 'अधिकतम',
+   522→
+   523→    // Accent themes
+   524→    'accent.title': 'अॅक्सेंट रंग',
+   525→    'accent.orange': 'नारिंगी',
+   526→    'accent.green': 'हिरवा',
+   527→    'accent.purple': 'जांभळा',
+   528→    'accent.blue': 'निळा',
+   529→    'accent.teal': 'टील',
+   530→
+   531→    // Theme
+   532→    'theme.title': 'थीम',
+   533→    'theme.dark': 'डार्क',
+   534→    'theme.light': 'लाइट',
+   535→
+   536→    // Toasts
+   537→    'toast.connected': 'कनेक्ट झाले',
+   538→    'toast.disconnected': 'डिव्हाइस डिस्कनेक्ट झाले',
+   539→    'toast.alerts_on': 'अलर्ट चालू',
+   540→    'toast.alerts_off': 'अलर्ट बंद',
+   541→    'toast.autosync_on': 'ऑटो-सिंक चालू',
+   542→    'toast.autosync_off': 'ऑटो-सिंक बंद',
+   543→    'toast.csv_exported': 'CSV निर्यात झाले',
+   544→    'toast.export_failed': 'निर्यात अयशस्वी',
+   545→    'toast.history_cleared': 'इतिहास साफ झाला',
+   546→    'toast.connection_failed': 'कनेक्शन अयशस्वी',
+   547→    'toast.command_sent': 'कमांड पाठवला:',
+   548→    'toast.command_failed': 'कमांड अयशस्वी:',
+   549→    'toast.demo': 'डेमो:',
+   550→    'toast.history_synced': 'इतिहास सिंक झाला',
+   551→
+   552→    // Bluetooth Gate
+   553→    'bt.gate.title': 'ब्लूटूथ आवश्यक',
+   554→    'bt.gate.desc': 'या अॅपला तुमच्या GRAIN-01 प्रोबशी कनेक्ट होण्यासाठी ब्लूटूथ आवश्यक आहे. कृपया सुरू ठेवण्यासाठी ब्लूटूथ चालू करा.',
+   555→    'bt.gate.unsupported': 'ब्लूटूथ समर्थित नाही',
+   556→    'bt.gate.unsupported_desc': 'तुमचा ब्राउझर वेब ब्लूटूथ समर्थित नाही. कृपया Chrome किंवा Edge वापरा.',
+   557→    'bt.gate.check': 'पुन्हा तपासा',
+   558→    'bt.gate.enable': 'ब्लूटूथ चालू करा',
+   559→    'bt.gate.continue': 'सुरू ठेवा',
+   560→  },
+   561→
+   562→  hinglish: {
+   563→    // Header
+   564→    'app.title': 'Grain Monitor',
+   565→    'status.offline': 'Offline',
+   566→    'status.pairing': 'Pairing ho raha hai...',
+   567→    'status.stable': 'STABLE',
+   568→    'status.rising': 'BADH RAHA HAI',
+   569→    'status.warning': 'WARNING',
+   570→    'status.critical': 'CRITICAL',
+   571→    'status.sleeping': 'SO RAHA HAI',
+   572→    'status.syncing': 'SYNC HO RAHA HAI',
+   573→
+   574→    // Navigation
+   575→    'nav.home': 'Home',
+   576→    'nav.discover': 'Discover',
+   577→    'nav.history': 'History',
+   578→    'nav.settings': 'Settings',
+   579→
+   580→    // Disconnected
+   581→    'disconnected.title': 'Koi Device Nahi',
+   582→    'disconnected.desc': 'Moisture level monitor karne ke liye apna GRAIN-01 probe connect karo.',
+   583→    'disconnected.connect': 'CONNECT KARO',
+   584→    'disconnected.demo': 'Demo Mode Use Karo',
+   585→
+   586→    // Connecting
+   587→    'connecting.title': 'Pairing',
+   588→    'connecting.subtitle': 'GRAIN-01',
+   589→
+   590→    // Syncing
+   591→    'syncing.title': 'Sync Ho Raha Hai',
+   592→    'syncing.desc': 'Probe se history retrieve ho rahi hai...',
+   593→
+   594→    // Sleeping
+   595→    'sleeping.title': 'Probe So Raha Hai',
+   596→    'sleeping.desc': 'Probe battery bachane ke liye low-power mode mein hai. Jab jaagega tab reading phir shuru hogi.',
+   597→    'sleeping.battery': 'Battery',
+   598→    'sleeping.wake': 'PROBE JAGAO',
+   599→
+   600→    // Low Battery
+   601→    'lowbattery.title': 'Low Battery',
+   602→    'lowbattery.desc': 'Probe battery bahut kam hai. Data loss se bachne ke liye jaldi battery badlo ya charge karo.',
+   603→    'lowbattery.level': 'Battery Level',
+   604→
+   605→    // Hero Card
+   606→    'hero.moisture': 'Moisture',
+   607→    'hero.moisture_content': 'moisture content',
+   608→
+   609→    // Metric Pills
+   610→    'metric.temp': 'Temp',
+   611→    'metric.signal': 'Signal',
+   612→    'metric.grain': 'Grain',
+   613→
+   614→    // Insight
+   615→    'insight.probe_sleeping': 'Probe So Raha Hai',
+   616→    'insight.probe_sleeping_desc': 'Probe power bachane ke liye so raha hai. Jab jaagega tab reading phir shuru hogi.',
+   617→    'insight.syncing_history': 'History Sync Ho Rahi Hai',
+   618→    'insight.syncing_history_desc': 'Probe se stored readings retrieve ho rahi hain. Thoda time lagega.',
+   619→    'insight.action_required': 'Action Zaroori Hai',
+   620→    'insight.attention': 'Dhyan Do',
+   621→    'insight.storage_safe': 'Storage Safe Hai',
+   622→
+   623→    // Recent Readings
+   624→    'recent.title': 'Recent Readings',
+   625→    'recent.show_more': 'Aur Dekho',
+   626→    'recent.today': 'Aaj',
+   627→    'recent.yesterday': 'Kal',
+   628→
+   629→    // Discover
+   630→    'discover.title': 'Discover',
+   631→    'discover.connected_desc_safe': 'Conditions stable hain. Seasonal changes ke liye yeh time hai taiyari karne ka.',
+   632→    'discover.connected_desc_warn': 'Readings badh rahi hain. Yeh resources changing conditions samajhne mein help karenge.',
+   633→    'discover.connected_desc_critical': 'Aapki current readings critical hain. Yeh resources emergency response par focus karte hain.',
+   634→    'discover.disconnected_desc': 'Personalised recommendations ke liye probe connect karo',
+   635→    'discover.condition_normal': 'Normal',
+   636→    'discover.condition_elevated': 'Elevated',
+   637→    'discover.condition_critical': 'Critical',
+   638→    'discover.no_results': 'Is combination ke liye abhi tak koi recommendation available nahi hai.',
+   639→
+   640→    // History
+   641→    'history.title': 'History',
+   642→    'history.readings': 'readings stored',
+   643→    'history.reading': 'reading stored',
+   644→    'history.past': 'Pichli readings',
+   645→    'history.no_history': 'Abhi Tak Koi History Nahi',
+   646→    'history.no_history_desc': 'Probe connect karne par readings yahan dikhengi.',
+   647→    'history.detail': 'Reading Detail',
+   648→    'history.moisture': 'Moisture',
+   649→    'history.temperature': 'Temperature',
+   650→    'history.battery': 'Battery',
+   651→    'history.signal': 'Signal',
+   652→    'history.grain': 'Grain',
+   653→    'history.rule': 'Rule',
+   654→    'history.confidence': 'Confidence',
+   655→    'history.severity': 'Severity',
+   656→    'history.safe': 'Safe',
+   657→    'history.warning': 'Warning',
+   658→
+   659→    // Settings
+   660→    'settings.title': 'Settings',
+   661→    'settings.desc': 'Device & preferences',
+   662→    'settings.device': 'Device',
+   663→    'settings.calibrate': 'CALIBRATE',
+   664→    'settings.probe_controls': 'Probe Controls',
+   665→    'settings.sync_history': 'Sync History',
+   666→    'settings.sync_history_desc': 'Purani readings kheencho',
+   667→    'settings.wake_probe': 'Wake Probe',
+   668→    'settings.wake_probe_desc': 'Sleep mode se bahar',
+   669→    'settings.demo_states': 'Demo States',
+   670→    'settings.grain_type': 'Grain Type',
+   671→    'settings.thresholds': 'Moisture Thresholds (%)',
+   672→    'settings.thresholds_desc': 'Grain profile se automatic. Fine-tune karne ke liye drag karo.',
+   673→    'settings.safe': 'Safe',
+   674→    'settings.warn': 'Warning',
+   675→    'settings.critical': 'Critical',
+   676→    'settings.preferences': 'Preferences',
+   677→    'settings.push_alerts': 'Push Alerts',
+   678→    'settings.auto_sync': 'Auto-sync',
+   679→    'settings.auto_reconnect': 'Auto-reconnect',
+   680→    'settings.wake_on_connect': 'Wake on Connect',
+   681→    'settings.data': 'Data',
+   682→    'settings.export_csv': 'Export CSV',
+   683→    'settings.download': 'Download',
+   684→    'settings.clear_history': 'Clear History',
+   685→    'settings.local_only': 'Local only',
+   686→    'settings.about': 'About',
+   687→    'settings.app_version': 'App Version',
+   688→    'settings.engine': 'Engine',
+   689→    'settings.probe_firmware': 'Probe Firmware',
+   690→
+   691→    // Language
+   692→    'language.title': 'Language',
+   693→    'language.save': 'Save & Reload',
+   694→    'language.saved': 'Language saved. Reloading...',
+   695→    'language.current': 'Current',
+   696→
+   697→    // Glass
+   698→    'glass.title': 'Glass Effect',
+   699→    'glass.opacity': 'Opacity',
+   700→    'glass.subtle': 'Subtle',
+   701→    'glass.medium': 'Medium',
+   702→    'glass.strong': 'Strong',
+   703→    'glass.max': 'Maximum',
+   704→
+   705→    // Accent themes
+   706→    'accent.title': 'Accent Color',
+   707→    'accent.orange': 'Orange',
+   708→    'accent.green': 'Green',
+   709→    'accent.purple': 'Purple',
+   710→    'accent.blue': 'Blue',
+   711→    'accent.teal': 'Teal',
+   712→
+   713→    // Theme
+   714→    'theme.title': 'Theme',
+   715→    'theme.dark': 'Dark',
+   716→    'theme.light': 'Light',
+   717→
+   718→    // Toasts
+   719→    'toast.connected': 'connect hua',
+   720→    'toast.disconnected': 'Device disconnect hua',
+   721→    'toast.alerts_on': 'Alerts on',
+   722→    'toast.alerts_off': 'Alerts off',
+   723→    'toast.autosync_on': 'Auto-sync on',
+   724→    'toast.autosync_off': 'Auto-sync off',
+   725→    'toast.csv_exported': 'CSV export hua',
+   726→    'toast.export_failed': 'Export fail hua',
+   727→    'toast.history_cleared': 'History clear hua',
+   728→    'toast.connection_failed': 'Connection fail hua',
+   729→    'toast.command_sent': 'Command bheja:',
+   730→    'toast.command_failed': 'Command fail:',
+   731→    'toast.demo': 'Demo:',
+   732→    'toast.history_synced': 'History sync hua',
+   733→
+   734→    // Bluetooth Gate
+   735→    'bt.gate.title': 'Bluetooth Zaroori Hai',
+   736→    'bt.gate.desc': 'Is app ko aapke GRAIN-01 probe se connect karne ke liye Bluetooth chahiye. Please Bluetooth on karein.',
+   737→    'bt.gate.unsupported': 'Bluetooth Supported Nahi Hai',
+   738→    'bt.gate.unsupported_desc': 'Aapka browser Web Bluetooth support nahi karta. Please Chrome ya Edge use karein.',
+   739→    'bt.gate.check': 'Phir Se Check Karein',
+   740→    'bt.gate.enable': 'Bluetooth On Karein',
+   741→    'bt.gate.continue': 'Continue',
+   742→  },
+   743→};
+   744→
+   745→/** Get translated string, fallback to English if key missing */
+   746→export function t(key: string, lang: AppLanguage): string {
+   747→  return translations[lang]?.[key] ?? translations.en[key] ?? key;
+   748→}
+   749→

@@ -47,6 +47,10 @@ interface GrainStore {
   activeTab: TabId;
   setActiveTab: (tab: TabId) => void;
 
+  /* ── Bluetooth ── */
+  btAvailable: boolean | null; // null = checking, true = on, false = off
+  setBtAvailable: (v: boolean) => void;
+
   /* ── Device ── */
   deviceState: DeviceState;
   deviceInfo: DeviceInfo | null;
@@ -95,6 +99,10 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
   /* ── Nav ── */
   activeTab: 'home',
   setActiveTab: (tab) => set({ activeTab: tab }),
+
+  /* ── Bluetooth ── */
+  btAvailable: null,
+  setBtAvailable: (v: boolean) => set({ btAvailable: v }),
 
   /* ── Device ── */
   deviceState: 'disconnected',
