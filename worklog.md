@@ -202,3 +202,37 @@ Stage Summary:
 - Battery % circle appears on ALL pages when device is connected
 - Big language selector card completely removed from settings content
 - Settings page is now cleaner: Theme toggle + Advanced Settings only
+
+---
+Task ID: 8
+Agent: Main
+Task: Move crucial settings to basic area + add Bluetooth force gate
+
+Work Log:
+- Moved 3 crucial sections from AdvancedSettingsContent to SettingsTab basic area:
+  - Device card (GRAIN-01 info, Calibrate button, Disconnect/Simulate)
+  - Demo States (Safe/Warning/Critical buttons)
+  - Grain Type selector (9 grain options)
+- Advanced Settings now contains only: Accent Color, Probe Controls, Thresholds, Preferences, Data, About
+- Updated SettingsTab to import all necessary store functions (selectGrainType, simulateConnect, switchDemoMode, etc.)
+- Created BluetoothGate component (bluetooth-gate.tsx):
+  - Self-contained: checks BT availability on mount, returns null when available
+  - Uses navigator.bluetooth.getAvailability() with availabilitychanged event listener
+  - Handles 3 states: checking (loading), unavailable (red warning), off (BT icon)
+  - Full-screen fixed overlay at z-index 200 with pulse ring animation
+  - Translated in all 4 languages (bt.gate.* keys already existed in i18n.ts)
+  - "Turn On Bluetooth" / "Check Again" button to re-check availability
+- Added BT gate CSS: .grain-bt-pulse-ring animation, .grain-bt-gate-icon positioning
+- Added BluetoothGate to page.tsx (renders before Header, blocks entire app)
+- Verified via Agent Browser:
+  - BT gate blocks full screen when BT unavailable (confirmed via VLM: only BT message visible)
+  - Settings basic area: Theme → Device → Demo States → Grain Type → Advanced Settings (all visible without expanding)
+  - Advanced Settings button exists and is clickable
+- Clean lint, zero errors
+
+Stage Summary:
+- Crucial settings (Device, Demo States, Grain Type) immediately accessible without expanding Advanced
+- Advanced Settings: Accent Color, Probe Controls, Thresholds, Preferences, Data, About
+- Bluetooth gate forces user to enable BT before using the app
+- Gate auto-dismisses when BT becomes available (via availabilitychanged event)
+- On unsupported browsers, shows "Not Supported" warning with Chrome/Edge recommendation

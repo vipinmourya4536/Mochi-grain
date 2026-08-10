@@ -5,6 +5,7 @@ import { useGrainStore } from '@/lib/grain-store';
 import { Header } from '@/components/grain/header';
 import { BottomNav } from '@/components/grain/bottom-nav';
 import { Toast } from '@/components/grain/toast';
+import { BluetoothGate } from '@/components/grain/bluetooth-gate';
 import { DisconnectedView } from '@/components/grain/home/disconnected-view';
 import { ConnectingView } from '@/components/grain/home/connecting-view';
 import { ConnectedView } from '@/components/grain/home/connected-view';
@@ -103,6 +104,7 @@ export default function GrainMonitorPage() {
       data-theme={settings.theme}
       style={glassStyle}
     >
+      <BluetoothGate />
       <Header />
       <Toast />
       <main className="grain-scroll" ref={scrollRef}>

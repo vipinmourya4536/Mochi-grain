@@ -184,6 +184,15 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.command_failed': 'Command failed:',
     'toast.demo': 'Demo:',
     'toast.history_synced': 'History synchronised',
+
+    // Bluetooth Gate
+    'bt.gate.title': 'Bluetooth Required',
+    'bt.gate.desc': 'This app requires Bluetooth to connect to your GRAIN-01 probe. Please enable Bluetooth to continue.',
+    'bt.gate.unsupported': 'Bluetooth Not Supported',
+    'bt.gate.unsupported_desc': 'Your browser does not support Web Bluetooth. Please use Chrome or Edge.',
+    'bt.gate.check': 'Check Again',
+    'bt.gate.enable': 'Enable Bluetooth',
+    'bt.gate.continue': 'Continue',
   },
 
   hi: {
@@ -357,6 +366,15 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.command_failed': 'कमांड विफल:',
     'toast.demo': 'डेमो:',
     'toast.history_synced': 'इतिहास सिंक हुआ',
+
+    // Bluetooth Gate
+    'bt.gate.title': 'ब्लूटूथ आवश्यक',
+    'bt.gate.desc': 'इस ऐप को आपके GRAIN-01 प्रोब से कनेक्ट करने के लिए ब्लूटूथ चाहिए। कृपया जारी रखने के लिए ब्लूटूथ चालू करें।',
+    'bt.gate.unsupported': 'ब्लूटूथ समर्थित नहीं',
+    'bt.gate.unsupported_desc': 'आपका ब्राउज़र वेब ब्लूटूथ का समर्थन नहीं करता। कृपया Chrome या Edge का उपयोग करें।',
+    'bt.gate.check': 'फिर से जांचें',
+    'bt.gate.enable': 'ब्लूटूथ चालू करें',
+    'bt.gate.continue': 'जारी रखें',
   },
 
   mr: {
@@ -530,6 +548,15 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.command_failed': 'कमांड अयशस्वी:',
     'toast.demo': 'डेमो:',
     'toast.history_synced': 'इतिहास सिंक झाला',
+
+    // Bluetooth Gate
+    'bt.gate.title': 'ब्लूटूथ आवश्यक',
+    'bt.gate.desc': 'या अॅपला तुमच्या GRAIN-01 प्रोबशी कनेक्ट होण्यासाठी ब्लूटूथ आवश्यक आहे. कृपया सुरू ठेवण्यासाठी ब्लूटूथ चालू करा.',
+    'bt.gate.unsupported': 'ब्लूटूथ समर्थित नाही',
+    'bt.gate.unsupported_desc': 'तुमचा ब्राउझर वेब ब्लूटूथ समर्थित नाही. कृपया Chrome किंवा Edge वापरा.',
+    'bt.gate.check': 'पुन्हा तपासा',
+    'bt.gate.enable': 'ब्लूटूथ चालू करा',
+    'bt.gate.continue': 'सुरू ठेवा',
   },
 
   hinglish: {
@@ -703,6 +730,15 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.command_failed': 'Command fail:',
     'toast.demo': 'Demo:',
     'toast.history_synced': 'History sync hua',
+
+    // Bluetooth Gate
+    'bt.gate.title': 'Bluetooth Zaroori Hai',
+    'bt.gate.desc': 'Is app ko aapke GRAIN-01 probe se connect karne ke liye Bluetooth chahiye. Please Bluetooth on karein.',
+    'bt.gate.unsupported': 'Bluetooth Supported Nahi Hai',
+    'bt.gate.unsupported_desc': 'Aapka browser Web Bluetooth support nahi karta. Please Chrome ya Edge use karein.',
+    'bt.gate.check': 'Phir Se Check Karein',
+    'bt.gate.enable': 'Bluetooth On Karein',
+    'bt.gate.continue': 'Continue',
   },
 };
 

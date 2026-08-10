@@ -684,3 +684,98 @@
 .grain-chevron.rotated {
   transform: rotate(180deg);
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   BLUETOOTH GATE – full-screen block until BT enabled
+   ═══════════════════════════════════════════════════════════════ */
+
+.grain-bt-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gm-bg);
+  padding: 32px;
+  animation: grain-fade-in 0.4s ease-out;
+}
+.grain-bt-gate-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 320px;
+}
+.grain-bt-icon-wrap {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--gm-glass-border);
+  background: var(--gm-accent-dim);
+  margin-bottom: 24px;
+}
+.grain-bt-gate-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+.grain-bt-gate-desc {
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--gm-text-secondary);
+}
+.grain-bt-gate-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 24px;
+  border-radius: 14px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+.grain-bt-gate-btn:active {
+  transform: scale(0.97);
+}
+.grain-bt-gate-btn-primary {
+  background: var(--gm-accent);
+  color: #ffffff;
+  box-shadow: 0 6px 20px var(--gm-accent-glow);
+}
+.grain-bt-gate-btn-primary:active {
+  box-shadow: 0 2px 8px var(--gm-accent-glow);
+}
+.grain-bt-gate-btn-secondary {
+  background: var(--gm-toggle-bg);
+  color: var(--gm-text-secondary);
+  border: 1px solid var(--gm-toggle-border);
+}
+.grain-bt-pulse-ring {
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  border: 2px solid var(--gm-accent);
+  opacity: 0;
+  animation: grain-bt-pulse 2s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes grain-bt-pulse {
+  0% { opacity: 0.6; transform: scale(0.9); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+.grain-bt-gate-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
