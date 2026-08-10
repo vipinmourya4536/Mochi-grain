@@ -272,3 +272,30 @@ Stage Summary:
 - Enable Bluetooth and Check Again buttons work correctly
 - Hero card area shows BT prompt when Bluetooth is off
 - Browsers without Web Bluetooth API get automatic pass-through
+
+---
+Task ID: 10
+Agent: Main
+Task: Remove full-screen BT popup, fix header empty space, add gradient frosted glass header
+
+Work Log:
+- Removed full-screen BluetoothGate popup from page.tsx entirely (per user request)
+- Kept BtOffHero inline component for home page hero card area when BT is off
+- Moved BT availability check into page.tsx useEffect (no gate component needed)
+- Reduced header top padding from pt-14 (56px) to pt-10 (40px) to reduce empty space
+- Reduced header bottom padding from pb-3 to pb-2.5
+- Made header position:absolute so it overlays scrolling content (required for frosted glass)
+- Added scroll area padding-top: 54px so hero card peeks behind bottom of header (~32px overlap)
+- Created gradient frosted glass effect on header:
+  - backdrop-filter: blur(28px) saturate(1.4) on base element
+  - ::after gradient: solid var(--gm-bg) at top (0-40%) → rgba(bg, 0.6) at 70% → rgba(bg, 0.35) at bottom
+  - ::before: subtle bright highlight line at bottom edge
+  - Content wrapper div with z-[3] ensures text stays above pseudo-elements
+- Verified via Agent Browser + VLM: orange color bleeds through at bottom of header, gradient from solid top to frosted bottom, blended edge between header and content
+
+Stage Summary:
+- Full-screen Bluetooth popup completely removed
+- Header has less empty space (pt-10 instead of pt-14)
+- Frosted glass gradient on header: top=solid, bottom=frosted with visible content blur
+- Header floats over scrollable content for the glass effect to work
+- Clean lint, zero errors, both dark and light modes verified

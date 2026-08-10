@@ -38,7 +38,8 @@ export function Header() {
   const isSettings = activeTab === 'settings';
 
   return (
-    <header className="grain-glass-header px-5 pt-14 pb-3 flex justify-between items-center shrink-0">
+    <header className="grain-glass-header shrink-0">
+      <div className="relative z-[3] px-5 pt-10 pb-2.5 flex justify-between items-center">
       {/* Left: status dot + title */}
       <div className="flex items-center gap-3">
         <div className="w-2 h-2 rounded-full grain-status-dot" style={dotStyle} />
@@ -85,6 +86,7 @@ export function Header() {
 
         {/* Language toggle – ONLY on Settings page */}
         {isSettings && <LanguageSelector />}
+      </div>
       </div>
     </header>
   );

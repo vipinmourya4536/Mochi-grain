@@ -301,7 +301,7 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0 20px 130px;
+  padding: 54px 20px 130px 20px;
   scrollbar-width: none;
 }
 .grain-scroll::-webkit-scrollbar { display: none; }
@@ -312,32 +312,39 @@
 
 /* Glass Header – heavy blur, NO sharp border, soft fade shadow */
 .grain-glass-header {
-  background: var(--gm-glass-bg);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
   backdrop-filter: blur(var(--gm-blur-header, 28px)) saturate(var(--gm-saturate-header, 1.4));
   -webkit-backdrop-filter: blur(var(--gm-blur-header, 28px)) saturate(var(--gm-saturate-header, 1.4));
-  border-bottom: none;
-  box-shadow: 0 6px 32px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.1);
-  position: relative;
-  z-index: 20;
 }
+/* Gradient: top solid → bottom frosted (transparent to show blur) */
 .grain-glass-header::after {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(180deg, var(--gm-glass-highlight) 0%, transparent 60%);
+  background: linear-gradient(
+    to bottom,
+    var(--gm-bg) 0%,
+    var(--gm-bg) 40%,
+    rgba(var(--gm-bg-r, 9), var(--gm-bg-g, 9), var(--gm-bg-b, 11), 0.6) 70%,
+    rgba(var(--gm-bg-r, 9), var(--gm-bg-g, 9), var(--gm-bg-b, 11), 0.35) 100%
+  );
   pointer-events: none;
+  z-index: 2;
 }
-/* Soft gradient fade below header (eliminates sharp line) */
+/* Subtle bright edge at bottom of header */
 .grain-glass-header::before {
   content: '';
   position: absolute;
-  bottom: -20px;
-  left: 0; right: 0;
-  height: 20px;
-  background: linear-gradient(to bottom, var(--gm-glass-bg), transparent);
+  bottom: 0;
+  left: 10%; right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
   pointer-events: none;
-  z-index: 1;
+  z-index: 3;
 }
 
 /* Glass Card – liquid glass with variable intensity */
