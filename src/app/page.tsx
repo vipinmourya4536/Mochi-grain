@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { useGrainStore } from '@/lib/grain-store';
 import { Header } from '@/components/grain/header';
 import { BottomNav } from '@/components/grain/bottom-nav';
 import { Toast } from '@/components/grain/toast';
-import { BluetoothGate } from '@/components/grain/bluetooth-gate';
 import { DisconnectedView } from '@/components/grain/home/disconnected-view';
 import { ConnectingView } from '@/components/grain/home/connecting-view';
 import { ConnectedView } from '@/components/grain/home/connected-view';
@@ -54,7 +53,7 @@ function computeGlassVars(isDark: boolean) {
 export default function GrainMonitorPage() {
   const {
     activeTab, deviceState, riskTheme, currentReading, settings, btAvailable,
-    loadSettings, loadHistory, simulateConnect,
+    loadSettings, loadHistory, simulateConnect, setBtAvailable,
   } = useGrainStore();
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -64,6 +63,20 @@ export default function GrainMonitorPage() {
     () => computeGlassVars(isDark),
     [isDark]
   );
+
+  // Check Bluetooth availability on mount (no gate, just sets store state for BtOffHero)
+  const checkBT = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !('bluetooth' in navigator)) {
+      setBtAvailable(true); // no Web Bluetooth API → allow app
+      return;
+    }
+    const bt = navigator.bluetooth as Bluetooth & { getAvailability?: () => Promise<boolean> };
+    if (typeof bt.getAvailability === 'function') {
+      try { setBtAvailable(await bt.getAvailability()); } catch { setBtAvailable(true); }
+    } else {
+      setBtAvailable(true);
+    }
+  }, [setBtAvailable]);
 
   useEffect(() => {
     loadSettings().then(() => {
@@ -79,7 +92,19 @@ export default function GrainMonitorPage() {
       } catch { /* ignore */ }
     });
     loadHistory();
-  }, []);
+    checkBT();
+
+    // Listen for BT adapter state changes
+    if (typeof navigator !== 'undefined' && 'bluetooth' in navigator) {
+      const btNav = navigator.bluetooth as Bluetooth & {
+        addEventListener?: (e: string, h: () => void) => void;
+        removeEventListener?: (e: string, h: () => void) => void;
+      };
+      const handler = () => { checkBT(); };
+      if (btNav.addEventListener) btNav.addEventListener('availabilitychanged', handler);
+      return () => { if (btNav.removeEventListener) btNav.removeEventListener('availabilitychanged', handler); };
+    }
+  }, [checkBT]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
@@ -107,7 +132,6 @@ export default function GrainMonitorPage() {
       data-theme={settings.theme}
       style={glassStyle}
     >
-      <BluetoothGate />
       <Header />
       <Toast />
       <main className="grain-scroll" ref={scrollRef}>
