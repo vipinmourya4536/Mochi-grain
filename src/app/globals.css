@@ -301,7 +301,7 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 54px 20px 130px 20px;
+  padding: 64px 20px 130px 20px;
   scrollbar-width: none;
 }
 .grain-scroll::-webkit-scrollbar { display: none; }
@@ -310,17 +310,18 @@
    LIQUID GLASS EFFECTS
    ═══════════════════════════════════════════════════════════════ */
 
-/* Glass Header – heavy blur, NO sharp border, soft fade shadow */
+/* Glass Header – gradient solid top → frosted glass bottom */
 .grain-glass-header {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   z-index: 20;
-  backdrop-filter: blur(var(--gm-blur-header, 28px)) saturate(var(--gm-saturate-header, 1.4));
-  -webkit-backdrop-filter: blur(var(--gm-blur-header, 28px)) saturate(var(--gm-saturate-header, 1.4));
+  background: transparent;
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
 }
-/* Gradient: top solid → bottom frosted (transparent to show blur) */
+/* Gradient overlay: top solid → bottom 80% opaque (frosted glass, no readable bleed) */
 .grain-glass-header::after {
   content: '';
   position: absolute;
@@ -328,21 +329,21 @@
   background: linear-gradient(
     to bottom,
     var(--gm-bg) 0%,
-    var(--gm-bg) 40%,
-    rgba(var(--gm-bg-r, 9), var(--gm-bg-g, 9), var(--gm-bg-b, 11), 0.6) 70%,
-    rgba(var(--gm-bg-r, 9), var(--gm-bg-g, 9), var(--gm-bg-b, 11), 0.35) 100%
+    var(--gm-bg) 45%,
+    rgba(var(--gm-bg-r, 9), var(--gm-bg-g, 9), var(--gm-bg-b, 11), 0.88) 70%,
+    rgba(var(--gm-bg-r, 9), var(--gm-bg-g, 9), var(--gm-bg-b, 11), 0.80) 100%
   );
   pointer-events: none;
   z-index: 2;
 }
-/* Subtle bright edge at bottom of header */
+/* Subtle bright highlight at bottom edge */
 .grain-glass-header::before {
   content: '';
   position: absolute;
   bottom: 0;
-  left: 10%; right: 10%;
+  left: 8%; right: 8%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
   pointer-events: none;
   z-index: 3;
 }
