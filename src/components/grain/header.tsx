@@ -25,38 +25,26 @@ export function Header() {
   const isSettings = activeTab === 'settings';
 
   return (
-    <header className="grain-glass-header shrink-0">
-      <div className="relative z-[3] flex justify-between items-center h-12 px-5">
+    <header className="grain-glass-header">
+      <div className="grain-header-inner">
         {/* Left: status dot + title */}
-        <div className="flex items-center gap-2.5">
+        <div className="grain-header-brand">
           <div className="w-2 h-2 rounded-full grain-status-dot" style={dotStyle} />
-          <h1
-            className="text-[11px] font-bold tracking-[0.2em] uppercase"
-            style={{ color: 'var(--gm-text-primary)' }}
-          >
+          <h1 className="grain-header-title">
             {t('app.title', lang)}
           </h1>
         </div>
 
-        {/* Right: context-aware buttons */}
-        <div className="flex items-center gap-2">
+        {/* Right: device status */}
+        <div className="grain-header-actions">
           {battery != null && (
-            <div
-              className="flex items-center justify-center"
-              style={{
-                width: 30,
-                height: 30,
-                borderRadius: '50%',
-                background: battery < 20
-                  ? 'rgba(239, 68, 68, 0.12)'
-                  : 'var(--gm-accent-dim)',
-                border: `1px solid ${battery < 20 ? 'rgba(239,68,68,0.3)' : 'var(--gm-glass-border)'}`,
-              }}
-            >
-              <span
-                className="text-[9px] font-bold"
-                style={{ color: battery < 20 ? '#EF4444' : 'var(--gm-accent)' }}
-              >
+            <div className="grain-battery-badge" style={{
+              background: battery < 20
+                ? 'rgba(239, 68, 68, 0.12)'
+                : 'var(--gm-accent-dim)',
+              borderColor: battery < 20 ? 'rgba(239,68,68,0.3)' : 'var(--gm-glass-border)',
+            }}>
+              <span style={{ color: battery < 20 ? '#EF4444' : 'var(--gm-accent)' }}>
                 {battery}%
               </span>
             </div>

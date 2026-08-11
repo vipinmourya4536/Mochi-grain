@@ -343,3 +343,33 @@ Stage Summary:
 - Grain type: interactive dropdown with all 9 types, checkmark for selected, accent color highlight
 - selectGrainType() properly updates thresholds and re-simulates when connected
 - No duplicate useGrainStore() calls, removed unused statusLabel variable
+---
+Task ID: 12
+Agent: Main
+Task: Fix broken header/top layout - header overlapping moisture card
+
+Work Log:
+- Analyzed user screenshot via VLM: confirmed GRAIN MONITOR was sitting ON TOP of the green moisture card
+- Inspected full DOM hierarchy and CSS to identify root cause
+- ROOT CAUSE: Header was inside the scroll container with `position: sticky; top: 0;` and a 78% opaque background. The hero card followed immediately with no gap. The semi-transparent sticky header visually merged with the hero card beneath it. The hero card also had `relative z-10` creating stacking context conflicts.
+- Fix 1 (page.tsx): Moved `<Header />` OUT of `<main className="grain-scroll">` back to being a direct flex child of `.grain-app`, above the scroll container
+- Fix 2 (header.tsx): Removed all Tailwind utility classes for positioning (shrink-0, z-[3], h-12, px-5). Replaced with semantic CSS classes (grain-header-inner, grain-header-brand, grain-header-title, grain-header-actions, grain-battery-badge)
+- Fix 3 (globals.css): Completely replaced `.grain-glass-header` CSS:
+  - Removed: position: sticky, top: 0, z-index: 20, background rgba(..., 0.78), backdrop-filter, border-bottom
+  - Added: flex-shrink: 0, padding-top: env(safe-area-inset-top, 0px)
+  - Created new classes: .grain-header-inner (flex row), .grain-header-brand (flex items-center gap-10px), .grain-header-title (11px bold uppercase tracking), .grain-header-actions, .grain-battery-badge (32px circle)
+- Fix 4 (hero-card.tsx): Removed `relative z-10` from hero card and its inner div to eliminate stacking context conflicts
+- Fix 5 (globals.css): Adjusted .grain-scroll padding-top from 12px to 16px for consistent spacing
+- Verified via Agent Browser DOM inspection: header is position:static, z-index:auto (normal flow)
+- Verified via VLM at 5 viewport widths (320, 360, 375, 412, 430px): all OK
+- Verified scrolling: header stays at top, bottom nav stays at bottom, content scrolls between
+- Verified Settings tab: header with EN language selector visible, no overlap with settings content
+- Clean lint, zero runtime errors
+
+Stage Summary:
+- Header is now a normal document-flow flex child of .grain-app (position: static)
+- No position:absolute/sticky/fixed, no z-index, no transform on the header
+- Clean separation between header and all content below it
+- Layout hierarchy: .grain-app > header + main.grain-scroll + nav.grain-floating-nav
+- Works correctly at all viewport widths from 320px to 430px
+- Bottom navigation completely unaffected

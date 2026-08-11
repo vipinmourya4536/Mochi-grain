@@ -15,8 +15,8 @@ export function HeroCard() {
   const deviceName = deviceInfo?.name || 'GRAIN-01';
 
   return (
-    <div className="grain-hero-card relative z-10">
-      <div className="relative z-10">
+    <div className="grain-hero-card">
+      <div>
         <div className="flex justify-between items-start mb-6">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-white/80">
