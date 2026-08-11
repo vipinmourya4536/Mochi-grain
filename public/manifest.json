@@ -1,24 +1,41 @@
 {
   "name": "Grain Monitor",
-  "short_name": "Grain",
-  "description": "Real-time grain moisture monitoring for ESP32 probes",
+  "short_name": "GrainMonitor",
+  "description": "Real-time grain moisture monitoring for ESP32 probes. Track moisture, temperature, and grain safety across 9 grain types.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#09090b",
-  "theme_color": "#09090b",
   "orientation": "portrait",
+  "background_color": "#09090b",
+  "theme_color": "#F97316",
+  "dir": "ltr",
+  "lang": "en",
+  "categories": ["utilities", "agriculture", "productivity"],
   "icons": [
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
       "type": "image/png"
     }
   ],
-  "categories": ["utilities", "agriculture"],
+  "screenshots": [],
   "prefer_related_applications": false
 }

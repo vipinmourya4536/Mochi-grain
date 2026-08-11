@@ -13,21 +13,36 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#09090b",
+  themeColor: "#F97316",
 };
 
 export const metadata: Metadata = {
   title: "Grain Monitor",
-  description: "Real-time grain moisture monitoring companion for ESP32 probes.",
+  description: "Real-time grain moisture monitoring companion for ESP32 probes. Track moisture, temperature & grain safety across 9 grain types.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Grain Monitor",
+    title: "GrainMonitor",
+    startupImage: [
+      {
+        url: "/apple-touch-icon.png",
+        media: "(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)",
+      },
+    ],
   },
   icons: {
-    icon: "/icon-192.png",
-    apple: "/icon-192.png",
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "black-translucent",
+    "application-name": "GrainMonitor",
+    "msapplication-TileColor": "#09090b",
   },
 };
 
@@ -38,6 +53,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className={inter.variable}>
+      <head>
+        <link rel="icon" href="/icon-32.png" sizes="32x32" />
+        <link rel="icon" href="/icon-192.png" sizes="192x192" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+      </head>
       <body
         style={{
           background: '#000',
