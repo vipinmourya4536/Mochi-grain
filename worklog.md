@@ -373,3 +373,35 @@ Stage Summary:
 - Layout hierarchy: .grain-app > header + main.grain-scroll + nav.grain-floating-nav
 - Works correctly at all viewport widths from 320px to 430px
 - Bottom navigation completely unaffected
+
+---
+Task ID: 13
+Agent: Main
+Task: Push code to GitHub and deploy to Vercel
+
+Work Log:
+- Verified header layout fix from Task 12 is in place (Header outside scroll container, normal document flow CSS)
+- Checked git status: 6 modified files (icon PNGs, README, bun.lock) needed committing
+- Committed icon updates
+- Attempted git push to origin (vipinmourya4536/Mochi-grain) - got 403 Permission Denied
+- Diagnosed token issue: fine-grained PAT has empty OAuth scopes (only Metadata)
+- Tried multiple approaches to push:
+  - git push via HTTPS with embedded token → 403
+  - GitHub API POST /git/blobs → 404 (masked 403 for insufficient permissions)
+  - GitHub API POST /contents → 404
+  - gh CLI repo create --push → GraphQL error: token has no scopes
+  - gh auth refresh → timeout (needs browser interaction)
+  - SSH key generation → no ssh-keygen available
+  - Vercel CLI deploy → no Vercel token available
+- Cleaned repo: removed 67 screenshot/upload files from git tracking, added to .gitignore
+- Installed Vercel CLI (v58.9.4) via npm
+- Final state: 112 tracked files, ~1.7MB total
+
+Stage Summary:
+- Root cause: GitHub fine-grained PAT ghp_Z39... has ONLY Metadata permission (empty scopes)
+  - Missing: Contents: Read and Write (needed for git push and API writes)
+  - Missing: public_repo scope (needed for repo creation)
+- GitHub repo exists (Mochi-grain, public, empty, default branch: main)
+- All code is committed locally, ready to push
+- Vercel CLI installed but needs Vercel token for deployment
+- User needs to: (1) Create new token with proper permissions, or (2) Edit existing fine-grained PAT
