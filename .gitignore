@@ -56,4 +56,5 @@ server.log
 # tool caches & uploads
 tool-results/
 upload/
-.zscripts/
+.zscripts/upload/
+screenshot-*.png
