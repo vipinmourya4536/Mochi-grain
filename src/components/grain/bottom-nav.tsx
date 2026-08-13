@@ -7,7 +7,7 @@ import {
   ClockCounterClockwise,
   Gear,
 } from '@phosphor-icons/react/dist/ssr';
-import { t } from '@/lib/i18n';
+import { t, type AppLanguage } from '@/lib/i18n';
 
 const TABS: { id: TabId; icon: typeof House; labelKey: string }[] = [
   { id: 'home', icon: House, labelKey: 'nav.home' },
@@ -18,10 +18,10 @@ const TABS: { id: TabId; icon: typeof House; labelKey: string }[] = [
 
 export function BottomNav() {
   const { activeTab, setActiveTab, settings } = useGrainStore();
-  const lang = settings.language as 'en' | 'hi' | 'mr' | 'hinglish';
+  const lang = settings.language as AppLanguage;
 
   return (
-    <nav className="grain-floating-nav shrink-0">
+    <nav className="grain-floating-nav">
       <div className="grain-floating-nav-inner grain-nav-solid">
         {TABS.map(({ id, icon: Icon, labelKey }) => {
           const isActive = activeTab === id;

@@ -2,14 +2,14 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useGrainStore } from '@/lib/grain-store';
-import { GRAIN_LABELS, type GrainType } from '@/lib/grain-types';
-import { t } from '@/lib/i18n';
+import { type GrainType } from '@/lib/grain-types';
+import { t, tGrain, type AppLanguage } from '@/lib/i18n';
 
-const GRAIN_OPTIONS = Object.keys(GRAIN_LABELS) as GrainType[];
+const GRAIN_OPTIONS: GrainType[] = ['wheat', 'rice', 'corn', 'barley', 'soybean', 'sorghum', 'oats', 'millet', 'other'];
 
 export function MetricPills() {
   const { currentReading, deviceInfo, settings, selectGrainType } = useGrainStore();
-  const lang = settings.language as 'en' | 'hi' | 'mr' | 'hinglish';
+  const lang = settings.language as AppLanguage;
 
   if (!currentReading || !deviceInfo) return null;
 
@@ -49,7 +49,7 @@ function GrainTypeDropdown({
 }: {
   currentGrain: GrainType;
   onSelect: (g: GrainType) => void;
-  lang: 'en' | 'hi' | 'mr' | 'hinglish';
+  lang: AppLanguage;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -63,7 +63,7 @@ function GrainTypeDropdown({
     return () => document.removeEventListener('pointerdown', handler);
   }, [open]);
 
-  const label = GRAIN_LABELS[currentGrain] || currentGrain;
+  const label = tGrain(currentGrain, lang);
 
   return (
     <div className="grain-card p-4 relative" ref={ref}>
@@ -100,7 +100,7 @@ function GrainTypeDropdown({
                 setOpen(false);
               }}
             >
-              {GRAIN_LABELS[g]}
+              {tGrain(g, lang)}
               {g === currentGrain && (
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--gm-accent)' }}>
                   <polyline points="20 6 9 17 4 12" />

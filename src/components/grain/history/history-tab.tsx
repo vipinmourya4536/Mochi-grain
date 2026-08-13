@@ -1,10 +1,9 @@
 'use client';
 
 import { useGrainStore } from '@/lib/grain-store';
-import { GRAIN_LABELS } from '@/lib/grain-types';
 import type { HistoryEntry } from '@/lib/grain-types';
 import { X, TrendUp, TrendDown, Minus, ArrowClockwise, Trash } from '@phosphor-icons/react/dist/ssr';
-import { t } from '@/lib/i18n';
+import { t, tGrain, tTrend, type AppLanguage } from '@/lib/i18n';
 import { getRiskColor, getRiskBg } from '@/lib/accent-hex';
 import { format } from 'date-fns';
 
@@ -18,7 +17,7 @@ function getTrendIcon(trend: string) {
 
 function ReadingList() {
   const { historyEntries, setSelectedHistoryId, settings } = useGrainStore();
-  const lang = settings.language as 'en' | 'hi' | 'mr' | 'hinglish';
+  const lang = settings.language as AppLanguage;
   const accent = settings.accentColor;
 
   if (historyEntries.length === 0) {
@@ -48,7 +47,7 @@ function ReadingList() {
                 <span className="w-1 h-1 rounded-full" style={{ background: 'var(--gm-separator)' }} />
                 <span className="text-[10px]" style={{ color: 'var(--gm-text-secondary)' }}>{format(entry.reading.timestamp, 'h:mm a')}</span>
               </div>
-              <div className="text-sm font-bold" style={{ color: 'var(--gm-text-primary)' }}>{entry.reading.moisture.toFixed(1)}%{' '}<span className="font-normal text-xs" style={{ color: 'var(--gm-text-secondary)' }}>/ {Math.round(entry.reading.temperature)}°C / {GRAIN_LABELS[entry.reading.grainType]}</span></div>
+              <div className="text-sm font-bold" style={{ color: 'var(--gm-text-primary)' }}>{entry.reading.moisture.toFixed(1)}%{' '}<span className="font-normal text-xs" style={{ color: 'var(--gm-text-secondary)' }}>/ {Math.round(entry.reading.temperature)}°C / {tGrain(entry.reading.grainType, lang)}</span></div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <div style={{ color: dotHex }}>{getTrendIcon(entry.decision.trend)}</div>
@@ -64,9 +63,19 @@ function ReadingList() {
 function ReadingDetail({ entry, onClose }: { entry: HistoryEntry; onClose: () => void }) {
   const { reading, decision } = entry;
   const { settings } = useGrainStore();
-  const lang = settings.language as 'en' | 'hi' | 'mr' | 'hinglish';
+  const lang = settings.language as AppLanguage;
   const accent = settings.accentColor;
   const dotHex = getRiskColor(decision.state, accent);
+
+  // Use i18n keys if available, fallback to stored English
+  const messageText = decision.messageKey ? t(decision.messageKey, lang) : decision.message;
+  const actionText = decision.actionKey ? t(decision.actionKey, lang) : decision.action;
+  const trendLabel = tTrend(decision.trend, lang);
+
+  const stateLabel =
+    decision.state === 'safe' ? t('history.safe', lang)
+    : decision.state === 'warn' ? t('history.warning', lang)
+    : t('history.critical', lang);
 
   return (
     <div className="grain-fade-in">
@@ -90,12 +99,12 @@ function ReadingDetail({ entry, onClose }: { entry: HistoryEntry; onClose: () =>
       <div className="grid grid-cols-3 gap-3 mb-5">
         <div className="grain-card p-3"><div className="text-[9px] font-bold tracking-[0.15em] uppercase mb-1" style={{ color: 'var(--gm-text-secondary)' }}>{t('history.battery', lang)}</div><span className="text-sm font-bold" style={{ color: 'var(--gm-text-primary)' }}>{reading.battery}%</span></div>
         <div className="grain-card p-3"><div className="text-[9px] font-bold tracking-[0.15em] uppercase mb-1" style={{ color: 'var(--gm-text-secondary)' }}>{t('history.signal', lang)}</div><span className="text-sm font-bold" style={{ color: 'var(--gm-text-primary)' }}>{reading.signal}%</span></div>
-        <div className="grain-card p-3"><div className="text-[9px] font-bold tracking-[0.15em] uppercase mb-1" style={{ color: 'var(--gm-text-secondary)' }}>{t('history.grain', lang)}</div><span className="text-sm font-bold" style={{ color: 'var(--gm-text-primary)' }}>{GRAIN_LABELS[reading.grainType]}</span></div>
+        <div className="grain-card p-3"><div className="text-[9px] font-bold tracking-[0.15em] uppercase mb-1" style={{ color: 'var(--gm-text-secondary)' }}>{t('history.grain', lang)}</div><span className="text-sm font-bold" style={{ color: 'var(--gm-text-primary)' }}>{tGrain(reading.grainType, lang)}</span></div>
       </div>
       <div className="grain-insight-card mb-5">
-        <h4 className="text-xs font-bold tracking-wide uppercase mb-2" style={{ color: dotHex }}>{decision.state === 'safe' ? t('history.safe', lang) : decision.state === 'warn' ? t('history.warning', lang) : t('settings.critical', lang)} · {decision.trend}</h4>
-        <p className="text-sm leading-relaxed" style={{ color: 'var(--gm-text-secondary)' }}>{decision.message}</p>
-        <p className="text-[11px] mt-2 leading-relaxed" style={{ color: 'var(--gm-text-tertiary)' }}>{decision.action}</p>
+        <h4 className="text-xs font-bold tracking-wide uppercase mb-2" style={{ color: dotHex }}>{stateLabel} · {trendLabel}</h4>
+        <p className="text-sm leading-relaxed" style={{ color: 'var(--gm-text-secondary)' }}>{messageText}</p>
+        <p className="text-[11px] mt-2 leading-relaxed" style={{ color: 'var(--gm-text-tertiary)' }}>{actionText}</p>
       </div>
       <div className="grain-card p-4">
         <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: 'var(--gm-text-tertiary)' }}>{t('history.rule', lang)}</span><span className="text-[11px] font-mono" style={{ color: 'var(--gm-text-secondary)' }}>{decision.ruleId}</span></div>
@@ -108,7 +117,7 @@ function ReadingDetail({ entry, onClose }: { entry: HistoryEntry; onClose: () =>
 
 export function HistoryTab() {
   const { selectedHistoryEntry, setSelectedHistoryId, historyEntries, clearHistory, settings } = useGrainStore();
-  const lang = settings.language as 'en' | 'hi' | 'mr' | 'hinglish';
+  const lang = settings.language as AppLanguage;
 
   return (
     <div className="pt-2 pb-6 grain-fade-in">

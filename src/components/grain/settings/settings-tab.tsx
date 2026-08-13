@@ -6,8 +6,8 @@ import {
   Cpu, DownloadSimple, ArrowClockwise, Trash, Power, Wrench,
   Sun, Moon, CaretDown, SlidersHorizontal, Palette,
 } from '@phosphor-icons/react/dist/ssr';
-import { GRAIN_LABELS, type GrainType, type AccentColor } from '@/lib/grain-types';
-import { t, type AppLanguage } from '@/lib/i18n';
+import { type GrainType, type AccentColor } from '@/lib/grain-types';
+import { t, tGrain, type AppLanguage } from '@/lib/i18n';
 
 const GRAIN_OPTIONS: GrainType[] = ['wheat', 'rice', 'corn', 'barley', 'soybean', 'sorghum', 'oats', 'millet', 'other'];
 
@@ -147,7 +147,7 @@ export function SettingsTab() {
                 color: isActive ? '#fff' : 'var(--gm-text-secondary)',
               }}
             >
-              {GRAIN_LABELS[g]}
+              {tGrain(g, lang)}
             </button>
           );
         })}
@@ -250,7 +250,7 @@ export function SettingsTab() {
 
       <div className="text-center pb-4">
         <p className="text-[10px]" style={{ color: 'var(--gm-text-tertiary)' }}>
-          Grain Monitor v1.0 · Built for ESP32
+          {t('settings.built_for', lang)}
         </p>
       </div>
 
@@ -262,7 +262,7 @@ export function SettingsTab() {
         <div className="flex items-center gap-3">
           <SlidersHorizontal size={18} weight="bold" style={{ color: 'var(--gm-accent)' }} />
           <span className="text-sm font-semibold" style={{ color: 'var(--gm-text-primary)' }}>
-            Advanced Settings
+            {t('settings.advanced', lang)}
           </span>
         </div>
         <CaretDown

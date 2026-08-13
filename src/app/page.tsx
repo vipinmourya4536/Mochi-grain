@@ -13,6 +13,11 @@ import { SleepingView, LowBatteryView, SyncingView } from '@/components/grain/ho
 import { DiscoverTab } from '@/components/grain/discover/discover-tab';
 import { HistoryTab } from '@/components/grain/history/history-tab';
 import { SettingsTab } from '@/components/grain/settings/settings-tab';
+import type { AppLanguage } from '@/lib/i18n';
+
+const LANG_MAP: Record<string, string> = {
+  en: 'en', hi: 'hi', mr: 'mr', hinglish: 'en',
+};
 
 /**
  * Compute glass-effect CSS variables at a fixed nice opacity.
@@ -63,6 +68,17 @@ export default function GrainMonitorPage() {
     () => computeGlassVars(isDark),
     [isDark]
   );
+
+  // Sync body background with theme to prevent black/white bar
+  useEffect(() => {
+    document.body.style.background = isDark ? '#09090b' : '#f5f5f7';
+  }, [isDark]);
+
+  // Sync html lang attribute with language
+  useEffect(() => {
+    const htmlLang = LANG_MAP[settings.language] || 'en';
+    document.documentElement.lang = htmlLang;
+  }, [settings.language]);
 
   // Check Bluetooth availability on mount (no gate, just sets store state for BtOffHero)
   const checkBT = useCallback(async () => {

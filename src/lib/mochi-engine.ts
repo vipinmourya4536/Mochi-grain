@@ -1,6 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════
    MOCHI DECISION ENGINE v1.0
    Threshold-based grain moisture analysis with trend detection.
+   Returns translation keys for i18n support.
    ═══════════════════════════════════════════════════════════════ */
 
 import type {
@@ -11,38 +12,16 @@ import type {
   MochiDecision,
 } from './grain-types';
 
-/* ── Simple deterministic messages ── */
-const SAFE_MESSAGES = [
-  'Storage conditions are stable.',
-  'All readings within normal range.',
-  'Moisture and temperature look good.',
-];
-const WARN_MESSAGES = [
-  'Moisture is rising. Check ventilation and storage conditions.',
-  'Temperature is elevated. Ensure proper airflow.',
-  'Readings above normal. Monitor closely.',
-];
-const CRITICAL_MESSAGES = [
-  'High moisture may increase spoilage risk. Dry the grain promptly.',
-  'Temperature dangerously high. Risk of spontaneous heating.',
-  'Both readings at dangerous levels. Act immediately.',
-];
+/* ── Translation key pools (deterministic by index) ── */
+const SAFE_MESSAGE_KEYS = ['mochi.safe_0', 'mochi.safe_1', 'mochi.safe_2'];
+const WARN_MESSAGE_KEYS = ['mochi.warn_0', 'mochi.warn_1', 'mochi.warn_2'];
+const CRITICAL_MESSAGE_KEYS = ['mochi.critical_0', 'mochi.critical_1', 'mochi.critical_2'];
 
-const SAFE_ACTIONS = [
-  'Continue monitoring. No action needed.',
-  'Maintain current storage conditions.',
-];
-const WARN_ACTIONS = [
-  'Check ventilation. Consider running fans or aerating.',
-  'Inspect grain bin for condensation or hot spots.',
-];
-const CRITICAL_ACTIONS = [
-  'Begin drying immediately. Contact storage facility.',
-  'Move grain to a safer environment. Do not delay.',
-];
+const SAFE_ACTION_KEYS = ['mochi.safe_action_0', 'mochi.safe_action_1'];
+const WARN_ACTION_KEYS = ['mochi.warn_action_0', 'mochi.warn_action_1'];
+const CRITICAL_ACTION_KEYS = ['mochi.critical_action_0', 'mochi.critical_action_1'];
 
-function pickByIndex(arr: string[], reading: Reading): string {
-  // Deterministic based on reading id so same reading always gets same message
+function pickByIndex<T>(arr: T[], reading: Reading): T {
   const idx = Math.abs(hashCode(reading.id)) % arr.length;
   return arr[idx];
 }
@@ -98,11 +77,21 @@ export function evaluate(
     if (temperature >= thresholds.tempWarn) reasonCodes.push('ELEVATED_TEMP');
   }
 
-  // Pick message + action deterministically
-  const messages = state === 'critical' ? CRITICAL_MESSAGES : state === 'warn' ? WARN_MESSAGES : SAFE_MESSAGES;
-  const actions = state === 'critical' ? CRITICAL_ACTIONS : state === 'warn' ? WARN_ACTIONS : SAFE_ACTIONS;
-  const message = pickByIndex(messages, reading);
-  const action = pickByIndex(actions, reading);
+  // Pick message/action keys deterministically
+  const messageKeys = state === 'critical' ? CRITICAL_MESSAGE_KEYS : state === 'warn' ? WARN_MESSAGE_KEYS : SAFE_MESSAGE_KEYS;
+  const actionKeys = state === 'critical' ? CRITICAL_ACTION_KEYS : state === 'warn' ? WARN_ACTION_KEYS : SAFE_ACTION_KEYS;
+  const messageKey = pickByIndex(messageKeys, reading);
+  const actionKey = pickByIndex(actionKeys, reading);
+
+  // For backward compat with stored history, store English as fallback
+  const EN_SAFE_MSGS = ['Storage conditions are stable.', 'All readings within normal range.', 'Moisture and temperature look good.'];
+  const EN_WARN_MSGS = ['Moisture is rising. Check ventilation and storage conditions.', 'Temperature is elevated. Ensure proper airflow.', 'Readings above normal. Monitor closely.'];
+  const EN_CRIT_MSGS = ['High moisture may increase spoilage risk. Dry the grain promptly.', 'Temperature dangerously high. Risk of spontaneous heating.', 'Both readings at dangerous levels. Act immediately.'];
+  const EN_SAFE_ACTS = ['Continue monitoring. No action needed.', 'Maintain current storage conditions.'];
+  const EN_WARN_ACTS = ['Check ventilation. Consider running fans or aerating.', 'Inspect grain bin for condensation or hot spots.'];
+  const EN_CRIT_ACTS = ['Begin drying immediately. Contact storage facility.', 'Move grain to a safer environment. Do not delay.'];
+  const enMsgs = state === 'critical' ? EN_CRIT_MSGS : state === 'warn' ? EN_WARN_MSGS : EN_SAFE_MSGS;
+  const enActs = state === 'critical' ? EN_CRIT_ACTS : state === 'warn' ? EN_WARN_ACTS : EN_SAFE_ACTS;
 
   // Severity: 0-100
   let severity: number;
@@ -111,10 +100,10 @@ export function evaluate(
   else severity = Math.round(70 + ((moisture - thresholds.warn) / (thresholds.critical - thresholds.warn + 5)) * 25);
   severity = Math.min(100, Math.max(0, severity));
 
-  // Secondary observations
+  // Secondary observations (translation keys)
   const secondaryObservations: string[] = [];
-  if (reading.battery < 20) secondaryObservations.push('LOW_BATTERY');
-  if (reading.signal < 30) secondaryObservations.push('WEAK_SIGNAL');
+  if (reading.battery < 20) secondaryObservations.push('obs.low_battery');
+  if (reading.signal < 30) secondaryObservations.push('obs.weak_signal');
 
   const messageId = `${state.toUpperCase()}_THRESHOLD`;
 
@@ -123,8 +112,10 @@ export function evaluate(
     severity,
     ruleId: `R-${messageId}`,
     messageId,
-    message,
-    action,
+    message: pickByIndex(enMsgs, reading),   // English fallback for stored data
+    action: pickByIndex(enActs, reading),    // English fallback for stored data
+    messageKey,                              // i18n key for UI
+    actionKey,                               // i18n key for UI
     reasonCodes,
     secondaryObservations,
     trend,

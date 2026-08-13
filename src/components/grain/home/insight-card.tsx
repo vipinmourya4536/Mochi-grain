@@ -8,11 +8,11 @@ import {
   Moon,
   ArrowsClockwise,
 } from '@phosphor-icons/react/dist/ssr';
-import { t } from '@/lib/i18n';
+import { t, type AppLanguage } from '@/lib/i18n';
 
 export function InsightCard() {
   const { decision, deviceState, settings } = useGrainStore();
-  const lang = settings.language as 'en' | 'hi' | 'mr' | 'hinglish';
+  const lang = settings.language as AppLanguage;
 
   // Handle non-connected states
   if (deviceState === 'sleeping') {
@@ -71,6 +71,10 @@ export function InsightCard() {
         ? t('insight.attention', lang)
         : t('insight.storage_safe', lang);
 
+  // Use i18n key if available, fallback to stored English
+  const messageText = decision.messageKey ? t(decision.messageKey, lang) : decision.message;
+  const actionText = decision.actionKey ? t(decision.actionKey, lang) : decision.action;
+
   return (
     <div className="grain-insight-card grain-fade-in">
       <div className="flex items-start gap-4">
@@ -82,10 +86,10 @@ export function InsightCard() {
             {title}
           </h3>
           <p className="text-xs leading-relaxed" style={{ color: 'var(--gm-text-secondary)' }}>
-            {decision.message}
+            {messageText}
           </p>
           <p className="text-[10px] mt-2 leading-relaxed" style={{ color: 'var(--gm-text-tertiary)' }}>
-            {decision.action}
+            {actionText}
           </p>
         </div>
       </div>

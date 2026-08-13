@@ -3,11 +3,11 @@
 import { useGrainStore } from '@/lib/grain-store';
 import { getDiscoverContent } from '@/lib/discover-content';
 import { YoutubeLogo, ArrowSquareOut, PlayCircle } from '@phosphor-icons/react/dist/ssr';
-import { t } from '@/lib/i18n';
+import { t, tGrain, type AppLanguage } from '@/lib/i18n';
 
 export function DiscoverTab() {
   const { decision, settings, deviceState } = useGrainStore();
-  const lang = settings.language as 'en' | 'hi' | 'mr' | 'hinglish';
+  const lang = settings.language as AppLanguage;
 
   const grainType = settings.grainType;
   const condition = decision?.state || 'safe';
@@ -29,7 +29,7 @@ export function DiscoverTab() {
       </h2>
       <p className="text-sm mb-5" style={{ color: 'var(--gm-text-secondary)' }}>
         {isConnected
-          ? `${grainType} · ${conditionLabel}`
+          ? `${tGrain(grainType, lang)} · ${conditionLabel}`
           : t('discover.disconnected_desc', lang)}
       </p>
 

@@ -1,12 +1,12 @@
 'use client';
 
 import { useGrainStore } from '@/lib/grain-store';
-import { t } from '@/lib/i18n';
+import { t, type AppLanguage } from '@/lib/i18n';
 import { LanguageSelector } from '@/components/grain/language-selector';
 
 export function Header() {
   const { deviceState, deviceInfo, statusBadge, riskTheme, settings, activeTab } = useGrainStore();
-  const lang = settings.language as 'en' | 'hi' | 'mr' | 'hinglish';
+  const lang = settings.language as AppLanguage;
 
   const statusLabel =
     deviceState === 'disconnected'

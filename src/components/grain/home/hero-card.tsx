@@ -2,16 +2,15 @@
 
 import { useGrainStore } from '@/lib/grain-store';
 import { SparklineChart } from '../sparkline-chart';
-import { GRAIN_LABELS } from '@/lib/grain-types';
-import { t } from '@/lib/i18n';
+import { t, tGrain, type AppLanguage } from '@/lib/i18n';
 
 export function HeroCard() {
   const { currentReading, statusBadge, sparklineData, deviceInfo, settings } = useGrainStore();
-  const lang = settings.language as 'en' | 'hi' | 'mr' | 'hinglish';
+  const lang = settings.language as AppLanguage;
 
   if (!currentReading) return null;
 
-  const grainLabel = GRAIN_LABELS[currentReading.grainType] || currentReading.grainType;
+  const grainLabel = tGrain(currentReading.grainType, lang);
   const deviceName = deviceInfo?.name || '';
 
   return (
@@ -24,7 +23,7 @@ export function HeroCard() {
             </span>
             <span className="text-[10px] text-white/50 tracking-wide">{deviceName}</span>
           </div>
-          <span className="grain-badge">{statusBadge}</span>
+          <span className="grain-badge">{t(`status.${statusBadge.toLowerCase()}`, lang)}</span>
         </div>
 
         <div className="flex items-baseline gap-2 mb-2">
@@ -39,12 +38,6 @@ export function HeroCard() {
         {/* Sparkline */}
         <div className="h-16 relative">
           <SparklineChart data={sparklineData} />
-          <div className="flex justify-between text-[9px] text-white/50 tracking-wide mt-1">
-            <span>10:00</span>
-            <span>12:00</span>
-            <span>14:00</span>
-            <span>16:00</span>
-          </div>
         </div>
       </div>
     </div>

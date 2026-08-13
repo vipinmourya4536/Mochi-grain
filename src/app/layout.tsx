@@ -14,6 +14,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   themeColor: "#F97316",
+  viewportFit: "cover",
 };
 
 export const metadata: Metadata = {
@@ -58,19 +59,7 @@ export default function RootLayout({
         <link rel="icon" href="/icon-192.png" sizes="192x192" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
       </head>
-      <body
-        style={{
-          background: '#000',
-          margin: 0,
-          padding: 0,
-          fontFamily: "var(--font-inter), system-ui, -apple-system, sans-serif",
-          display: 'flex',
-          justifyContent: 'center',
-          minHeight: '100dvh',
-        }}
-      >
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

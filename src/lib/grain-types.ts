@@ -54,10 +54,12 @@ export interface MochiDecision {
   severity: number; // 0–100
   ruleId: string;
   messageId: string;
-  message: string;
-  action: string;
+  message: string;       // English fallback (for stored history)
+  action: string;       // English fallback (for stored history)
+  messageKey: string;   // i18n translation key
+  actionKey: string;    // i18n translation key
   reasonCodes: string[];
-  secondaryObservations: string[];
+  secondaryObservations: string[]; // i18n keys
   trend: TrendDirection;
   confidence: number; // 0–1
   variables: Record<string, number | string>;

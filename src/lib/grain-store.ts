@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════
    Grain Monitor – Zustand Store
    ═══════════════════════════════════════════════════════════════ */
 
@@ -33,6 +33,7 @@ import {
   disconnect as bleDisconnect,
   sendCommand,
 } from './bluetooth';
+import { t, tp, type AppLanguage } from './i18n';
 
 export type TabId = 'home' | 'discover' | 'history' | 'settings';
 
@@ -85,6 +86,11 @@ interface GrainStore {
   loadSettings: () => Promise<void>;
   loadSelectedEntry: () => Promise<void>;
   syncProbeHistory: () => Promise<void>;
+}
+
+/** Helper to get current lang from store */
+function getLang(store: GrainStore): AppLanguage {
+  return store.settings.language as AppLanguage;
 }
 
 export const useGrainStore = create<GrainStore>((set, get) => ({
@@ -150,12 +156,13 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
   /* ═══ Actions ═══ */
 
   connectProbe: async () => {
+    const lang = getLang(get());
     set({ deviceState: 'connecting' });
 
     const info = await requestDevice();
     if (!info) {
       set({ deviceState: 'disconnected' });
-      get().showToast('No device selected');
+      get().showToast(t('toast.no_device_selected', lang));
       return;
     }
 
@@ -164,12 +171,12 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
     const connected = await bleConnect();
     if (!connected) {
       set({ deviceState: 'disconnected' });
-      get().showToast('Connection failed');
+      get().showToast(t('toast.connection_failed', lang));
       return;
     }
 
     set({ deviceState: 'connected', hasDevice: true });
-    get().showToast(`${info.name} connected`);
+    get().showToast(tp('toast.device_connected', lang, { name: info.name }));
 
     bleOnReading((reading) => {
       get().handleReading(reading);
@@ -177,6 +184,7 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
   },
 
   disconnectProbe: () => {
+    const lang = getLang(get());
     bleDisconnect();
     set({
       deviceState: 'disconnected',
@@ -189,18 +197,21 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
       sparklineData: [],
     });
     set({ activeTab: 'home' });
-    get().showToast('Device disconnected');
+    get().showToast(t('toast.disconnected', lang));
   },
 
   sendProbeCommand: async (cmd) => {
+    const lang = getLang(get());
     const ok = await sendCommand(cmd);
-    get().showToast(ok ? `Command sent: ${cmd}` : `Command failed: ${cmd}`);
+    const baseKey = ok ? 'toast.command_sent' : 'toast.command_failed';
+    get().showToast(`${t(baseKey, lang)} ${cmd}`);
   },
 
   clearHistory: async () => {
+    const lang = getLang(get());
     await clearAllHistory();
     set({ historyEntries: [] });
-    get().showToast('History cleared');
+    get().showToast(t('toast.history_cleared', lang));
   },
 
   loadHistory: async () => {
@@ -222,16 +233,15 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
   },
 
   syncProbeHistory: async () => {
+    const lang = getLang(get());
     set({ deviceState: 'syncing' });
     const ok = await sendCommand('sync');
-    // After sending sync command, probe will dump history via BLE notifications
-    // The onReading handler will process them. We wait a bit then return to connected.
     setTimeout(() => {
       if (get().deviceState === 'syncing') {
         set({ deviceState: 'connected' });
       }
     }, 5000);
-    get().showToast(ok ? 'Syncing probe history...' : 'Sync command failed');
+    get().showToast(ok ? t('toast.syncing_history', lang) : t('toast.sync_failed', lang));
   },
 
   /* ═══ Internal ═══ */

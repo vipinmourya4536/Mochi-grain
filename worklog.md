@@ -482,3 +482,34 @@ Stage Summary:
 - UI polished: better disconnected state, pulsing connect animation, refined card styling
 - Engine labeled as Mochi v1.0 (not dummy)
 - All 11 files changed, pushed to GitHub
+---
+Task ID: 2
+Agent: Main
+Task: Fix black bar/scrolling and complete i18n system
+
+Work Log:
+- Audited entire codebase: layout.tsx, page.tsx, globals.css, all components, store, i18n, mochi-engine, grain-types, bluetooth, offline-storage
+- Identified root cause of black bar: body background #000 vs light mode app background #f5f5f7
+- Identified scroll architecture issues: no overscroll-behavior, no safe-area handling, hardcoded 140px bottom padding
+- Identified i18n gaps: ~25 hardcoded strings, Mochi engine messages in English only, grain labels not translatable, language selector required page reload
+- Fixed layout.tsx: removed inline body styles (background #000, display flex, etc.)
+- Fixed globals.css: html/body overflow hidden, body background matches default dark theme, grain-app uses 100dvh with @supports fallback, scroll area uses min-height:0 and overscroll-behavior-y:contain, bottom nav uses calc(12px + env(safe-area-inset-bottom))
+- Fixed page.tsx: added useEffect to sync body background with theme changes, added useEffect to sync html lang attribute with language
+- Rebuilt i18n.ts: expanded from ~180 keys per language to ~250+ keys per language (en/hi/mr/hinglish), added grain type translations, trend direction translations, Mochi message/action translation keys, secondary observation keys, added tp() for parameterized translations, added tGrain() and tTrend() helpers
+- Adapted mochi-engine.ts: now returns messageKey and actionKey fields alongside English fallback message/action, MochiDecision type updated
+- Fixed grain-store.ts: all toast messages now use i18n t() function with current language from settings
+- Updated all components: settings-tab, history-tab, insight-card, hero-card, metric-pills, discover-tab, header, bottom-nav, language-selector
+- Fixed language-selector: removed page reload requirement, language switches instantly via Zustand reactivity
+- Removed needsSave flag from LANGUAGE_OPTIONS
+- Status badge in hero card now uses i18n translation
+- Verified: no black bar in dark mode, no black/white bar in light mode, body bg matches app bg, language switching is instant, settings page scrolls to absolute bottom, no horizontal overflow, Advanced Settings content accessible above nav
+
+Stage Summary:
+- Root cause: body had hardcoded background #000 that showed through gaps between body and .grain-app in light mode; 100dvh without safe-area handling caused nav to be partially off-screen; 140px hardcoded bottom padding was excessive and didn not account for safe-area
+- Files changed: layout.tsx, page.tsx, globals.css, i18n.ts, mochi-engine.ts, grain-types.ts, grain-store.ts, settings-tab.tsx, history-tab.tsx, insight-card.tsx, hero-card.tsx, metric-pills.tsx, discover-tab.tsx, header.tsx, bottom-nav.tsx, language-selector.tsx
+- Scroll architecture: html/body overflow:hidden -> .grain-app (100dvh flex column, overflow:hidden) -> Header (flex-shrink:0) -> .grain-scroll (flex:1, min-height:0, overflow-y:auto, overscroll-behavior-y:contain, padding-bottom:calc(88px + safe-area)) -> BottomNav (position:absolute, bottom:calc(12px + safe-area))
+- i18n: centralized in i18n.ts with t(), tp(), tGrain(), tTrend() functions, ~250+ keys per language, all components use t() for every user-facing string
+- ~25 hardcoded strings migrated to i18n
+- Mochi adapted: decision.messageKey/actionKey used in UI with t() fallback to decision.message/action for stored history backward compat
+- Language persists via IndexedDB settings store, loads on startup before render
+- No remaining known issues

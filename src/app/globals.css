@@ -116,8 +116,17 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    /* Default dark background – updated by JS when theme changes */
+    background: #09090b;
+    font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
@@ -130,12 +139,15 @@
   width: 100%;
   max-width: 430px;
   height: 100dvh;
+  /* Fallback for browsers without dvh support */
+  @supports not (height: 100dvh) {
+    height: 100vh;
+  }
   position: relative;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   margin: 0 auto;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-tap-highlight-color: transparent;
 
   /* Dark mode (default) color tokens */
@@ -299,10 +311,11 @@
 
 .grain-scroll {
   flex: 1;
+  min-height: 0; /* allow flex child to shrink below content size */
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 20px 20px 140px 20px;
-  scrollbar-width: none;
+  padding: 20px 20px calc(88px + env(safe-area-inset-bottom, 0px)) 20px;
+  overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth;
 }
@@ -416,12 +429,13 @@
 
 .grain-floating-nav {
   position: absolute;
-  bottom: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   z-index: 30;
   width: calc(100% - 32px);
   max-width: 360px;
+  flex-shrink: 0;
 }
 .grain-floating-nav-inner {
   background: var(--gm-glass-bg);
