@@ -34,8 +34,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     // Disconnected
     'disconnected.title': 'No Device',
     'disconnected.desc': 'Connect your GRAIN-01 probe to begin monitoring moisture levels.',
-    'disconnected.connect': 'CONNECT',
-    'disconnected.demo': 'Use Demo Mode',
+    'disconnected.connect': 'CONNECT PROBE',
+    'disconnected.hint': 'Make sure your probe is powered on and nearby',
 
     // Connecting
     'connecting.title': 'Pairing',
@@ -120,7 +120,7 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'settings.sync_history_desc': 'Pull old readings',
     'settings.wake_probe': 'Wake Probe',
     'settings.wake_probe_desc': 'Exit sleep mode',
-    'settings.demo_states': 'Demo States',
+    'settings.no_device': 'Koi device connected nahi',
     'settings.grain_type': 'Grain Type',
     'settings.thresholds': 'Moisture Thresholds (%)',
     'settings.thresholds_desc': 'Auto-set from grain profile. Drag to fine-tune.',
@@ -147,14 +147,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'language.save': 'Save & Reload',
     'language.saved': 'Language saved. Reloading...',
     'language.current': 'Current',
-
-    // Glass
-    'glass.title': 'Glass Effect',
-    'glass.opacity': 'Opacity',
-    'glass.subtle': 'Subtle',
-    'glass.medium': 'Medium',
-    'glass.strong': 'Strong',
-    'glass.max': 'Maximum',
+    'theme.tap_switch': 'Tap to switch',
+    'settings.connect_first': 'Connect a device first',
 
     // Accent themes
     'accent.title': 'Accent Color',
@@ -182,7 +176,6 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.connection_failed': 'Connection failed',
     'toast.command_sent': 'Command sent:',
     'toast.command_failed': 'Command failed:',
-    'toast.demo': 'Demo:',
     'toast.history_synced': 'History synchronised',
 
     // Bluetooth Gate
@@ -220,8 +213,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     // Disconnected
     'disconnected.title': 'कोई डिवाइस नहीं',
     'disconnected.desc': 'नमी स्तर की निगरानी शुरू करने के लिए अपना GRAIN-01 प्रोब कनेक्ट करें।',
-    'disconnected.connect': 'कनेक्ट करें',
-    'disconnected.demo': 'डेमो मोड उपयोग करें',
+    'disconnected.connect': 'प्रोब कनेक्ट करें',
+    'disconnected.hint': 'प्रोब चालू है और पास में है यह सुनिश्चित करें',
 
     // Connecting
     'connecting.title': 'पेयरिंग',
@@ -306,7 +299,7 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'settings.sync_history_desc': 'पुरानी रीडिंग खींचें',
     'settings.wake_probe': 'प्रोब जगाएं',
     'settings.wake_probe_desc': 'स्लीप मोड से बाहर',
-    'settings.demo_states': 'डेमो स्टेट',
+    'settings.no_device': 'कोई डिवाइस कनेक्ट नहीं',
     'settings.grain_type': 'अनाज का प्रकार',
     'settings.thresholds': 'नमी सीमाएं (%)',
     'settings.thresholds_desc': 'अनाज प्रोफाइल से स्वचालित। बारीक ट्यूनिंग के लिए खींचें।',
@@ -334,14 +327,6 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'language.saved': 'भाषा सहेजी गई। रीलोड हो रहा है...',
     'language.current': 'वर्तमान',
 
-    // Glass
-    'glass.title': 'ग्लास प्रभाव',
-    'glass.opacity': 'अपारदर्शिता',
-    'glass.subtle': 'हल्का',
-    'glass.medium': 'मध्यम',
-    'glass.strong': 'मजबूत',
-    'glass.max': 'अधिकतम',
-
     // Accent themes
     'accent.title': 'एक्सेंट रंग',
     'accent.orange': 'नारंगी',
@@ -368,7 +353,6 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.connection_failed': 'कनेक्शन विफल',
     'toast.command_sent': 'कमांड भेजा गया:',
     'toast.command_failed': 'कमांड विफल:',
-    'toast.demo': 'डेमो:',
     'toast.history_synced': 'इतिहास सिंक हुआ',
 
     // Bluetooth Gate
@@ -406,8 +390,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     // Disconnected
     'disconnected.title': 'कोणतेही डिव्हाइस नाही',
     'disconnected.desc': 'ओलावा पातळी निरीक्षण सुरू करण्यासाठी तुमचा GRAIN-01 प्रोब कनेक्ट करा.',
-    'disconnected.connect': 'कनेक्ट करा',
-    'disconnected.demo': 'डेमो मोड वापरा',
+    'disconnected.connect': 'प्रोब कनेक्ट करा',
+    'disconnected.hint': 'तुमचा प्रोब चालू आहे आणि जवळ आहे हे सुनिश्चित करा',
 
     // Connecting
     'connecting.title': 'पेअरिंग',
@@ -492,7 +476,7 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'settings.sync_history_desc': 'जुन्या रीडिंग काढा',
     'settings.wake_probe': 'प्रोब जागा करा',
     'settings.wake_probe_desc': 'स्लीप मोडमधून बाहेर',
-    'settings.demo_states': 'डेमो स्टेट',
+    'settings.no_device': 'कोई डिवाइस कनेक्ट नहीं',
     'settings.grain_type': 'धान्याचा प्रकार',
     'settings.thresholds': 'ओलावा मर्यादा (%)',
     'settings.thresholds_desc': 'धान्य प्रोफाइलमधून स्वयंचलित. बारीक ट्यूनिंगसाठी ओढा.',
@@ -520,14 +504,6 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'language.saved': 'भाषा जतन केली. रीलोड होत आहे...',
     'language.current': 'सध्याची',
 
-    // Glass
-    'glass.title': 'ग्लास प्रभाव',
-    'glass.opacity': 'पारदर्शकता',
-    'glass.subtle': 'हलके',
-    'glass.medium': 'मध्यम',
-    'glass.strong': 'जास्त',
-    'glass.max': 'अधिकतम',
-
     // Accent themes
     'accent.title': 'अॅक्सेंट रंग',
     'accent.orange': 'नारिंगी',
@@ -554,7 +530,6 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.connection_failed': 'कनेक्शन अयशस्वी',
     'toast.command_sent': 'कमांड पाठवला:',
     'toast.command_failed': 'कमांड अयशस्वी:',
-    'toast.demo': 'डेमो:',
     'toast.history_synced': 'इतिहास सिंक झाला',
 
     // Bluetooth Gate
@@ -592,8 +567,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     // Disconnected
     'disconnected.title': 'Koi Device Nahi',
     'disconnected.desc': 'Moisture level monitor karne ke liye apna GRAIN-01 probe connect karo.',
-    'disconnected.connect': 'CONNECT KARO',
-    'disconnected.demo': 'Demo Mode Use Karo',
+    'disconnected.connect': 'PROBE CONNECT KARO',
+    'disconnected.hint': 'Apna probe on hai aur paas mein hai yeh ensure karo',
 
     // Connecting
     'connecting.title': 'Pairing',
@@ -678,7 +653,7 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'settings.sync_history_desc': 'Purani readings kheencho',
     'settings.wake_probe': 'Wake Probe',
     'settings.wake_probe_desc': 'Sleep mode se bahar',
-    'settings.demo_states': 'Demo States',
+    'settings.no_device': 'Koi device connected nahi',
     'settings.grain_type': 'Grain Type',
     'settings.thresholds': 'Moisture Thresholds (%)',
     'settings.thresholds_desc': 'Grain profile se automatic. Fine-tune karne ke liye drag karo.',
@@ -705,14 +680,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'language.save': 'Save & Reload',
     'language.saved': 'Language saved. Reloading...',
     'language.current': 'Current',
-
-    // Glass
-    'glass.title': 'Glass Effect',
-    'glass.opacity': 'Opacity',
-    'glass.subtle': 'Subtle',
-    'glass.medium': 'Medium',
-    'glass.strong': 'Strong',
-    'glass.max': 'Maximum',
+    'theme.tap_switch': 'Tap to switch',
+    'settings.connect_first': 'Connect a device first',
 
     // Accent themes
     'accent.title': 'Accent Color',
@@ -740,7 +709,6 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.connection_failed': 'Connection fail hua',
     'toast.command_sent': 'Command bheja:',
     'toast.command_failed': 'Command fail:',
-    'toast.demo': 'Demo:',
     'toast.history_synced': 'History sync hua',
 
     // Bluetooth Gate

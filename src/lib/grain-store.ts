@@ -1,4 +1,4 @@
-/* ═════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════
    Grain Monitor – Zustand Store
    ═══════════════════════════════════════════════════════════════ */
 
@@ -32,13 +32,7 @@ import {
   onReading as bleOnReading,
   disconnect as bleDisconnect,
   sendCommand,
-  startSimulation,
-  stopSimulation,
-  switchSimulationMode,
-  isSimulating,
-  getSimMode,
 } from './bluetooth';
-import type { SimConnectCallbacks } from './bluetooth';
 
 export type TabId = 'home' | 'discover' | 'history' | 'settings';
 
@@ -48,13 +42,13 @@ interface GrainStore {
   setActiveTab: (tab: TabId) => void;
 
   /* ── Bluetooth ── */
-  btAvailable: boolean | null; // null = checking, true = on, false = off
+  btAvailable: boolean | null;
   setBtAvailable: (v: boolean) => void;
 
   /* ── Device ── */
   deviceState: DeviceState;
   deviceInfo: DeviceInfo | null;
-  hasDevice: boolean; // true once a device has been connected (survives re-renders)
+  hasDevice: boolean;
 
   /* ── Latest reading ── */
   currentReading: Reading | null;
@@ -85,8 +79,6 @@ interface GrainStore {
   /* ── Actions ── */
   connectProbe: () => Promise<void>;
   disconnectProbe: () => void;
-  simulateConnect: (mode?: 'safe' | 'warn' | 'critical') => void;
-  switchDemoMode: (mode: 'safe' | 'warn' | 'critical') => void;
   sendProbeCommand: (cmd: 'wake' | 'calibrate' | 'sync' | 'sleep') => Promise<void>;
   clearHistory: () => Promise<void>;
   loadHistory: () => Promise<void>;
@@ -141,25 +133,11 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
     storeSettings(updated);
   },
 
-  /** Select grain type → update thresholds from grain profile → re-simulate if running */
   selectGrainType: (grain) => {
     const profile = GRAIN_PROFILES[grain];
     const updated = { ...get().settings, grainType: grain, thresholds: { ...profile } };
     set({ settings: updated });
     storeSettings(updated);
-
-    // If simulation is running, re-simulate with new grain
-    if (isSimulating() && get().deviceInfo) {
-      const mode = getSimMode();
-      const deviceId = get().deviceInfo!.id;
-      // Switch mode in place (no connecting state)
-      set({ deviceState: 'syncing' });
-      switchSimulationMode(deviceId, grain, {
-        onSyncStart: () => {},
-        onReading: (r) => get().handleReading(r),
-        onSyncComplete: () => set({ deviceState: 'connected' }),
-      }, mode);
-    }
   },
 
   /* ── Toast ── */
@@ -176,7 +154,8 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
 
     const info = await requestDevice();
     if (!info) {
-      get().simulateConnect();
+      set({ deviceState: 'disconnected' });
+      get().showToast('No device selected');
       return;
     }
 
@@ -199,7 +178,6 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
 
   disconnectProbe: () => {
     bleDisconnect();
-    stopSimulation();
     set({
       deviceState: 'disconnected',
       deviceInfo: null,
@@ -214,66 +192,7 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
     get().showToast('Device disconnected');
   },
 
-  simulateConnect: (mode = 'safe') => {
-    stopSimulation();
-    set({ deviceState: 'connecting' });
-
-    setTimeout(() => {
-      const deviceId = 'sim-grain-01';
-      const info: DeviceInfo = {
-        id: deviceId,
-        name: 'GRAIN-01',
-        firmware: 'v1.2.4',
-        platform: 'ESP32',
-        grainType: get().settings.grainType,
-        battery: 92,
-        signal: 85,
-      };
-
-      set({ deviceInfo: info, hasDevice: true });
-
-      const simCallbacks: SimConnectCallbacks = {
-        onSyncStart: () => set({ deviceState: 'syncing' }),
-        onReading: (reading) => get().handleReading(reading),
-        onSyncComplete: () => {
-          set({ deviceState: 'connected' });
-          get().showToast('GRAIN-01 connected');
-        },
-      };
-
-      startSimulation(deviceId, get().settings.grainType, simCallbacks, mode);
-    }, 1200);
-  },
-
-  /** Switch demo mode WITHOUT going through connecting state */
-  switchDemoMode: (mode) => {
-    if (!isSimulating() || !get().deviceInfo) {
-      get().simulateConnect(mode);
-      return;
-    }
-    const deviceId = get().deviceInfo!.id;
-    set({ deviceState: 'syncing' });
-    switchSimulationMode(deviceId, get().settings.grainType, {
-      onSyncStart: () => {},
-      onReading: (r) => get().handleReading(r),
-      onSyncComplete: () => {
-        set({ deviceState: 'connected' });
-        get().showToast(`Demo: ${mode}`);
-      },
-    }, mode);
-  },
-
   sendProbeCommand: async (cmd) => {
-    if (isSimulating()) {
-      get().showToast(`Command sent: ${cmd}`);
-      if (cmd === 'sleep') set({ deviceState: 'sleeping' });
-      if (cmd === 'wake') set({ deviceState: 'connected' });
-      if (cmd === 'sync') {
-        set({ deviceState: 'syncing' });
-        setTimeout(() => set({ deviceState: 'connected' }), 2000);
-      }
-      return;
-    }
     const ok = await sendCommand(cmd);
     get().showToast(ok ? `Command sent: ${cmd}` : `Command failed: ${cmd}`);
   },
@@ -304,19 +223,23 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
 
   syncProbeHistory: async () => {
     set({ deviceState: 'syncing' });
-    await new Promise((r) => setTimeout(r, 2000));
-    set({ deviceState: 'connected' });
-    get().showToast('History synchronised');
+    const ok = await sendCommand('sync');
+    // After sending sync command, probe will dump history via BLE notifications
+    // The onReading handler will process them. We wait a bit then return to connected.
+    setTimeout(() => {
+      if (get().deviceState === 'syncing') {
+        set({ deviceState: 'connected' });
+      }
+    }, 5000);
+    get().showToast(ok ? 'Syncing probe history...' : 'Sync command failed');
   },
 
   /* ═══ Internal ═══ */
   handleReading: (reading: Reading) => {
     const { settings, deviceState } = get();
 
-    // If we're not in a state that should process readings, ignore
     if (deviceState === 'disconnected' || deviceState === 'connecting') return;
 
-    // Save to IndexedDB, evaluate, save history, refresh list
     saveReading(reading).then(() =>
       getRecentReadings(reading.deviceId, 20)
     ).then((recent) => {
@@ -331,7 +254,6 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
         ? { ...info, battery: reading.battery, signal: reading.signal, grainType: reading.grainType }
         : null;
 
-      // Only update deviceState from battery if we're in connected/awake
       let newState = get().deviceState;
       if ((newState === 'connected' || newState === 'awake') && reading.battery < 15) {
         newState = 'low-battery';

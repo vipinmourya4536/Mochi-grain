@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useGrainStore } from '@/lib/grain-store';
-import { isSimulating } from '@/lib/bluetooth';
 import {
   Cpu, DownloadSimple, ArrowClockwise, Trash, Power, Wrench,
   Sun, Moon, CaretDown, SlidersHorizontal, Palette,
@@ -23,15 +22,13 @@ const ACCENT_COLORS: { value: AccentColor; color: string; labelKey: string }[] =
 export function SettingsTab() {
   const {
     deviceInfo, settings, updateSettings, selectGrainType,
-    disconnectProbe, sendProbeCommand, simulateConnect,
-    switchDemoMode, hasDevice,
+    disconnectProbe, sendProbeCommand, hasDevice, showToast,
   } = useGrainStore();
 
   const lang = settings.language as AppLanguage;
   const isDark = settings.theme === 'dark';
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const hasConnection = hasDevice;
-  const simRunning = isSimulating();
 
   return (
     <div className="pt-2 pb-6 grain-fade-in">
@@ -67,7 +64,7 @@ export function SettingsTab() {
                 {isDark ? t('theme.dark', lang) : t('theme.light', lang)}
               </span>
               <p className="text-[10px] mt-0.5" style={{ color: 'var(--gm-text-tertiary)' }}>
-                Tap to switch
+                {t('theme.tap_switch', lang)}
               </p>
             </div>
           </div>
@@ -95,20 +92,24 @@ export function SettingsTab() {
           </div>
           <div>
             <h3 className="font-bold text-sm tracking-tight" style={{ color: 'var(--gm-text-primary)' }}>
-              {deviceInfo?.name || 'GRAIN-01'}
+              {deviceInfo?.name || '—'}
             </h3>
             <p className="text-[11px] mt-0.5" style={{ color: 'var(--gm-text-secondary)' }}>
-              {deviceInfo?.firmware || 'FW v1.2.4'} · {deviceInfo?.platform || 'ESP32'}
+              {deviceInfo ? `${deviceInfo.firmware} · ${deviceInfo.platform}` : t('settings.no_device', lang)}
             </p>
           </div>
         </div>
         <div className="flex gap-3">
           <button
             onClick={async () => {
-              if (!hasConnection) { simulateConnect(); return; }
+              if (!hasConnection) {
+                showToast(t('settings.connect_first', lang));
+                return;
+              }
               await sendProbeCommand('calibrate');
             }}
-            className="flex-1 font-bold text-xs py-3.5 rounded-xl active:scale-95 transition-all tracking-wide"
+            disabled={!hasConnection}
+            className="flex-1 font-bold text-xs py-3.5 rounded-xl active:scale-95 transition-all tracking-wide disabled:opacity-40"
             style={{ background: 'var(--gm-btn-primary-bg)', color: 'var(--gm-btn-primary-text)' }}
           >
             {t('settings.calibrate', lang)}
@@ -125,19 +126,7 @@ export function SettingsTab() {
             >
               <Power size={18} weight="bold" />
             </button>
-          ) : (
-            <button
-              onClick={() => simulateConnect()}
-              className="px-4 py-3.5 rounded-xl active:scale-95 transition-all font-bold text-xs"
-              style={{
-                background: 'var(--gm-toggle-bg)',
-                color: 'var(--gm-text-secondary)',
-                border: '1px solid var(--gm-toggle-border)',
-              }}
-            >
-              <ArrowClockwise size={18} weight="bold" />
-            </button>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -250,12 +239,12 @@ export function SettingsTab() {
         <div className="grain-separator" />
         <div className="flex justify-between items-center px-5 py-4">
           <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.engine', lang)}</span>
-          <span className="text-[11px]" style={{ color: 'var(--gm-text-secondary)' }}>Dummy Decision v0.1</span>
+          <span className="text-[11px]" style={{ color: 'var(--gm-text-secondary)' }}>Mochi v1.0</span>
         </div>
         <div className="grain-separator" />
         <div className="flex justify-between items-center px-5 py-4">
           <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.probe_firmware', lang)}</span>
-          <span className="text-[11px]" style={{ color: 'var(--gm-text-secondary)' }}>{deviceInfo?.firmware || '--'}</span>
+          <span className="text-[11px]" style={{ color: 'var(--gm-text-secondary)' }}>{deviceInfo?.firmware || '—'}</span>
         </div>
       </div>
 
@@ -294,14 +283,13 @@ export function SettingsTab() {
 function AdvancedSettingsContent() {
   const {
     settings, updateSettings,
-    disconnectProbe, sendProbeCommand, simulateConnect,
-    switchDemoMode, syncProbeHistory, clearHistory,
+    disconnectProbe, sendProbeCommand,
+    syncProbeHistory, clearHistory,
     hasDevice, showToast,
   } = useGrainStore();
 
   const lang = settings.language as AppLanguage;
   const hasConnection = hasDevice;
-  const simRunning = isSimulating();
 
   return (
     <>
@@ -338,28 +326,6 @@ function AdvancedSettingsContent() {
             </div>
           ))}
         </div>
-      </div>
-
-      {/* ─── Demo States ─── */}
-      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
-        {t('settings.demo_states', lang)}
-      </p>
-      <div className="grain-card p-2 flex gap-2 mb-6">
-        {(['safe', 'warn', 'critical'] as const).map((mode) => (
-          <button
-            key={mode}
-            onClick={() => {
-              if (simRunning) { switchDemoMode(mode); } else { simulateConnect(mode); }
-            }}
-            className="flex-1 py-3 rounded-xl text-[11px] font-bold tracking-wide uppercase active:scale-95 transition-all"
-            style={{
-              color: mode === 'safe' ? 'var(--gm-accent)' : mode === 'warn' ? '#F59E0B' : '#EF4444',
-              background: mode === 'safe' ? 'var(--gm-accent-dim)' : mode === 'warn' ? 'rgba(245, 158, 11, 0.08)' : 'rgba(239, 68, 68, 0.08)',
-            }}
-          >
-            {mode === 'critical' ? t('settings.critical', lang) : mode === 'warn' ? t('settings.warn', lang) : t('settings.safe', lang)}
-          </button>
-        ))}
       </div>
 
       {/* ─── Probe Controls ─── */}

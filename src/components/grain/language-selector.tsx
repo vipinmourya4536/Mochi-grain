@@ -1,13 +1,11 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useGrainStore } from '@/lib/grain-store';
 import { LANGUAGE_OPTIONS, t, type AppLanguage } from '@/lib/i18n';
 import { Translate, Check } from '@phosphor-icons/react/dist/ssr';
-import { isSimulating } from '@/lib/bluetooth';
-
 export function LanguageSelector() {
-  const { settings, updateSettings, deviceState, deviceInfo, showToast } = useGrainStore();
+  const { settings, updateSettings, deviceState, showToast } = useGrainStore();
   const [open, setOpen] = useState(false);
   const [pendingLang, setPendingLang] = useState<AppLanguage | null>(null);
   const lang = settings.language as AppLanguage;
@@ -24,17 +22,8 @@ export function LanguageSelector() {
 
   const applyAndReload = useCallback((code: AppLanguage) => {
     // Save current connection state for auto-reconnect after reload
-    if (deviceState !== 'disconnected' && deviceState !== 'connecting') {
-      const reloadState = {
-        trigger: 'language_change' as const,
-        deviceState,
-        deviceInfo,
-        simRunning: isSimulating(),
-      };
-      try {
-        sessionStorage.setItem('grain_reload_state', JSON.stringify(reloadState));
-      } catch { /* ignore */ }
-    }
+    // Note: BLE connection is lost on page reload.
+    // User will need to reconnect after language change.
 
     updateSettings({ language: code });
 
@@ -42,7 +31,7 @@ export function LanguageSelector() {
     setTimeout(() => {
       window.location.reload();
     }, 200);
-  }, [deviceState, deviceInfo, updateSettings]);
+  }, [deviceState, updateSettings]);
 
   const handleSelectLanguage = useCallback((code: AppLanguage) => {
     const option = LANGUAGE_OPTIONS.find(o => o.code === code);

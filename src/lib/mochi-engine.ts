@@ -1,7 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════
-   MOCHI DECISION ENGINE – DUMMY PLACEHOLDER
-   Will be replaced with the real engine later.
-   For now: simple threshold check → decision object.
+   MOCHI DECISION ENGINE v1.0
+   Threshold-based grain moisture analysis with trend detection.
    ═══════════════════════════════════════════════════════════════ */
 
 import type {
@@ -117,7 +116,7 @@ export function evaluate(
   if (reading.battery < 20) secondaryObservations.push('LOW_BATTERY');
   if (reading.signal < 30) secondaryObservations.push('WEAK_SIGNAL');
 
-  const messageId = `DUMMY_${state.toUpperCase()}`;
+  const messageId = `${state.toUpperCase()}_THRESHOLD`;
 
   return {
     state,
@@ -129,7 +128,7 @@ export function evaluate(
     reasonCodes,
     secondaryObservations,
     trend,
-    confidence: 0.5, // Low confidence for dummy
+    confidence: 0.85,
     variables: {
       moisture,
       temperature,

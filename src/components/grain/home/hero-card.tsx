@@ -12,7 +12,7 @@ export function HeroCard() {
   if (!currentReading) return null;
 
   const grainLabel = GRAIN_LABELS[currentReading.grainType] || currentReading.grainType;
-  const deviceName = deviceInfo?.name || 'GRAIN-01';
+  const deviceName = deviceInfo?.name || '';
 
   return (
     <div className="grain-hero-card">

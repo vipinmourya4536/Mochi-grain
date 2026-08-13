@@ -53,7 +53,7 @@ function computeGlassVars(isDark: boolean) {
 export default function GrainMonitorPage() {
   const {
     activeTab, deviceState, riskTheme, currentReading, settings, btAvailable,
-    loadSettings, loadHistory, simulateConnect, setBtAvailable,
+    loadSettings, loadHistory, setBtAvailable,
   } = useGrainStore();
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -79,18 +79,7 @@ export default function GrainMonitorPage() {
   }, [setBtAvailable]);
 
   useEffect(() => {
-    loadSettings().then(() => {
-      try {
-        const reloadStr = sessionStorage.getItem('grain_reload_state');
-        if (reloadStr) {
-          sessionStorage.removeItem('grain_reload_state');
-          const reloadState = JSON.parse(reloadStr);
-          if (reloadState.trigger === 'language_change' && reloadState.deviceInfo) {
-            simulateConnect('safe');
-          }
-        }
-      } catch { /* ignore */ }
-    });
+    loadSettings();
     loadHistory();
     checkBT();
 
