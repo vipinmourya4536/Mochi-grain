@@ -196,6 +196,16 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.history_synced': 'History synchronised',
     'toast.syncing_history': 'Syncing probe history...',
     'toast.sync_failed': 'Sync command failed',
+    'toast.demo_on': 'Demo mode ON – simulating live data',
+    'toast.demo_off': 'Demo mode OFF',
+
+    // ── Demo Mode ──
+    'demo.title': 'Demo Mode',
+    'demo.desc': 'Simulate a connected probe with live-updating data. No hardware required.',
+    'demo.start': 'Start Demo',
+    'demo.stop': 'Stop Demo',
+    'demo.active': 'Demo Active',
+    'demo.badge': 'DEMO',
 
     // ── Bluetooth Gate ──
     'bt.gate.title': 'Bluetooth Required',
@@ -425,6 +435,16 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.history_synced': 'इतिहास सिंक हुआ',
     'toast.syncing_history': 'प्रोब से इतिहास सिंक हो रहा है...',
     'toast.sync_failed': 'सिंक कमांड विफल',
+    'toast.demo_on': 'डेमो मोड चालू – लाइव डेटा सिमुलेट हो रहा है',
+    'toast.demo_off': 'डेमो मोड बंद',
+
+    // ── Demo Mode ──
+    'demo.title': 'डेमो मोड',
+    'demo.desc': 'हार्डवेयर के बिना कनेक्टेड प्रोब का अनुकरण करें। लाइव डेटा अपडेट होगा।',
+    'demo.start': 'डेमो शुरू करें',
+    'demo.stop': 'डेमो बंद करें',
+    'demo.active': 'डेमो चल रहा है',
+    'demo.badge': 'डेमो',
 
     // ── Bluetooth Gate ──
     'bt.gate.title': 'ब्लूटूथ आवश्यक',
@@ -654,6 +674,16 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.history_synced': 'इतिहास सिंक झाला',
     'toast.syncing_history': 'प्रोबवरून इतिहास सिंक होत आहे...',
     'toast.sync_failed': 'सिंक कमांड अयशस्वी',
+    'toast.demo_on': 'डेमो मोड चालू – लाइव डेटा सिम्युलेट होत आहे',
+    'toast.demo_off': 'डेमो मोड बंद',
+
+    // ── Demo Mode ──
+    'demo.title': 'डेमो मोड',
+    'demo.desc': 'हार्डवेअरशिवाय कनेक्टेड प्रोबचे अनुकरण करा. लाइव डेटा अपडेट होईल.',
+    'demo.start': 'डेमो सुरू करा',
+    'demo.stop': 'डेमो बंद करा',
+    'demo.active': 'डेमो चालू आहे',
+    'demo.badge': 'डेमो',
 
     // ── Bluetooth Gate ──
     'bt.gate.title': 'ब्लूटूथ आवश्यक',
@@ -883,6 +913,16 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.history_synced': 'History sync hua',
     'toast.syncing_history': 'Probe se history sync ho rahi hai...',
     'toast.sync_failed': 'Sync command fail hua',
+    'toast.demo_on': 'Demo mode ON – live data simulate ho raha hai',
+    'toast.demo_off': 'Demo mode OFF',
+
+    // ── Demo Mode ──
+    'demo.title': 'Demo Mode',
+    'demo.desc': 'Bina hardware ke connected probe simulate karein. Live data update hoga.',
+    'demo.start': 'Demo Shuru Karein',
+    'demo.stop': 'Demo Band Karein',
+    'demo.active': 'Demo Chal Raha Hai',
+    'demo.badge': 'DEMO',
 
     // ── Bluetooth Gate ──
     'bt.gate.title': 'Bluetooth Zaroori Hai',

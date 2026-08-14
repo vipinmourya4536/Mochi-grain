@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useGrainStore } from '@/lib/grain-store';
 import {
   Cpu, DownloadSimple, ArrowClockwise, Trash, Power, Wrench,
-  Sun, Moon, CaretDown, SlidersHorizontal, Palette,
+  Sun, Moon, CaretDown, SlidersHorizontal, Palette, Play, StopCircle,
 } from '@phosphor-icons/react/dist/ssr';
 import { type GrainType, type AccentColor } from '@/lib/grain-types';
 import { t, tGrain, type AppLanguage } from '@/lib/i18n';
@@ -286,6 +286,7 @@ function AdvancedSettingsContent() {
     disconnectProbe, sendProbeCommand,
     syncProbeHistory, clearHistory,
     hasDevice, showToast,
+    demoMode, enableDemoMode, disableDemoMode,
   } = useGrainStore();
 
   const lang = settings.language as AppLanguage;
@@ -293,6 +294,48 @@ function AdvancedSettingsContent() {
 
   return (
     <>
+      {/* ─── Demo Mode ─── */}
+      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1 mt-4" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('demo.title', lang)}
+      </p>
+      <div className="grain-card p-5 mb-6">
+        <div className="flex items-start gap-4">
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: demoMode ? 'rgba(34, 197, 94, 0.12)' : 'var(--gm-toggle-bg)', border: `1px solid ${demoMode ? 'rgba(34, 197, 94, 0.25)' : 'var(--gm-toggle-border)'}` }}
+          >
+            {demoMode
+              ? <StopCircle size={22} weight="fill" style={{ color: '#22C55E' }} />
+              : <Play size={22} weight="fill" style={{ color: 'var(--gm-text-secondary)' }} />}
+          </div>
+          <div className="flex-1">
+            <h3 className="font-bold text-sm tracking-tight mb-1" style={{ color: 'var(--gm-text-primary)' }}>
+              {t('demo.title', lang)}
+            </h3>
+            <p className="text-[11px] leading-relaxed mb-3" style={{ color: 'var(--gm-text-secondary)' }}>
+              {t('demo.desc', lang)}
+            </p>
+            <button
+              onClick={() => {
+                if (demoMode) {
+                  disableDemoMode();
+                } else {
+                  enableDemoMode();
+                }
+              }}
+              className="font-bold text-xs py-3 px-5 rounded-xl active:scale-95 transition-all tracking-wide"
+              style={{
+                background: demoMode ? 'rgba(239, 68, 68, 0.12)' : 'var(--gm-btn-primary-bg)',
+                color: demoMode ? '#EF4444' : 'var(--gm-btn-primary-text)',
+                border: demoMode ? '1px solid rgba(239, 68, 68, 0.25)' : 'none',
+              }}
+            >
+              {demoMode ? t('demo.stop', lang) : t('demo.start', lang)}
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* ─── Accent Color ─── */}
       <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1 mt-4" style={{ color: 'var(--gm-text-tertiary)' }}>
         {t('accent.title', lang)}

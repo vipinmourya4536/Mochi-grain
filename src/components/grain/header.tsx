@@ -5,15 +5,17 @@ import { t, type AppLanguage } from '@/lib/i18n';
 import { LanguageSelector } from '@/components/grain/language-selector';
 
 export function Header() {
-  const { deviceState, deviceInfo, statusBadge, riskTheme, settings, activeTab } = useGrainStore();
+  const { deviceState, deviceInfo, statusBadge, riskTheme, settings, activeTab, demoMode } = useGrainStore();
   const lang = settings.language as AppLanguage;
 
   const statusLabel =
-    deviceState === 'disconnected'
-      ? t('status.offline', lang)
-      : deviceState === 'connecting'
-        ? t('status.pairing', lang)
-        : statusBadge;
+    demoMode
+      ? t('demo.badge', lang)
+      : deviceState === 'disconnected'
+        ? t('status.offline', lang)
+        : deviceState === 'connecting'
+          ? t('status.pairing', lang)
+          : statusBadge;
 
   const isConnected = deviceState !== 'disconnected' && deviceState !== 'connecting';
 
@@ -46,6 +48,16 @@ export function Header() {
             }}>
               <span style={{ color: battery < 20 ? '#EF4444' : 'var(--gm-accent)' }}>
                 {battery}%
+              </span>
+            </div>
+          )}
+          {demoMode && (
+            <div className="grain-battery-badge" style={{
+              background: 'rgba(34, 197, 94, 0.12)',
+              borderColor: 'rgba(34, 197, 94, 0.3)',
+            }}>
+              <span style={{ color: '#22C55E', fontWeight: 700, fontSize: '10px', letterSpacing: '0.08em' }}>
+                {t('demo.badge', lang)}
               </span>
             </div>
           )}
