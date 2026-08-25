@@ -407,8 +407,11 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 40%, transparent 70%, rgba(255,255,255,0.02) 100%);
+  background: var(--gm-card-highlight, linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 40%, transparent 70%, rgba(255,255,255,0.02) 100%));
   pointer-events: none;
+}
+.grain-app[data-theme="light"] .grain-card::before {
+  --gm-card-highlight: linear-gradient(135deg, rgba(255,255,255,0.6) 0%, transparent 40%, transparent 70%, rgba(255,255,255,0.2) 100%);
 }
 
 /* Hero Card */
@@ -416,7 +419,7 @@
   background: linear-gradient(145deg, var(--gm-hero-start) 0%, var(--gm-hero-end) 100%);
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid var(--gm-hero-card-border, rgba(255,255,255,0.08));
   transition: background 0.6s ease;
   border-radius: 1.25rem;
   padding: 1.5rem 1.5rem 1.25rem;
@@ -429,8 +432,15 @@
   right: -20%;
   width: 300px;
   height: 300px;
-  background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+  background: var(--gm-hero-glow, radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%));
   pointer-events: none;
+}
+.grain-app[data-theme="light"] .grain-hero-card {
+  --gm-hero-card-border: rgba(0,0,0,0.06);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+}
+.grain-app[data-theme="light"] .grain-hero-card::before {
+  --gm-hero-glow: radial-gradient(circle, rgba(255,255,255,0.25) 0%, transparent 70%);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -509,11 +519,13 @@
    SPARKLINE
    ═══════════════════════════════════════════════════════════════ */
 
-.grain-sparkline { stroke: rgba(255,255,255,0.8); stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; transition: d 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+.grain-sparkline { stroke: var(--gm-sparkline-stroke, rgba(255,255,255,0.8)); stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; transition: d 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
 .grain-sparkline-fill { fill: url(#grainSparkGradient); stroke: none; transition: d 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
 .grain-sparkline-dot { transition: cx 0.4s ease, cy 0.4s ease; }
 @keyframes spark-pulse { 0%, 100% { opacity: 0.2; r: 6; } 50% { opacity: 0.4; r: 9; } }
 .grain-sparkline-pulse { animation: spark-pulse 2.5s ease-in-out infinite; }
+/* Sparkline light mode – white still works on colored hero gradient, but increase contrast */
+.grain-app[data-theme="light"] .grain-sparkline { stroke: rgba(255,255,255,0.9); }
 
 /* ═══════════════════════════════════════════════════════════════
    INSIGHT CARD – liquid glass
@@ -552,8 +564,7 @@
   box-shadow: 0 2px 12px rgba(0,0,0, var(--gm-insight-shadow-alpha, 0.09));
 }
 
-/* State-specific insight backgrounds for v2 */
-.grain-app[data-grain-theme="safe"] .grain-insight-card-v2,
+/* State-specific insight backgrounds for v2 – DARK MODE */
 .grain-app[data-grain-theme="safe"] .grain-insight-card-v2 {
   --gm-insight-v2-bg: #1a1610;
   --gm-insight-v2-border: rgba(255,255,255,0.06);
@@ -569,6 +580,28 @@
 .grain-app[data-grain-theme="monitor"] .grain-insight-card-v2 {
   --gm-insight-v2-bg: #1c1810;
   --gm-insight-v2-border: rgba(251, 191, 36, 0.12);
+}
+
+/* State-specific insight backgrounds for v2 – LIGHT MODE */
+.grain-app[data-theme="light"] .grain-insight-card-v2 {
+  --gm-insight-v2-bg: #f9fafb;
+  --gm-insight-v2-border: rgba(0, 0, 0, 0.06);
+}
+.grain-app[data-theme="light"][data-grain-theme="safe"] .grain-insight-card-v2 {
+  --gm-insight-v2-bg: #fffbf5;
+  --gm-insight-v2-border: rgba(249, 115, 22, 0.12);
+}
+.grain-app[data-theme="light"][data-grain-theme="warn"] .grain-insight-card-v2 {
+  --gm-insight-v2-bg: #fffbeb;
+  --gm-insight-v2-border: rgba(245, 158, 11, 0.2);
+}
+.grain-app[data-theme="light"][data-grain-theme="critical"] .grain-insight-card-v2 {
+  --gm-insight-v2-bg: #fef2f2;
+  --gm-insight-v2-border: rgba(239, 68, 68, 0.25);
+}
+.grain-app[data-theme="light"][data-grain-theme="monitor"] .grain-insight-card-v2 {
+  --gm-insight-v2-bg: #fffef5;
+  --gm-insight-v2-border: rgba(251, 191, 36, 0.15);
 }
 
 /* ═══════════════════════════════════════════════════════════════

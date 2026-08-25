@@ -157,7 +157,7 @@ export function InsightCard() {
           {/* Recommendation / Action */}
           <div
             className="mt-2.5 pt-2.5 flex items-start gap-2"
-            style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+            style={{ borderTop: '1px solid var(--gm-separator)' }}
           >
             <ArrowLineUp size={12} weight="bold" style={{ color: 'var(--gm-text-tertiary)', marginTop: 2, flexShrink: 0 }} />
             <p className="text-[11px] leading-relaxed" style={{ color: 'var(--gm-text-tertiary)' }}>
@@ -169,7 +169,7 @@ export function InsightCard() {
 
       {/* Confidence indicator for non-safe states */}
       {decision.state !== STATE.SAFE && decision.state !== STATE.RECOVERY && (
-        <div className="flex items-center gap-1.5 mt-3 pt-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+        <div className="flex items-center gap-1.5 mt-3 pt-2.5" style={{ borderTop: '1px solid var(--gm-border)' }}>
           <div className="w-1.5 h-1.5 rounded-full" style={{ background: confidenceColor }} />
           <span className="text-[9px] font-semibold tracking-wider uppercase" style={{ color: 'var(--gm-text-tertiary)' }}>
             {t('history.confidence', lang)}: {confidence.toUpperCase()}

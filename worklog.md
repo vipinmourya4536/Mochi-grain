@@ -68,3 +68,25 @@ Stage Summary:
 - All 4 languages (en/hi/mr/hinglish) have complete translations
 - Recovery detection, cooldown suppression, confidence scoring all working
 - 13 distinct engine messages with evidence + recommendation pattern
+---
+Task ID: 1
+Agent: Main
+Task: Fix pitch-black cards in light mode
+
+Work Log:
+- Analyzed user screenshot showing insight card as pitch black in light mode
+- Identified root cause: `.grain-insight-card-v2` had dark brown/black background colors (#1c1410, #1a1610, etc.) with NO light mode overrides
+- Also found hardcoded `rgba(255,255,255,...)` borders in insight-card.tsx that only work in dark mode
+- Found grain-card::before, hero-card border/::before with dark-mode-only white alpha values
+- Added light mode CSS overrides for insight-card-v2 (safe: #fffbf5, warn: #fffbeb, critical: #fef2f2, monitor: #fffef5)
+- Added light mode grain-card::before with brighter white highlight
+- Added light mode hero-card border and ::after glow adjustments
+- Added light mode sparkline stroke (higher contrast white on colored gradient)
+- Replaced hardcoded rgba(255,255,255,0.06) and rgba(255,255,255,0.04) in insight-card.tsx with var(--gm-separator) and var(--gm-border)
+- Verified with Agent Browser: light mode now shows white/light insight cards, dark mode still correct
+- No lint errors, no console errors
+
+Stage Summary:
+- Insight card v2 now properly supports both light and dark themes
+- Hero card, grain cards, sparkline all adapt to light mode
+- All changes are CSS-only (globals.css) plus 2 line changes in insight-card.tsx
