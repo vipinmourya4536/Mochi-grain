@@ -2,6 +2,7 @@
 
 import { useGrainStore } from '@/lib/grain-store';
 import { getDiscoverContent } from '@/lib/discover-content';
+import { stateToRiskTheme } from '@/lib/grain-types';
 import { YoutubeLogo, ArrowSquareOut, PlayCircle } from '@phosphor-icons/react/dist/ssr';
 import { t, tGrain, type AppLanguage } from '@/lib/i18n';
 
@@ -10,15 +11,15 @@ export function DiscoverTab() {
   const lang = settings.language as AppLanguage;
 
   const grainType = settings.grainType;
-  const condition = decision?.state || 'safe';
-  const videos = getDiscoverContent(grainType, condition);
+  const riskTheme = decision ? stateToRiskTheme(decision.state) : 'safe';
+  const videos = getDiscoverContent(grainType, riskTheme);
 
   const isConnected = deviceState !== 'disconnected' && deviceState !== 'connecting';
 
   const conditionLabel =
-    condition === 'safe'
+    riskTheme === 'safe'
       ? t('discover.condition_normal', lang)
-      : condition === 'warn'
+      : riskTheme === 'warn'
         ? t('discover.condition_elevated', lang)
         : t('discover.condition_critical', lang);
 
@@ -36,9 +37,9 @@ export function DiscoverTab() {
       {isConnected && (
         <div className="grain-insight-card mb-5">
           <p className="text-xs leading-relaxed" style={{ color: 'var(--gm-text-secondary)' }}>
-            {condition === 'critical'
+            {riskTheme === 'critical'
               ? t('discover.connected_desc_critical', lang)
-              : condition === 'warn'
+              : riskTheme === 'warn'
                 ? t('discover.connected_desc_warn', lang)
                 : t('discover.connected_desc_safe', lang)}
           </p>

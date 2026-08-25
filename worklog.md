@@ -46,3 +46,25 @@ Stage Summary:
 - Demo and BLE flows are fully isolated
 - All i18n updated for en/hi/mr/hinglish
 
+---
+Task ID: 1
+Agent: main
+Task: Implement Mochi Decision Engine v2.0
+
+Work Log:
+- Rewrote grain-types.ts: Added STATE/EXPRESSION/PRIORITY/TREND enums, EngineState, MochiExpression, expanded MochiDecision with expression/confidence/debug, added stateToRiskTheme mapper, expanded RiskTheme to include monitor, expanded StatusBadge with MONITOR/RECOVERY/LEARNING/IDLE
+- Rewrote mochi-engine.ts: Full 6-module engine with trendAnalyzer, historyAnalyzer (dedup/gap detection/stability windows), riskEvaluator (moisture+temp+trend escalation), ruleEvaluator (recovery detection, 9 rule types), cooldownManager, messageResolver (13 message types with i18n keys), getStatusBadge (8 states), getInsightTitle, getTrendLabel
+- Updated grain-store.ts: Wired stateToRiskTheme for all decision.state → riskTheme conversions (enableDemoMode, live interval, handleReading)
+- Updated accent-hex.ts: getRiskColor/getRiskBg now map engine states via stateToRiskTheme, added monitor color
+- Redesigned insight-card.tsx: Dark brown v2 card matching reference UI, SAFE · STABLE header, expression-mapped icons, state-specific icon colors, evidence + recommendation structure, confidence indicator, rule ID display
+- Added 196 i18n keys (49 per language × 4): engine message/action keys for all 13 rules, status badges (monitor/recovery/learning/idle/invalid), trend keys (rising_rapidly/falling_rapidly/insufficient_data), engine title keys
+- Updated history-tab.tsx: New trend types (rising_rapidly, falling_rapidly), expanded state labels, confidence display (HIGH/MEDIUM/LOW instead of %)
+- Updated discover-tab.tsx: Uses stateToRiskTheme for condition mapping
+- Added CSS: grain-insight-card-v2 with dark brown backgrounds per state, monitor risk theme for hero/alert colors
+
+Stage Summary:
+- Full Mochi Decision Engine v2.0 implemented with 6 sub-modules
+- UI matches reference screenshots (SAFE · STABLE, dark brown insight card)
+- All 4 languages (en/hi/mr/hinglish) have complete translations
+- Recovery detection, cooldown suppression, confidence scoring all working
+- 13 distinct engine messages with evidence + recommendation pattern

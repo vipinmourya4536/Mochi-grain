@@ -9,10 +9,83 @@ export type DeviceState =
   | 'low-battery'
   | 'awake';
 
-export type RiskTheme = 'safe' | 'warn' | 'critical';
+/* ─── Mochi Engine States ─── */
+export const STATE = {
+  SAFE: 'safe',
+  MONITOR: 'monitor',
+  WARNING: 'warning',
+  CRITICAL: 'critical',
+  INSUFFICIENT_DATA: 'insufficient_data',
+  IDLE: 'idle',
+  RECOVERY: 'recovery',
+  INVALID: 'invalid',
+  DISCONNECTED: 'disconnected',
+  SLEEPING: 'sleeping',
+  SYNCING: 'syncing',
+} as const;
+export type EngineState = (typeof STATE)[keyof typeof STATE];
 
-export type StatusBadge = 'STABLE' | 'RISING' | 'WARNING' | 'CRITICAL' | 'SLEEPING' | 'SYNCING';
+/* ─── Mochi Expressions (Mochi face) ─── */
+export const EXPRESSION = {
+  SAFE: 'safe',
+  CONCERNED: 'concerned',
+  CRITICAL: 'critical',
+  THINKING: 'thinking',
+  SUCCESS: 'success',
+  CONNECTED: 'connected',
+  SLEEPING: 'sleeping',
+} as const;
+export type MochiExpression = (typeof EXPRESSION)[keyof typeof EXPRESSION];
 
+/* ─── Priority Levels ─── */
+export const PRIORITY = {
+  IDLE: 0,
+  INSUFFICIENT_DATA: 5,
+  SAFE: 10,
+  MONITOR: 40,
+  WARNING: 60,
+  CRITICAL: 80,
+  INVALID: 90,
+  SYNCING_SLEEPING_LOW_BATT: 70,
+} as const;
+
+/* ─── Trend Directions ─── */
+export const TREND = {
+  STABLE: 'stable',
+  RISING: 'rising',
+  RISING_RAPIDLY: 'rising_rapidly',
+  FALLING: 'falling',
+  FALLING_RAPIDLY: 'falling_rapidly',
+  INSUFFICIENT_DATA: 'insufficient_data',
+} as const;
+export type TrendDirection = (typeof TREND)[keyof typeof TREND];
+
+/* ─── Legacy compat: RiskTheme used for CSS theming ─── */
+export type RiskTheme = 'safe' | 'warn' | 'critical' | 'monitor';
+
+/* Map engine state → risk theme for CSS */
+export function stateToRiskTheme(state: EngineState): RiskTheme {
+  if (state === STATE.CRITICAL || state === STATE.INVALID) return 'critical';
+  if (state === STATE.WARNING) return 'warn';
+  if (state === STATE.MONITOR) return 'monitor';
+  return 'safe';
+}
+
+/* ─── Status Badge ─── */
+export type StatusBadge =
+  | 'STABLE'
+  | 'RISING'
+  | 'WARNING'
+  | 'CRITICAL'
+  | 'MONITOR'
+  | 'RECOVERY'
+  | 'SLEEPING'
+  | 'SYNCING'
+  | 'LEARNING'
+  | 'IDLE'
+  | 'OFFLINE';
+
+/* ─── Grain Types ─── */
 export type GrainType =
   | 'wheat'
   | 'rice'
@@ -47,10 +120,8 @@ export interface DeviceInfo {
 }
 
 /* ─── Mochi Decision Engine Output ─── */
-export type TrendDirection = 'stable' | 'rising' | 'falling' | 'spike' | 'drop';
-
 export interface MochiDecision {
-  state: RiskTheme;
+  state: EngineState;
   severity: number; // 0–100
   ruleId: string;
   messageId: string;
@@ -59,10 +130,28 @@ export interface MochiDecision {
   messageKey: string;   // i18n translation key
   actionKey: string;    // i18n translation key
   reasonCodes: string[];
-  secondaryObservations: string[]; // i18n keys
+  secondaryObservations: string[];
   trend: TrendDirection;
-  confidence: number; // 0–1
+  expression: MochiExpression;
+  confidence: 'high' | 'medium' | 'low';
   variables: Record<string, number | string>;
+  /* Engine debug */
+  debug?: {
+    triggeredRules: string[];
+    selectedRule: string;
+    historySummary?: {
+      trend: TrendDirection;
+      isStableWindow: boolean;
+      gaps: { from: string; to: string }[];
+      duplicatesRemoved: number;
+      recentReadingsCount: number;
+    };
+    riskAssessment?: {
+      state: EngineState;
+      severity: number;
+      reasonCodes: string[];
+    };
+  };
 }
 
 export interface HistoryEntry {

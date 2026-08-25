@@ -9,8 +9,8 @@ import { format } from 'date-fns';
 
 function getTrendIcon(trend: string) {
   switch (trend) {
-    case 'rising': case 'spike': return <TrendUp size={14} weight="bold" />;
-    case 'falling': case 'drop': return <TrendDown size={14} weight="bold" />;
+    case 'rising': case 'spike': case 'rising_rapidly': return <TrendUp size={14} weight="bold" />;
+    case 'falling': case 'drop': case 'falling_rapidly': return <TrendDown size={14} weight="bold" />;
     default: return <Minus size={14} weight="bold" />;
   }
 }
@@ -74,8 +74,13 @@ function ReadingDetail({ entry, onClose }: { entry: HistoryEntry; onClose: () =>
 
   const stateLabel =
     decision.state === 'safe' ? t('history.safe', lang)
-    : decision.state === 'warn' ? t('history.warning', lang)
-    : t('history.critical', lang);
+    : decision.state === 'warning' ? t('history.warning', lang)
+    : decision.state === 'critical' ? t('history.critical', lang)
+    : decision.state === 'monitor' ? t('status.monitor', lang)
+    : decision.state === 'recovery' ? t('status.recovery', lang)
+    : decision.state === 'insufficient_data' ? t('status.learning', lang)
+    : decision.state === 'invalid' ? t('status.invalid', lang)
+    : decision.state;
 
   return (
     <div className="grain-fade-in">
@@ -108,7 +113,7 @@ function ReadingDetail({ entry, onClose }: { entry: HistoryEntry; onClose: () =>
       </div>
       <div className="grain-card p-4">
         <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: 'var(--gm-text-tertiary)' }}>{t('history.rule', lang)}</span><span className="text-[11px] font-mono" style={{ color: 'var(--gm-text-secondary)' }}>{decision.ruleId}</span></div>
-        <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: 'var(--gm-text-tertiary)' }}>{t('history.confidence', lang)}</span><span className="text-[11px] font-bold" style={{ color: 'var(--gm-text-primary)' }}>{Math.round(decision.confidence * 100)}%</span></div>
+        <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: 'var(--gm-text-tertiary)' }}>{t('history.confidence', lang)}</span><span className="text-[11px] font-bold" style={{ color: 'var(--gm-text-primary)' }}>{decision.confidence.toUpperCase()}</span></div>
         <div className="flex justify-between items-center"><span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: 'var(--gm-text-tertiary)' }}>{t('history.severity', lang)}</span><span className="text-[11px] font-bold" style={{ color: dotHex }}>{decision.severity}/100</span></div>
       </div>
     </div>

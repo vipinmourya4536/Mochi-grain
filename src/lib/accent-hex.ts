@@ -1,5 +1,6 @@
 /* ─── Accent color hex values for inline styles ─── */
-import type { AccentColor } from './grain-types';
+import type { AccentColor, EngineState } from './grain-types';
+import { stateToRiskTheme } from './grain-types';
 
 const ACCENT_HEX: Record<AccentColor, string> = {
   orange: '#F97316',
@@ -13,11 +14,13 @@ export function getAccentHex(accent: AccentColor): string {
   return ACCENT_HEX[accent] || '#F97316';
 }
 
-/** Returns hex for risk state color. Always a real hex, never a CSS variable. */
+/** Returns hex for risk state color. Maps engine states to risk themes. */
 export function getRiskColor(state: string, accent: AccentColor): string {
-  switch (state) {
+  const theme = stateToRiskTheme(state as EngineState);
+  switch (theme) {
     case 'critical': return '#EF4444';
     case 'warn': return '#F59E0B';
+    case 'monitor': return '#FBBF24';
     default: return getAccentHex(accent);
   }
 }

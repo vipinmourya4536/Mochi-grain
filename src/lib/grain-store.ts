@@ -15,7 +15,7 @@ import type {
   HistoryEntry,
   StatusBadge,
 } from './grain-types';
-import { DEFAULT_SETTINGS, GRAIN_PROFILES } from './grain-types';
+import { DEFAULT_SETTINGS, GRAIN_PROFILES, stateToRiskTheme } from './grain-types';
 import { evaluate, getStatusBadge } from './mochi-engine';
 import {
   saveReading,
@@ -220,6 +220,7 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
     const currentReading = latestEntry.reading;
     const decision = latestEntry.decision;
     const badge = getStatusBadge(decision, 'connected');
+    const riskTheme = stateToRiskTheme(decision.state);
 
     // Sparkline: last 16 entries as {v, t} points
     const sparklineData: SparklinePoint[] = historyEntries.slice(0, 16).map((e) => ({
@@ -247,7 +248,7 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
       currentReading,
       decision,
       statusBadge: badge,
-      riskTheme: decision.state,
+      riskTheme,
       sparklineData,
       historyEntries,
       selectedHistoryId: null,
@@ -272,6 +273,7 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
       const miniHistory = [...s.historyEntries.slice(0, 6).map((e) => e.reading), newReading];
       const newDecision = evaluate(newReading, miniHistory, s.settings.thresholds);
       const newBadge = getStatusBadge(newDecision, 'connected');
+      const newRiskTheme = stateToRiskTheme(newDecision.state);
       const newEntry: HistoryEntry = { reading: newReading, decision: newDecision };
 
       // Update sparkline: add new point at end (newest), keep max 16
@@ -285,7 +287,7 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
         currentReading: newReading,
         decision: newDecision,
         statusBadge: newBadge,
-        riskTheme: newDecision.state,
+        riskTheme: newRiskTheme,
         deviceInfo: {
           ...s.deviceInfo!,
           battery: newReading.battery,
@@ -506,6 +508,7 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
       const allRecent = [reading, ...recent];
       const decision = evaluate(reading, allRecent, settings.thresholds);
       const badge = getStatusBadge(decision, get().deviceState);
+      const riskTheme = stateToRiskTheme(decision.state);
 
       // Build timestamped sparkline from real readings
       const sparkline: SparklinePoint[] = allRecent.slice(0, 16).reverse().map((r) => ({
@@ -527,7 +530,7 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
         currentReading: reading,
         decision,
         statusBadge: badge,
-        riskTheme: decision.state,
+        riskTheme,
         sparklineData: sparkline,
         deviceInfo: updatedInfo,
         deviceState: newState,
