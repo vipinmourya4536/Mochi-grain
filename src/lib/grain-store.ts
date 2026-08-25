@@ -38,12 +38,25 @@ import { t, tp, type AppLanguage } from './i18n';
 
 export type TabId = 'home' | 'discover' | 'history' | 'settings';
 
+/** Time-stamped sparkline point */
+export interface SparklinePoint {
+  v: number;   // moisture value
+  t: number;   // epoch ms
+}
+
+/** Available demo interval presets (in seconds) */
+export const DEMO_INTERVAL_PRESETS = [60, 300, 600, 1800, 3600] as const;
+export type DemoIntervalPreset = (typeof DEMO_INTERVAL_PRESETS)[number];
+
 interface GrainStore {
-  /* ── Demo Mode ── */
+  /* ── Demo Mode (completely isolated from BLE) ── */
   demoMode: boolean;
-  demoInterval: ReturnType<typeof setInterval> | null;
+  demoIntervalSec: DemoIntervalPreset;
+  _demoTimer: ReturnType<typeof setInterval> | null;
+  _demoTick: number;
   enableDemoMode: () => void;
   disableDemoMode: () => void;
+  setDemoIntervalSec: (sec: DemoIntervalPreset) => void;
 
   /* ── Navigation ── */
   activeTab: TabId;
@@ -66,8 +79,8 @@ interface GrainStore {
   statusBadge: StatusBadge;
   riskTheme: RiskTheme;
 
-  /* ── Sparkline data ── */
-  sparklineData: number[];
+  /* ── Sparkline data (timestamped) ── */
+  sparklineData: SparklinePoint[];
 
   /* ── History ── */
   historyEntries: HistoryEntry[];
@@ -84,7 +97,7 @@ interface GrainStore {
   toast: string;
   showToast: (msg: string) => void;
 
-  /* ── Actions ── */
+  /* ── Actions (real BLE only) ── */
   connectProbe: () => Promise<void>;
   disconnectProbe: () => void;
   sendProbeCommand: (cmd: 'wake' | 'calibrate' | 'sync' | 'sleep') => Promise<void>;
@@ -100,72 +113,121 @@ function getLang(store: GrainStore): AppLanguage {
   return store.settings.language as AppLanguage;
 }
 
-/* ═══ Demo Data Generator ═══ */
-function generateDemoReading(grainType: GrainType, ts: number, idx: number): Reading {
-  // Simulate realistic moisture readings with slight variation
-  const baseMoisture = 11.5 + (idx % 7) * 0.4;
-  const jitter = (Math.sin(idx * 2.3) * 1.2) + (Math.cos(idx * 0.7) * 0.5);
-  const moisture = Math.round((baseMoisture + jitter) * 10) / 10;
-  const baseTemp = 26 + (idx % 5) * 0.8;
-  const tempJitter = Math.sin(idx * 1.8) * 1.5;
-  const temperature = Math.round((baseTemp + tempJitter) * 10) / 10;
-  const battery = Math.max(15, Math.min(100, 92 - idx * 0.3 + Math.round(Math.sin(idx) * 3)));
-  const signal = Math.max(40, Math.min(100, 85 - Math.round(Math.sin(idx * 0.9) * 15)));
+/* ═══════════════════════════════════════════════════════════════
+   DEMO DATA GENERATOR – isolated fake world
+   ═══════════════════════════════════════════════════════════════ */
+
+/** Seedable pseudo-random for deterministic demo data */
+function seededRandom(seed: number): number {
+  let s = seed;
+  s = (s * 16807 + 0) % 2147483647;
+  return (s - 1) / 2147483646;
+}
+
+function generateDemoReading(grainType: GrainType, ts: number, tick: number): Reading {
+  // Deterministic but natural-looking values using seeded random + smooth waves
+  const r1 = seededRandom(tick * 7 + 3);
+  const r2 = seededRandom(tick * 13 + 7);
+  const r3 = seededRandom(tick * 19 + 11);
+
+  // Moisture: slow sine wave + small random walk, stays within realistic 9–16% range
+  const baseWave = Math.sin(tick * 0.15) * 1.5 + Math.cos(tick * 0.07) * 0.8;
+  const randomWalk = (r1 - 0.5) * 0.6;
+  const moisture = Math.round((12.0 + baseWave + randomWalk) * 10) / 10;
+
+  // Temperature: slow drift around 27°C ± 3
+  const tempWave = Math.sin(tick * 0.1 + 1.5) * 1.8 + (r2 - 0.5) * 0.4;
+  const temperature = Math.round((27 + tempWave) * 10) / 10;
+
+  // Battery: slow drain from 95% down, with small jitter
+  const battery = Math.max(12, Math.min(100, Math.round(95 - tick * 0.15 + (r3 - 0.5) * 2)));
+
+  // Signal: varies 65–95%
+  const signal = Math.max(50, Math.min(98, Math.round(80 + Math.sin(tick * 0.2) * 12 + (r1 - 0.5) * 5)));
 
   return {
-    id: `demo-${ts}-${idx}`,
+    id: `demo-${ts}-${tick}`,
     deviceId: 'DEMO-GRAIN-01',
     grainType,
-    moisture: Math.max(8, moisture),
-    temperature,
+    moisture: Math.max(8, Math.min(20, moisture)),
+    temperature: Math.max(20, Math.min(40, temperature)),
     battery,
     timestamp: ts,
     signal,
-    deviceStatus: 'connected',
+    deviceStatus: 'connected' as DeviceState,
   };
 }
 
-function generateDemoHistory(grainType: GrainType, thresholds: GrainThresholds): HistoryEntry[] {
+/**
+ * Generate a batch of demo history entries.
+ * Entries are spaced exactly `intervalSec` apart in timestamp space.
+ * The most recent entry is at `now`, going backwards.
+ */
+function generateDemoHistory(
+  grainType: GrainType,
+  thresholds: GrainThresholds,
+  intervalSec: number,
+  count: number,
+): HistoryEntry[] {
   const now = Date.now();
   const entries: HistoryEntry[] = [];
-  // Generate 20 entries over the past 3 days
-  for (let i = 0; i < 20; i++) {
-    const ts = now - (i * 3.5 * 60 * 60 * 1000); // every 3.5 hours
-    const reading = generateDemoReading(grainType, ts, i);
-    // Also build a mini history for trend detection
-    const miniHistory = Array.from({ length: Math.min(i + 1, 5) }, (_, j) =>
-      generateDemoReading(grainType, ts - j * 30 * 60 * 1000, i + j)
+
+  for (let i = 0; i < count; i++) {
+    const ts = now - (i * intervalSec * 1000);
+    const tick = i; // each entry has a unique tick for deterministic data
+    const reading = generateDemoReading(grainType, ts, tick);
+
+    // Build mini-history for Mochi trend detection (previous readings)
+    const miniHistory = Array.from({ length: Math.min(i + 1, 6) }, (_, j) =>
+      generateDemoReading(grainType, ts - (j + 1) * intervalSec * 1000, tick + j + 1),
     );
+
     const decision = evaluate(reading, miniHistory, thresholds);
     entries.push({ reading, decision });
   }
+
   return entries;
 }
+
+/** How many history entries to generate based on interval */
+function historyCountForInterval(intervalSec: number): number {
+  // Aim for ~48 hours of history, but clamp to reasonable range
+  const total = Math.floor((48 * 3600) / intervalSec);
+  return Math.min(60, Math.max(12, total));
+}
+
+/** Real-time simulation speed: one tick every N ms (accelerated preview) */
+const SIMULATION_TICK_MS = 3000;
 
 export const useGrainStore = create<GrainStore>((set, get) => ({
   /* ── Demo Mode ── */
   demoMode: false,
-  demoInterval: null,
+  demoIntervalSec: 600, // default 10 minutes
+  _demoTimer: null,
+  _demoTick: 0,
 
   enableDemoMode: () => {
-    const { settings } = get();
+    const { settings, demoIntervalSec } = get();
     const lang = settings.language as AppLanguage;
     const grainType = settings.grainType;
     const thresholds = settings.thresholds;
 
-    // Generate demo history
-    const historyEntries = generateDemoHistory(grainType, thresholds);
+    // Generate initial demo history spaced at the configured interval
+    const count = historyCountForInterval(demoIntervalSec);
+    const historyEntries = generateDemoHistory(grainType, thresholds, demoIntervalSec, count);
 
-    // Latest reading (most recent in history)
+    // Latest reading
     const latestEntry = historyEntries[0];
     const currentReading = latestEntry.reading;
     const decision = latestEntry.decision;
     const badge = getStatusBadge(decision, 'connected');
 
-    // Sparkline from recent entries
-    const sparklineData = historyEntries.slice(0, 12).map((e) => e.reading.moisture);
+    // Sparkline: last 16 entries as {v, t} points
+    const sparklineData: SparklinePoint[] = historyEntries.slice(0, 16).map((e) => ({
+      v: e.reading.moisture,
+      t: e.reading.timestamp,
+    })).reverse(); // oldest first for chart
 
-    // Fake device info
     const deviceInfo: DeviceInfo = {
       id: 'DEMO-GRAIN-01',
       name: 'GRAIN-01 (Demo)',
@@ -175,6 +237,8 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
       battery: currentReading.battery,
       signal: currentReading.signal,
     };
+
+    const startTick = count; // continue the tick sequence
 
     set({
       demoMode: true,
@@ -190,23 +254,35 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
       selectedHistoryId: null,
       selectedHistoryEntry: null,
       activeTab: 'home',
+      _demoTick: startTick,
     });
 
     get().showToast(t('toast.demo_on', lang));
 
-    // Simulate live readings every 8 seconds
-    const interval = setInterval(() => {
+    // Live simulation: every 3s generate a new reading (timestamp spaced by configured interval)
+    const timer = setInterval(() => {
       const s = get();
       if (!s.demoMode) return;
-      const now = Date.now();
-      const idx = Math.floor(now / 8000);
-      const newReading = generateDemoReading(s.settings.grainType, now, idx);
-      const miniHistory = [...s.historyEntries.slice(0, 5).map((e) => e.reading), newReading];
+
+      const nextTick = s._demoTick + 1;
+      // New timestamp is `intervalSec` after the last reading's timestamp
+      const lastTs = s.currentReading?.timestamp ?? Date.now();
+      const newTs = lastTs + s.demoIntervalSec * 1000;
+
+      const newReading = generateDemoReading(s.settings.grainType, newTs, nextTick);
+      const miniHistory = [...s.historyEntries.slice(0, 6).map((e) => e.reading), newReading];
       const newDecision = evaluate(newReading, miniHistory, s.settings.thresholds);
       const newBadge = getStatusBadge(newDecision, 'connected');
       const newEntry: HistoryEntry = { reading: newReading, decision: newDecision };
 
+      // Update sparkline: add new point at end (newest), keep max 16
+      const newSparkline: SparklinePoint[] = [
+        ...s.sparklineData.slice(-(16 - 1)),
+        { v: newReading.moisture, t: newTs },
+      ];
+
       set({
+        _demoTick: nextTick,
         currentReading: newReading,
         decision: newDecision,
         statusBadge: newBadge,
@@ -217,22 +293,23 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
           signal: newReading.signal,
           grainType: newReading.grainType,
         },
-        sparklineData: [...s.sparklineData.slice(-11), newReading.moisture],
+        sparklineData: newSparkline,
         historyEntries: [newEntry, ...s.historyEntries].slice(0, 100),
       });
-    }, 8000);
+    }, SIMULATION_TICK_MS);
 
-    set({ demoInterval: interval });
+    set({ _demoTimer: timer });
   },
 
   disableDemoMode: () => {
-    const { demoInterval } = get();
-    if (demoInterval) clearInterval(demoInterval);
+    const { _demoTimer } = get();
+    if (_demoTimer) clearInterval(_demoTimer);
 
     const lang = getLang(get());
     set({
       demoMode: false,
-      demoInterval: null,
+      _demoTimer: null,
+      _demoTick: 0,
       deviceState: 'disconnected',
       deviceInfo: null,
       hasDevice: false,
@@ -247,6 +324,19 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
       activeTab: 'settings',
     });
     get().showToast(t('toast.demo_off', lang));
+  },
+
+  setDemoIntervalSec: (sec: DemoIntervalPreset) => {
+    const wasRunning = get().demoMode;
+    if (wasRunning) {
+      // Stop and restart with new interval
+      get().disableDemoMode();
+    }
+    set({ demoIntervalSec: sec });
+    if (wasRunning) {
+      // Small delay so state settles, then re-enable
+      setTimeout(() => get().enableDemoMode(), 100);
+    }
   },
 
   /* ── Nav ── */
@@ -308,7 +398,7 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
     setTimeout(() => set({ toast: '' }), 2500);
   },
 
-  /* ═══ Actions ═══ */
+  /* ═══ REAL BLE Actions (never touched by demo) ═══ */
 
   connectProbe: async () => {
     const lang = getLang(get());
@@ -405,7 +495,7 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
     get().showToast(ok ? t('toast.syncing_history', lang) : t('toast.sync_failed', lang));
   },
 
-  /* ═══ Internal ═══ */
+  /* ═══ Internal – REAL BLE only ═══ */
   handleReading: (reading: Reading) => {
     const { settings, deviceState } = get();
 
@@ -418,7 +508,11 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
       const decision = evaluate(reading, allRecent, settings.thresholds);
       const badge = getStatusBadge(decision, get().deviceState);
 
-      const sparkline = allRecent.slice(0, 12).reverse().map((r) => r.moisture);
+      // Build timestamped sparkline from real readings
+      const sparkline: SparklinePoint[] = allRecent.slice(0, 16).reverse().map((r) => ({
+        v: r.moisture,
+        t: r.timestamp,
+      }));
 
       const info = get().deviceInfo;
       const updatedInfo = info

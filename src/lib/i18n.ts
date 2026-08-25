@@ -206,6 +206,14 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'demo.stop': 'Stop Demo',
     'demo.active': 'Demo Active',
     'demo.badge': 'DEMO',
+    'demo.interval_title': 'Data Interval',
+    'demo.interval_desc': 'Time gap between readings in demo history',
+    'demo.1m': '1 min',
+    'demo.5m': '5 min',
+    'demo.10m': '10 min',
+    'demo.30m': '30 min',
+    'demo.1h': '1 hour',
+    'demo.sim_speed': 'Preview speed: 3s/tick',
 
     // ── Bluetooth Gate ──
     'bt.gate.title': 'Bluetooth Required',
@@ -445,6 +453,14 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'demo.stop': 'डेमो बंद करें',
     'demo.active': 'डेमो चल रहा है',
     'demo.badge': 'डेमो',
+    'demo.interval_title': 'डेटा अंतराल',
+    'demo.interval_desc': 'डेमो इतिहास में रीडिंग के बीच समय अंतराल',
+    'demo.1m': '1 मिनट',
+    'demo.5m': '5 मिनट',
+    'demo.10m': '10 मिनट',
+    'demo.30m': '30 मिनट',
+    'demo.1h': '1 घंटा',
+    'demo.sim_speed': 'प्रीव्यू गति: 3s/टिक',
 
     // ── Bluetooth Gate ──
     'bt.gate.title': 'ब्लूटूथ आवश्यक',
@@ -684,6 +700,14 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'demo.stop': 'डेमो बंद करा',
     'demo.active': 'डेमो चालू आहे',
     'demo.badge': 'डेमो',
+    'demo.interval_title': 'डेटा अंतराल',
+    'demo.interval_desc': 'डेमो इतिहासातील रीडिंगमधील वेळेचा अंतराल',
+    'demo.1m': '1 मिनिट',
+    'demo.5m': '5 मिनिट',
+    'demo.10m': '10 मिनिट',
+    'demo.30m': '30 मिनिट',
+    'demo.1h': '1 तास',
+    'demo.sim_speed': 'प्रीव्यू वेग: 3s/टिक',
 
     // ── Bluetooth Gate ──
     'bt.gate.title': 'ब्लूटूथ आवश्यक',
@@ -923,6 +947,14 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'demo.stop': 'Demo Band Karein',
     'demo.active': 'Demo Chal Raha Hai',
     'demo.badge': 'DEMO',
+    'demo.interval_title': 'Data Interval',
+    'demo.interval_desc': 'Demo history mein readings ke beech ka time gap',
+    'demo.1m': '1 min',
+    'demo.5m': '5 min',
+    'demo.10m': '10 min',
+    'demo.30m': '30 min',
+    'demo.1h': '1 hour',
+    'demo.sim_speed': 'Preview speed: 3s/tick',
 
     // ── Bluetooth Gate ──
     'bt.gate.title': 'Bluetooth Zaroori Hai',

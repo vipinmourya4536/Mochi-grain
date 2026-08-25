@@ -16,7 +16,7 @@ export function HeroCard() {
   return (
     <div className="grain-hero-card">
       <div>
-        <div className="flex justify-between items-start mb-6">
+        <div className="flex justify-between items-start mb-5">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold tracking-[0.15em] uppercase text-white/80">
               {t('hero.moisture', lang)}
@@ -26,17 +26,17 @@ export function HeroCard() {
           <span className="grain-badge">{t(`status.${statusBadge.toLowerCase()}`, lang)}</span>
         </div>
 
-        <div className="flex items-baseline gap-2 mb-2">
+        <div className="flex items-baseline gap-2 mb-1">
           <span className="text-7xl font-bold tracking-tight text-white">
             {currentReading.moisture.toFixed(1)}
           </span>
           <span className="text-2xl font-semibold text-white/60">%</span>
         </div>
 
-        <p className="text-xs text-white/40 mb-4">{grainLabel} {t('hero.moisture_content', lang)}</p>
+        <p className="text-xs text-white/40 mb-3">{grainLabel} {t('hero.moisture_content', lang)}</p>
 
-        {/* Sparkline */}
-        <div className="h-16 relative">
+        {/* Professional sparkline chart */}
+        <div className="h-[72px] relative -mx-1">
           <SparklineChart data={sparklineData} />
         </div>
       </div>

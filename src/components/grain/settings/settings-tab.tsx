@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useGrainStore } from '@/lib/grain-store';
+import { useGrainStore, DEMO_INTERVAL_PRESETS, type DemoIntervalPreset } from '@/lib/grain-store';
 import {
   Cpu, DownloadSimple, ArrowClockwise, Trash, Power, Wrench,
   Sun, Moon, CaretDown, SlidersHorizontal, Palette, Play, StopCircle,
@@ -10,6 +10,14 @@ import { type GrainType, type AccentColor } from '@/lib/grain-types';
 import { t, tGrain, type AppLanguage } from '@/lib/i18n';
 
 const GRAIN_OPTIONS: GrainType[] = ['wheat', 'rice', 'corn', 'barley', 'soybean', 'sorghum', 'oats', 'millet', 'other'];
+
+const INTERVAL_OPTIONS: { sec: DemoIntervalPreset; key: string }[] = [
+  { sec: 60, key: 'demo.1m' },
+  { sec: 300, key: 'demo.5m' },
+  { sec: 600, key: 'demo.10m' },
+  { sec: 1800, key: 'demo.30m' },
+  { sec: 3600, key: 'demo.1h' },
+];
 
 const ACCENT_COLORS: { value: AccentColor; color: string; labelKey: string }[] = [
   { value: 'orange', color: '#F97316', labelKey: 'accent.orange' },
@@ -287,6 +295,7 @@ function AdvancedSettingsContent() {
     syncProbeHistory, clearHistory,
     hasDevice, showToast,
     demoMode, enableDemoMode, disableDemoMode,
+    demoIntervalSec, setDemoIntervalSec,
   } = useGrainStore();
 
   const lang = settings.language as AppLanguage;
@@ -335,6 +344,35 @@ function AdvancedSettingsContent() {
           </div>
         </div>
       </div>
+
+      {/* ─── Data Interval ─── */}
+      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-2 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('demo.interval_title', lang)}
+      </p>
+      <p className="text-[10px] mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('demo.interval_desc', lang)}
+      </p>
+      <div className="grain-card p-2 flex flex-wrap gap-2 mb-4">
+        {INTERVAL_OPTIONS.map((opt) => {
+          const isActive = demoIntervalSec === opt.sec;
+          return (
+            <button
+              key={opt.sec}
+              onClick={() => setDemoIntervalSec(opt.sec)}
+              className="px-3.5 py-2 rounded-xl text-[11px] font-bold tracking-wide transition-all"
+              style={{
+                background: isActive ? 'var(--gm-accent)' : 'transparent',
+                color: isActive ? '#fff' : 'var(--gm-text-secondary)',
+              }}
+            >
+              {t(opt.key, lang)}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-[9px] px-1 mb-2" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('demo.sim_speed', lang)}
+      </p>
 
       {/* ─── Accent Color ─── */}
       <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1 mt-4" style={{ color: 'var(--gm-text-tertiary)' }}>
