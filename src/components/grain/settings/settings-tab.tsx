@@ -31,12 +31,13 @@ export function SettingsTab() {
   const {
     deviceInfo, settings, updateSettings, selectGrainType,
     disconnectProbe, sendProbeCommand, hasDevice, showToast,
+    demoMode,
   } = useGrainStore();
 
   const lang = settings.language as AppLanguage;
   const isDark = settings.theme === 'dark';
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const hasConnection = hasDevice;
+  const hasConnection = hasDevice && !demoMode;
 
   return (
     <div className="pt-2 pb-6 grain-fade-in">
@@ -299,7 +300,7 @@ function AdvancedSettingsContent() {
   } = useGrainStore();
 
   const lang = settings.language as AppLanguage;
-  const hasConnection = hasDevice;
+  const hasConnection = hasDevice && !demoMode;
 
   return (
     <>
@@ -350,9 +351,9 @@ function AdvancedSettingsContent() {
         {t('demo.interval_title', lang)}
       </p>
       <p className="text-[10px] mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
-        {t('demo.interval_desc', lang)}
+        {t('demo.sim_speed', lang)}
       </p>
-      <div className="grain-card p-2 flex flex-wrap gap-2 mb-4">
+      <div className="grain-card p-2 flex flex-wrap gap-2 mb-6">
         {INTERVAL_OPTIONS.map((opt) => {
           const isActive = demoIntervalSec === opt.sec;
           return (
@@ -370,9 +371,6 @@ function AdvancedSettingsContent() {
           );
         })}
       </div>
-      <p className="text-[9px] px-1 mb-2" style={{ color: 'var(--gm-text-tertiary)' }}>
-        {t('demo.sim_speed', lang)}
-      </p>
 
       {/* ─── Accent Color ─── */}
       <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1 mt-4" style={{ color: 'var(--gm-text-tertiary)' }}>

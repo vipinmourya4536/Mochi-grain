@@ -213,7 +213,9 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'demo.10m': '10 min',
     'demo.30m': '30 min',
     'demo.1h': '1 hour',
-    'demo.sim_speed': 'Preview speed: 3s/tick',
+    'demo.sim_speed': 'Data updates at real-time intervals',
+    'demo.next_reading': 'Next reading in',
+    'demo.live': 'LIVE',
 
     // ── Bluetooth Gate ──
     'bt.gate.title': 'Bluetooth Required',
@@ -460,7 +462,9 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'demo.10m': '10 मिनट',
     'demo.30m': '30 मिनट',
     'demo.1h': '1 घंटा',
-    'demo.sim_speed': 'प्रीव्यू गति: 3s/टिक',
+    'demo.sim_speed': 'डेटा रियल-टाइम अंतराल पर अपडेट होता है',
+    'demo.next_reading': 'अगली रीडिंग',
+    'demo.live': 'लाइव',
 
     // ── Bluetooth Gate ──
     'bt.gate.title': 'ब्लूटूथ आवश्यक',
@@ -707,7 +711,9 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'demo.10m': '10 मिनिट',
     'demo.30m': '30 मिनिट',
     'demo.1h': '1 तास',
-    'demo.sim_speed': 'प्रीव्यू वेग: 3s/टिक',
+    'demo.sim_speed': 'डेटा रिअल-टाइम अंतरालावर अपडेट होतो',
+    'demo.next_reading': 'पुढील रीडिंग',
+    'demo.live': 'लाइव',
 
     // ── Bluetooth Gate ──
     'bt.gate.title': 'ब्लूटूथ आवश्यक',
@@ -954,7 +960,9 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'demo.10m': '10 min',
     'demo.30m': '30 min',
     'demo.1h': '1 hour',
-    'demo.sim_speed': 'Preview speed: 3s/tick',
+    'demo.sim_speed': 'Data real-time interval pe update hota hai',
+    'demo.next_reading': 'Aglee reading',
+    'demo.live': 'LIVE',
 
     // ── Bluetooth Gate ──
     'bt.gate.title': 'Bluetooth Zaroori Hai',

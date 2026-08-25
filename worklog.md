@@ -22,3 +22,27 @@ Stage Summary:
 - No hardware required – user can test the entire app experience
 - 4 files changed: grain-store.ts, i18n.ts, settings-tab.tsx, header.tsx
 - Pushed to https://github.com/vipinmourya4536/Mochi-grain.git
+---
+Task ID: 1
+Agent: Main Agent
+Task: Configurable real-time demo interval + professional sparkline chart
+
+Work Log:
+- Analyzed screenshot showing Chrome BLE pairing dialog
+- Read all relevant source files (grain-store, hero-card, sparkline-chart, settings-tab, i18n, page.tsx)
+- Changed demo interval from 3s simulation to real-time (demoIntervalSec * 1000 ms)
+- Removed SIMULATION_TICK_MS constant, now uses actual configured interval
+- Timestamps use Date.now() for real-time accuracy
+- Rebuilt sparkline-chart.tsx: 120px height, time axis labels (HH:MM), min/max value annotations, grid lines, interval delta label, countdown indicator with pulsing green dot
+- Enhanced hero-card.tsx: LIVE badge, real-time countdown timer (ticking every second), "Next reading in Xm Xs" text
+- Updated i18n for all 4 languages: changed sim_speed text to real-time description, added demo.next_reading and demo.live keys
+- Fixed settings-tab.tsx: probe controls (Sync/Wake) hidden during demo mode, hasConnection = hasDevice && !demoMode
+- Verified with agent-browser: countdown 9m 59s for 10min interval, professional chart with time labels, LIVE/DEMO badges, clean lint
+
+Stage Summary:
+- Demo data now arrives at actual real-time intervals (1min/5min/10min/30min/1hr)
+- Professional sparkline with time-proportional X axis, value annotations, smooth monotone cubic curves
+- Live countdown shows exactly when next reading arrives
+- Demo and BLE flows are fully isolated
+- All i18n updated for en/hi/mr/hinglish
+

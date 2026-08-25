@@ -196,8 +196,7 @@ function historyCountForInterval(intervalSec: number): number {
   return Math.min(60, Math.max(12, total));
 }
 
-/** Real-time simulation speed: one tick every N ms (accelerated preview) */
-const SIMULATION_TICK_MS = 3000;
+/** No simulation acceleration — demo uses real-time intervals as configured */
 
 export const useGrainStore = create<GrainStore>((set, get) => ({
   /* ── Demo Mode ── */
@@ -259,15 +258,15 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
 
     get().showToast(t('toast.demo_on', lang));
 
-    // Live simulation: every 3s generate a new reading (timestamp spaced by configured interval)
+    // Live updates at the REAL configured interval (no simulation acceleration)
+    const intervalMs = demoIntervalSec * 1000;
     const timer = setInterval(() => {
       const s = get();
       if (!s.demoMode) return;
 
       const nextTick = s._demoTick + 1;
-      // New timestamp is `intervalSec` after the last reading's timestamp
-      const lastTs = s.currentReading?.timestamp ?? Date.now();
-      const newTs = lastTs + s.demoIntervalSec * 1000;
+      // Timestamp reflects the actual real-time moment this reading arrives
+      const newTs = Date.now();
 
       const newReading = generateDemoReading(s.settings.grainType, newTs, nextTick);
       const miniHistory = [...s.historyEntries.slice(0, 6).map((e) => e.reading), newReading];
@@ -296,7 +295,7 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
         sparklineData: newSparkline,
         historyEntries: [newEntry, ...s.historyEntries].slice(0, 100),
       });
-    }, SIMULATION_TICK_MS);
+    }, intervalMs);
 
     set({ _demoTimer: timer });
   },
