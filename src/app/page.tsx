@@ -19,6 +19,34 @@ const LANG_MAP: Record<string, string> = {
   en: 'en', hi: 'hi', mr: 'mr', hinglish: 'en',
 };
 
+/* Accent hex values – must match CSS accent definitions */
+const ACCENT_HEX: Record<string, string> = {
+  orange: '#F97316',
+  green:  '#22C55E',
+  purple: '#A855F7',
+  blue:   '#3B82F6',
+  teal:   '#14B8A6',
+};
+
+/**
+ * Derive the PWA/system status-bar theme-color from accent + dark/light.
+ * In dark mode: darken the accent so status-bar icons remain readable.
+ * In light mode: use the app background so the bar blends seamlessly.
+ */
+function computeThemeColor(accent: string, isDark: boolean): string {
+  if (!isDark) return '#f5f5f7'; // light mode: match app bg
+  const hex = ACCENT_HEX[accent] || ACCENT_HEX.orange;
+  // Darken the accent to ~25% brightness for readable status-bar icons
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const factor = 0.18;
+  const dr = Math.round(r * factor);
+  const dg = Math.round(g * factor);
+  const db = Math.round(b * factor);
+  return `#${dr.toString(16).padStart(2, '0')}${dg.toString(16).padStart(2, '0')}${db.toString(16).padStart(2, '0')}`;
+}
+
 /**
  * Compute glass-effect CSS variables at a fixed nice opacity.
  * Nav bar uses solid bg via .grain-nav-solid class.
@@ -73,6 +101,18 @@ export default function GrainMonitorPage() {
   useEffect(() => {
     document.body.style.background = isDark ? '#09090b' : '#f5f5f7';
   }, [isDark]);
+
+  // Sync <meta name="theme-color"> with accent + dark/light mode
+  useEffect(() => {
+    const color = computeThemeColor(settings.accentColor, isDark);
+    let meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'theme-color';
+      document.head.appendChild(meta);
+    }
+    meta.content = color;
+  }, [settings.accentColor, isDark]);
 
   // Sync html lang attribute with language
   useEffect(() => {

@@ -534,9 +534,9 @@
 .grain-insight-card {
   background: var(--gm-alert-bg);
   border-color: var(--gm-alert-border);
-  border-radius: 1rem;
+  border-radius: 0.875rem;
   border: 1px solid;
-  padding: 1.25rem;
+  padding: 12px 14px;
   transition: all 0.5s ease;
   backdrop-filter: blur(var(--gm-blur-insight, 17px)) saturate(1.1);
   -webkit-backdrop-filter: blur(var(--gm-blur-insight, 17px)) saturate(1.1);
@@ -556,8 +556,8 @@
 .grain-insight-card-v2 {
   background: var(--gm-insight-v2-bg, #1c1410);
   border: 1px solid var(--gm-insight-v2-border, rgba(255,255,255,0.08));
-  border-radius: 1rem;
-  padding: 1.25rem;
+  border-radius: 0.875rem;
+  padding: 14px 16px;
   transition: all 0.5s ease;
   backdrop-filter: blur(var(--gm-blur-insight, 17px)) saturate(1.1);
   -webkit-backdrop-filter: blur(var(--gm-blur-insight, 17px)) saturate(1.1);
