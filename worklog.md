@@ -90,3 +90,27 @@ Stage Summary:
 - Insight card v2 now properly supports both light and dark themes
 - Hero card, grain cards, sparkline all adapt to light mode
 - All changes are CSS-only (globals.css) plus 2 line changes in insight-card.tsx
+---
+Task ID: 2
+Agent: Main
+Task: Compact Mochi decision card + fix system theme-color
+
+Work Log:
+- Analyzed user screenshots showing oversized insight card and hardcoded orange status bar
+- Redesigned insight-card.tsx: reduced icon 44→36px, glyph 22→18px, gap 16→12px
+- Tightened typography: status 9px, title 14px, desc 12px, action 11px
+- Reduced CSS padding from 1.25rem (20px) to 14px/16px, border-radius 1rem→0.875rem
+- Tightened inter-element spacing: mt-2.5→mt-1.5, pt-2.5→pt-1.5, mb-1.5→mb-1
+- Removed hardcoded themeColor: "#F97316" from layout.tsx viewport export
+- Updated manifest.json theme_color from #F97316 to #09090b (neutral dark for install-time)
+- Added computeThemeColor() function that darkens accent to 18% in dark mode
+- Added useEffect in page.tsx to dynamically update <meta name="theme-color">
+- Verified theme-color changes: orange→#2d1504, green→#062311, blue→#0b172c, light→#f5f5f7
+- Verified insight card height reduced from ~180px to ~115px
+- No text truncation, no fixed heights, no line-clamp used
+- Pushed to GitHub (commit b151dbf)
+
+Stage Summary:
+- Files changed: insight-card.tsx, globals.css, layout.tsx, page.tsx, manifest.json
+- Mochi decision card is now ~35% shorter vertically
+- System theme-color now dynamically follows accent color + dark/light mode
