@@ -6,14 +6,16 @@ import { useGrainStore, DEMO_INTERVAL_PRESETS, type DemoIntervalPreset } from '@
 import {
   Cpu, DownloadSimple, ArrowClockwise, Trash, Power, Wrench,
   Sun, Moon, CaretDown, SlidersHorizontal, Palette, Play, StopCircle, Check,
-  DeviceMobile, Archive, UploadSimple, ArrowsClockwise, Warning,
+  DeviceMobile, Archive, UploadSimple, ArrowsClockwise, Warning, FileCsv,
 } from '@phosphor-icons/react/dist/ssr';
 import { type GrainType, type AccentColor, GRAIN_OPTIONS } from '@/lib/grain-types';
-import { t, tGrain, type AppLanguage } from '@/lib/i18n';
+import { t, tp, tGrain, type AppLanguage } from '@/lib/i18n';
 import { haptic, HAPTIC_SELECT } from '@/lib/haptics';
+import { buildReadingsCsv, deliverCsv } from '@/lib/csv-export';
 import { playSafeAlert } from '@/lib/alert-sound';
 import { usePwaInstall } from '@/lib/pwa';
 import { exportBackupJSON, importBackupJSON } from '@/lib/offline-storage';
+import { format } from 'date-fns';
 
 const INTERVAL_OPTIONS: { sec: DemoIntervalPreset; key: string }[] = [
   { sec: 60, key: 'demo.1m' },
@@ -344,6 +346,7 @@ function AdvancedSettingsContent() {
     hasDevice, showToast,
     demoMode, enableDemoMode, disableDemoMode,
     demoIntervalSec, setDemoIntervalSec,
+    historyEntries,
     loadHistory, loadSettings,
   } = useGrainStore();
 
@@ -569,17 +572,45 @@ function AdvancedSettingsContent() {
         {t('settings.data', lang)}
       </p>
       <div className="grain-card overflow-hidden mb-8">
+        {/* Decision columns toggle — controls BOTH CSV entry points
+            (this row + the History header export) via settings.exportDecisions */}
+        <div className="flex justify-between items-center gap-4 px-5 py-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--gm-accent-dim)' }}>
+              <FileCsv size={18} weight="bold" style={{ color: 'var(--gm-accent)' }} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.export_decisions', lang)}</p>
+              <p className="text-[10px] leading-snug mt-0.5" style={{ color: 'var(--gm-text-tertiary)' }}>{t('settings.export_decisions_desc', lang)}</p>
+            </div>
+          </div>
+          <input
+            type="checkbox"
+            checked={settings.exportDecisions}
+            onChange={(e) => { updateSettings({ exportDecisions: e.target.checked }); haptic(e.target.checked, 10); }}
+            className="grain-toggle shrink-0"
+            aria-label={t('settings.export_decisions', lang)}
+          />
+        </div>
+        <div className="grain-separator" />
         <button
           onClick={async () => {
+            if (historyEntries.length === 0) {
+              showToast(t('toast.nothing_to_export', lang));
+              return;
+            }
+            haptic(settings.hapticsEnabled, 8);
             try {
-              const res = await fetch('/api/export?format=csv');
-              const blob = await res.blob();
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a'); a.href = url;
-              a.download = `grain-readings-${new Date().toISOString().split('T')[0]}.csv`;
-              a.click(); URL.revokeObjectURL(url);
-              showToast(t('toast.csv_exported', lang));
-            } catch { showToast(t('toast.export_failed', lang)); }
+              /* Client-side builder — the readings live in this browser's
+               * IndexedDB; a server route can never read them (the old
+               * /api/export endpoint always failed with 500). */
+              const csv = buildReadingsCsv(historyEntries, lang, settings.exportDecisions);
+              const filename = `mochi-grain-readings-${format(Date.now(), 'yyyy-MM-dd')}.csv`;
+              const outcome = await deliverCsv(csv, filename);
+              if (outcome !== 'cancelled') showToast(tp('toast.exported', lang, { n: historyEntries.length }));
+            } catch {
+              showToast(t('toast.export_failed', lang));
+            }
           }}
           className="w-full flex justify-between items-center px-5 py-4 text-left"
           style={{ color: 'var(--gm-text-primary)' }}

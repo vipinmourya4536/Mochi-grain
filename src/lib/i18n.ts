@@ -193,6 +193,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
 
     'settings.data': 'Data',
     'settings.export_csv': 'Export CSV',
+    'settings.export_decisions': 'Decision advice in CSV',
+    'settings.export_decisions_desc': 'Adds Mochi\u2019s message and suggested action columns to CSV exports',
     'settings.download': 'Download',
     'settings.export_backup': 'Export Backup',
     'settings.import_backup': 'Import Backup',
@@ -270,6 +272,7 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.unsaved': 'Removed from saved',
     'toast.share_fail': 'Could not share',
     'toast.exported': 'Exported {n} readings',
+    'toast.nothing_to_export': 'No readings to export yet',
 
     // ── Demo Mode ──
     'demo.title': 'Demo Mode',
@@ -562,6 +565,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
 
     'settings.data': 'डेटा',
     'settings.export_csv': 'CSV निर्यात',
+    'settings.export_decisions': 'CSV \u092e\u0947\u0902 \u0938\u0932\u093e\u0939 \u0936\u093e\u092e\u093f\u0932 \u0915\u0930\u0947\u0902',
+    'settings.export_decisions_desc': '\u0928\u093f\u0930\u094d\u092f\u093e\u0924 \u092e\u0947\u0902 \u092e\u094b\u091a\u0940 \u0915\u0947 \u0938\u0902\u0926\u0947\u0936 \u0914\u0930 \u0938\u0941\u091d\u093e\u0908 \u0917\u0908 \u0915\u093e\u0930\u094d\u0930\u0935\u093e\u0908 \u0915\u0949\u0932\u092e \u091c\u094b\u0921\u093c\u0924\u093e \u0939\u0948',
     'settings.download': 'डाउनलोड',
     'settings.export_backup': 'बैकअप निर्यात',
     'settings.import_backup': 'बैकअप आयात',
@@ -639,6 +644,7 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.unsaved': 'सेव से हटा दिया गया',
     'toast.share_fail': 'साझा नहीं हो सका',
     'toast.exported': '{n} रीडिंग निर्यात हुईं',
+    'toast.nothing_to_export': '\u0928\u093f\u0930\u094d\u092f\u093e\u0924 \u0915\u0947 \u0932\u093f\u090f \u0905\u092d\u0940 \u0915\u094b\u0908 \u0930\u0940\u0921\u093f\u0902\u0917 \u0928\u0939\u0940\u0902',
 
     // ── Demo Mode ──
     'demo.title': 'डेमो मोड',
@@ -931,6 +937,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
 
     'settings.data': 'डेटा',
     'settings.export_csv': 'CSV निर्यात',
+    'settings.export_decisions': 'CSV \u092e\u0927\u094d\u092f\u0947 \u0938\u0932\u094d\u0932\u093e \u0938\u092e\u093e\u0935\u093f\u0937\u094d\u091f \u0915\u0930\u093e',
+    'settings.export_decisions_desc': '\u0928\u093f\u0930\u094d\u092f\u093e\u0924\u0940\u092e\u0927\u094d\u092f\u0947 \u092e\u094b\u091a\u0940\u091a\u093e \u0938\u0902\u0926\u0947\u0936 \u0906\u0923\u093f \u0938\u0941\u091a\u0935\u0932\u0947\u0932\u0940 \u0915\u0943\u0924\u0940 \u0938\u094d\u0924\u0902\u092d \u091c\u094b\u0921\u0924\u0947',
     'settings.download': 'डाउनलोड',
     'settings.export_backup': 'बैकअप निर्यात',
     'settings.import_backup': 'बैकअप आयात',
@@ -1008,6 +1016,7 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.unsaved': 'सेव्हमधून काढले',
     'toast.share_fail': 'सामायिक करता आले नाही',
     'toast.exported': '{n} वाचने निर्यात झाली',
+    'toast.nothing_to_export': '\u0928\u093f\u0930\u094d\u092f\u093e\u0924 \u0915\u0930\u0923\u094d\u092f\u093e\u0938\u093e\u0920\u0940 \u0905\u091c\u0942\u0923 \u0935\u093e\u091a\u0928\u0947 \u0928\u093e\u0939\u0940\u0924',
 
     // ── Demo Mode ──
     'demo.title': 'डेमो मोड',
@@ -1300,6 +1309,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
 
     'settings.data': 'Data',
     'settings.export_csv': 'Export CSV',
+    'settings.export_decisions': 'CSV mein advice shaamil karein',
+    'settings.export_decisions_desc': 'Export mein Mochi ka message aur suggested action column add karta hai',
     'settings.download': 'Download',
     'settings.export_backup': 'Backup export',
     'settings.import_backup': 'Backup import',
@@ -1377,6 +1388,7 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.unsaved': 'Saved se hata diya',
     'toast.share_fail': 'Share nahi ho paya',
     'toast.exported': '{n} readings export ho gayi',
+    'toast.nothing_to_export': 'Export ke liye abhi koi readings nahi hain',
 
     // ── Demo Mode ──
     'demo.title': 'Demo Mode',

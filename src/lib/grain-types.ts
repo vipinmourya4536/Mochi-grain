@@ -220,6 +220,8 @@ export interface AppSettings {
   trendsRange: TrendsRange;   // 'auto' picks the smallest range with ≥2 points
   trendsMovingAvg: boolean; // overlay a trailing moving-average line on the trends chart
   trendsMaWindow: number;   // moving-average window in readings (5 | 7 | 14)
+  detailMetric: TrendsMetric; // metric shown by the detail context sparkline
+  exportDecisions: boolean; // CSV exports include decision message + action columns
 }
 
 export const DEFAULT_THRESHOLDS: GrainThresholds = {
@@ -261,6 +263,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   trendsRange: 'auto',
   trendsMovingAvg: true,
   trendsMaWindow: 7,
+  detailMetric: 'moisture',
+  exportDecisions: true,
 };
 
 /** Allowed moving-average window sizes (segmented control in the trends header) */

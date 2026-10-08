@@ -461,3 +461,42 @@ Unresolved / Next-round recommendations:
 4. Detail sparkline temp variant is local state; persisting sparkMetric like trendsMetric is trivial if users expect stickiness.
 5. Marathi + Hinglish walkthrough of the newest surfaces (Hindi verified in-browser again; mr/hinglish code-verified only).
 6. Demo default interval is 10 min — consider surfacing the interval preset on the demo chip or a faster default for first-run demos.
+
+---
+Task ID: 11 (cron review round 11)
+Agent: Main Agent (Z.ai Code)
+Task: QA status assessment via agent-browser, then bug fix (broken settings CSV export) + feature round implementing round-10 recommendations (#2 crossing haptic, #3 CSV decision toggle, #4 persist detailMetric, #5 mr/hinglish walkthrough, #6 demo interval surfaced), styling detail polish.
+
+Work Log:
+- QA BASELINE (agent-browser, 390px): all 4 tabs render, demo data flows, export button present, ZERO console errors. App STABLE → proceeded to bug fix + features.
+- BUG FOUND + FIXED — Settings → "Export CSV" ALWAYS failed (toast "Export failed"):
+  - `GET /api/export` called `exportReadingsAsCSV()` → IndexedDB `openDB` — browser-only API, server route → guaranteed `500` (verified via curl: `{"error":"Export failed"}` HTTP 500).
+  - FIX: new shared client-side module `src/lib/csv-export.ts` — `buildReadingsCsv(entries, lang, includeDecisions)` + `deliverCsv()` (Web Share with File → blob download fallback → 'cancelled' status for user-dismissed sheets) + RFC-4180 `csvCell()` escaping (decision message/action are localized prose WITH commas — the old inline builder had no escaping).
+  - HistoryTab + SettingsTab both use the shared builder now; deleted the dead `/api/export` route + the now-unused `exportReadingsAsCSV()` in offline-storage.
+  - VERIFIED: settings export downloads a real 61-line CSV (previously impossible), history export identical, `python csv.reader` parse = 0 ragged rows across EN/mr/hinglish exports (244 rows), states safe/monitor/warning all serialize.
+- FEATURE — Decision columns toggle (rec #3): `settings.exportDecisions` (default ON) + Settings → Data section toggle row (FileCsv icon tile in accent-dim, label + desc, `.grain-toggle`); ON adds `decision_message,decision_action` columns (localized via messageKey/actionKey, same resolution as detail view); verified 11 cols ON ↔ 9 cols OFF in browser downloads.
+- FEATURE — detailMetric persistence (rec #4): `settings.detailMetric` (TrendsMetric, default 'moisture'); ReadingDetail now reads/writes the setting instead of local useState; browser-verified: switch to temp → full reload → fresh demo batch → open detail → temp still active (`[false,true]` from .grain-spark-seg probe).
+- FEATURE — Store-level crossing haptic (rec #2): `detectMaCrossing(chrono, win)` + `notifyMaCrossing()` in grain-store — SAME rule as the trends chart (pure sign flip of value − trailing MA, one-sided); hooked into BOTH `handleReading` (BLE path) and the demo tick → soft tick fires even when History is not the open tab; up-cross = double tick [12,70,12] (rising moisture = risk direction), down = single 12ms; respects `trendsMovingAvg` (no line → no cue) + `hapticsEnabled`. Moisture-only (storage-risk semantics).
+- FEATURE — Demo chip live interval (rec #6): header chip now shows `DEMO │ 10m` — `.grain-demo-chip-int` (mono digits, tabular-nums, green hairline separator, opacity 0.8); aria-label = "Demo Active · {localized interval}" via demo.active + demo.{1m..1h} keys; verified switching interval 10m→1m updates chip instantly ("Demo Active · 1 min" / visible 1M tag).
+- i18n: 3 new keys × 4 languages (settings.export_decisions, settings.export_decisions_desc, toast.nothing_to_export) inserted after per-language `settings.export_csv` / `toast.exported` anchors; EN + Hindi + Marathi + Hinglish verified in browser (Marathi: "CSV मध्ये सल्ला समाविष्ट करा"; Hinglish: "CSV mein advice shaamil karein").
+- WALKTHROUGH (rec #5): Marathi + Hinglish verified IN BROWSER on the newest surfaces: chip aria ("डेमो चालू आहे · 1 मिनिट" / "Demo Chal Raha Hai · 10 min"), settings toggle + desc, detail metric toggle (ओलावा/तापमान), trends MA group ("चल सरासरी कालावधी"), Marathi + Hinglish CSV exports parse clean.
+- LIGHT THEME PASS: data card toggle row, demo chip interval tag, detail view (temp sparkline, echo chip, delta badge) — all verified in light mode; light disconnected hero (Hinglish) captured.
+- INVESTIGATED (false alarm): "language reverts to EN after reload" — instrumented loadSettings/updateSettings/selectGrainType with window.__grainBoot tracing; store + IndexedDB record both correct ('hinglish'); the "EN nav" was Hinglish's own `nav.home='Home'` string (by design) + LANG_MAP maps hinglish→'en' for html lang. NO BUG. All debug instrumentation removed; lint/tsc re-verified clean after removal.
+- STYLING DETAILS: `.grain-demo-chip-int` (mono, hairline divider, tabular-nums); Data-section toggle row uses accent-dim icon tile + two-line label consistent with the card system; `.grain-separator` dividers around the new row; reduced-motion block unaffected (no new animations).
+- VALIDATION: `bun run lint` clean; `bunx tsc --noEmit` → 0 src errors; ZERO browser console errors across the entire round (incl. demo on/off, 3 languages, light+dark, 5 CSV downloads); app left in clean default state (EN, dark, demo off, wheat, 0 readings, detailMetric=moisture, exportDecisions=ON, maWindow 7).
+- Screenshots (download/): r11-qa-home/history/discover/settings, r11-demo-home, r11-demo-history, r11-chip-10m/1m (chip interval tag dark), r11-chip-before, r11-mr-detail (Marathi detail), r11-hinglish-history, r11-light-settings, r11-light-data-card4 (light CSV toggle), r11-light-chip2 (light DEMO 10m), r11-light-detail-temp (light temp sparkline), r11-final-home, r11-final-clean-home; CSV artifacts: r11-settings-export.csv, r11-export-nodec.csv, r11-history-export.csv, r11-millet-export.csv, r11-mr-export.csv, r11-hinglish-export.csv.
+
+Stage Summary (browser-verified):
+- The settings CSV export path WORKS for the first time (was a guaranteed 500), and both export entry points share one RFC-4180-correct builder with localized decision columns behind a persisted toggle.
+- The detail sparkline metric now survives reloads like every other chart preference.
+- MA crossings are now felt, not just seen: a store-level detector ticks the vibrator on every new crossing regardless of the open tab.
+- The demo chip answers "how fast is this simulation?" at a glance.
+- No remaining known bugs from this round; language-persistence suspicion investigated and disproven with boot tracing.
+
+Unresolved / Next-round recommendations:
+1. BLE auto-reconnect + PWA install card still need REAL-DEVICE QA (carried since rounds 8–10).
+2. CSV export could gain a date-range picker (currently full log); the share sheet path is untestable headless (download path verified instead).
+3. detectMaCrossing is moisture-only; if temp crossings should also tick, mirror the call with temperature values.
+4. `/api/route.ts` is a leftover "Hello, world!" — candidate for deletion next round.
+5. Demo interval preference is session-only (store default 600); persisting it as a setting would make the chip's info sticky across reloads.
+6. `html lang` for hinglish maps to 'en' (reasonable for romanized text, but a `hi-Latn` value would be more precise).

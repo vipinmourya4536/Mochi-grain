@@ -184,19 +184,6 @@ export async function saveSettings(settings: AppSettings): Promise<void> {
   await db.put('settings', { key: 'app-settings', value: settings });
 }
 
-/* ── Export ── */
-export async function exportReadingsAsCSV(deviceId?: string): Promise<string> {
-  const readings = await getReadings(deviceId, 10000);
-  const real = readings.filter((r) => r.deviceId !== DEMO_DEVICE_ID);
-  if (real.length === 0) return '';
-
-  const header = 'ID,Device,Grain,Moisture,Temperature,Battery,Signal,Timestamp,Status';
-  const rows = real.map((r) =>
-    `${r.id},${r.deviceId},${r.grainType},${r.moisture},${r.temperature},${r.battery},${r.signal},${new Date(r.timestamp).toISOString()},${r.deviceStatus}`
-  );
-  return [header, ...rows].join('\n');
-}
-
 /* ── Full backup (JSON): settings + readings + history ── */
 
 export interface BackupFile {

@@ -38,6 +38,7 @@ import {
   sendCommand,
 } from './bluetooth';
 import { t, tp, type AppLanguage } from './i18n';
+import { haptic } from './haptics';
 
 export type TabId = 'home' | 'discover' | 'history' | 'settings';
 
@@ -203,6 +204,42 @@ function historyCountForInterval(intervalSec: number): number {
   return Math.min(60, Math.max(12, total));
 }
 
+/* ══ Store-level MA-crossing signal (moisture) ══
+ * The trends chart draws crossing rings locally, but the tactile cue
+ * must fire wherever the user happens to be — so the store runs the
+ * SAME rule on every new reading: sign flip of (value − trailing MA)
+ * between the previous and the newest sample. Pure sign flip, no
+ * dead-band — identical to detectCrossings() in the trends chart.
+ * Returns the crossing direction of the NEWEST value, or null. */
+function detectMaCrossing(chrono: number[], win: number): 'up' | 'down' | null {
+  if (chrono.length < win + 1 || win < 2) return null;
+  const prev = chrono.slice(0, -1);
+  const last = chrono[chrono.length - 1];
+  // MA at the previous sample: last `win` values BEFORE the new one
+  const prevWin = prev.slice(-win);
+  const maPrev = prevWin.reduce((a, b) => a + b, 0) / win;
+  // MA at the newest sample: trailing (win−1) previous values + the new one
+  const tail = prev.slice(-(win - 1));
+  const maNew = [...tail, last].reduce((a, b) => a + b, 0) / win;
+  const dPrev = prev[prev.length - 1] - maPrev;
+  const dNew = last - maNew;
+  if (dPrev < 0 && dNew > 0) return 'up';
+  if (dPrev > 0 && dNew < 0) return 'down';
+  return null;
+}
+
+/** Soft one-shot tick when a NEW reading crosses its trailing MA.
+ *  Moisture-only (storage-risk semantics); respects the MA overlay
+ *  toggle — when the user turned the line off, no cue. Up-crossing
+ *  (rising momentum = risk direction) gets a double tick, down gets
+ *  a single one. */
+function notifyMaCrossing(values: number[], win: number, movingAvgOn: boolean, hapticsOn: boolean): void {
+  if (!movingAvgOn) return;
+  const dir = detectMaCrossing(values, win);
+  if (dir === 'up') haptic(hapticsOn, [12, 70, 12]);
+  else if (dir === 'down') haptic(hapticsOn, 12);
+}
+
 /** No simulation acceleration — demo uses real-time intervals as configured */
 
 export const useGrainStore = create<GrainStore>((set, get) => ({
@@ -292,6 +329,17 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
       const newBadge = getStatusBadge(newDecision, 'connected');
       const newRiskTheme = stateToRiskTheme(newDecision.state);
       const newEntry: HistoryEntry = { reading: newReading, decision: newDecision };
+
+      // Store-level momentum cue: fire a soft haptic when the new reading
+      // crosses its trailing MA (fires even when History is not the open tab)
+      notifyMaCrossing(
+        [newReading, ...s.historyEntries.slice(0, s.settings.trendsMaWindow).map((e) => e.reading)]
+          .map((r) => r.moisture)
+          .reverse(),
+        s.settings.trendsMaWindow,
+        s.settings.trendsMovingAvg,
+        s.settings.hapticsEnabled,
+      );
 
       // Update sparkline: add new point at end (newest), keep max 16
       const newSparkline: SparklinePoint[] = [
@@ -571,6 +619,15 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
       const decision = evaluate(reading, allRecent, settings.thresholds);
       const badge = getStatusBadge(decision, get().deviceState);
       const riskTheme = stateToRiskTheme(decision.state);
+
+      // Store-level momentum cue (moisture): soft tick on an MA crossing,
+      // independent of which tab the user is currently on
+      notifyMaCrossing(
+        allRecent.slice(0, settings.trendsMaWindow + 1).map((r) => r.moisture).reverse(),
+        settings.trendsMaWindow,
+        settings.trendsMovingAvg,
+        settings.hapticsEnabled,
+      );
 
       // Build timestamped sparkline from real readings
       const sparkline: SparklinePoint[] = allRecent.slice(0, 16).reverse().map((r) => ({

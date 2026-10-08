@@ -1,0 +1,61 @@
+timestamp,datetime,grain,moisture_pct,temperature_c,battery_pct,signal_pct,state,trend,decision_message,decision_action
+2026-10-08T07:01:20.848Z,2026-10-08 07:01:20,millet,12.10,28.4,85,69,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T07:11:20.848Z,2026-10-08 07:11:20,millet,12.20,28.3,85,68,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T07:21:20.848Z,2026-10-08 07:21:20,millet,12.30,28.2,85,66,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T07:31:20.848Z,2026-10-08 07:31:20,millet,12.40,28.1,86,66,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T07:41:20.848Z,2026-10-08 07:41:20,millet,12.50,28.0,86,66,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T07:51:20.848Z,2026-10-08 07:51:20,millet,12.50,27.8,86,66,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T08:01:20.848Z,2026-10-08 08:01:20,millet,12.50,27.7,86,66,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T08:11:20.848Z,2026-10-08 08:11:20,millet,12.50,27.5,86,68,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T08:21:20.848Z,2026-10-08 08:21:20,millet,12.40,27.4,86,69,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T08:31:20.848Z,2026-10-08 08:31:20,millet,12.40,27.2,87,71,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T08:41:20.848Z,2026-10-08 08:41:20,millet,12.20,27.0,87,73,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T08:51:20.848Z,2026-10-08 08:51:20,millet,12.10,26.8,87,75,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T09:01:20.848Z,2026-10-08 09:01:20,millet,12.00,26.7,87,78,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T09:11:20.848Z,2026-10-08 09:11:20,millet,11.80,26.5,87,80,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T09:21:20.848Z,2026-10-08 09:21:20,millet,11.60,26.3,87,82,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T09:31:20.848Z,2026-10-08 09:31:20,millet,11.40,26.1,87,85,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T09:41:20.848Z,2026-10-08 09:41:20,millet,11.20,26.0,88,86,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T09:51:20.848Z,2026-10-08 09:51:20,millet,10.90,25.8,88,88,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T10:01:20.848Z,2026-10-08 10:01:20,millet,10.70,25.7,88,89,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T10:11:20.848Z,2026-10-08 10:11:20,millet,10.50,25.5,88,89,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T10:21:20.848Z,2026-10-08 10:21:20,millet,10.30,25.4,88,89,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T10:31:20.848Z,2026-10-08 10:31:20,millet,10.20,25.3,88,89,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T10:41:20.848Z,2026-10-08 10:41:20,millet,10.00,25.2,88,88,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T10:51:20.848Z,2026-10-08 10:51:20,millet,9.90,25.1,89,87,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T11:01:20.848Z,2026-10-08 11:01:20,millet,9.80,25.1,89,85,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T11:11:20.848Z,2026-10-08 11:11:20,millet,9.70,25.0,89,83,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T11:21:20.848Z,2026-10-08 11:21:20,millet,9.70,25.0,89,81,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T11:31:20.848Z,2026-10-08 11:31:20,millet,9.70,25.0,89,79,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T11:41:20.848Z,2026-10-08 11:41:20,millet,9.80,25.0,89,77,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T11:51:20.848Z,2026-10-08 11:51:20,millet,9.80,25.0,90,74,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T12:01:20.848Z,2026-10-08 12:01:20,millet,9.90,25.1,90,72,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T12:11:20.848Z,2026-10-08 12:11:20,millet,10.10,25.2,90,70,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T12:21:20.848Z,2026-10-08 12:21:20,millet,10.30,25.2,90,68,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T12:31:20.848Z,2026-10-08 12:31:20,millet,10.50,25.3,90,67,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T12:41:20.848Z,2026-10-08 12:41:20,millet,10.70,25.4,90,66,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T12:51:20.848Z,2026-10-08 12:51:20,millet,10.90,25.6,90,66,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T13:01:20.848Z,2026-10-08 13:01:20,millet,11.20,25.7,91,66,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T13:11:20.848Z,2026-10-08 13:11:20,millet,11.50,25.8,91,66,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T13:21:20.848Z,2026-10-08 13:21:20,millet,11.80,26.0,91,67,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T13:31:20.848Z,2026-10-08 13:31:20,millet,12.00,26.2,91,68,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T13:41:20.848Z,2026-10-08 13:41:20,millet,12.30,26.3,91,70,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T13:51:20.848Z,2026-10-08 13:51:20,millet,12.60,26.5,91,72,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T14:01:20.848Z,2026-10-08 14:01:20,millet,12.80,26.7,91,74,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T14:11:20.848Z,2026-10-08 14:11:20,millet,13.10,26.9,92,77,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T14:21:20.848Z,2026-10-08 14:21:20,millet,13.30,27.1,92,79,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T14:31:20.848Z,2026-10-08 14:31:20,millet,13.40,27.2,92,82,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T14:41:20.848Z,2026-10-08 14:41:20,millet,13.60,27.4,92,84,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T14:51:20.848Z,2026-10-08 14:51:20,millet,13.70,27.6,92,86,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T15:01:20.848Z,2026-10-08 15:01:20,millet,13.80,27.7,92,87,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T15:11:20.848Z,2026-10-08 15:11:20,millet,13.80,27.9,93,88,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T15:21:20.848Z,2026-10-08 15:21:20,millet,13.80,28.0,93,89,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T15:31:20.848Z,2026-10-08 15:31:20,millet,13.80,28.1,93,89,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T15:41:20.848Z,2026-10-08 15:41:20,millet,13.70,28.3,93,89,invalid,insufficient_data,Data purana hai. Koi recent reading nahi mili.,Probe battery aur Bluetooth connection check karo.
+2026-10-08T15:51:20.848Z,2026-10-08 15:51:20,millet,13.60,28.4,93,89,warning,stable,Moisture safe limit se upar hai. Grain quality degrade hone ka risk.,Storage inspect karo. Ventilation improve karo ya aeration shuru karo.
+2026-10-08T16:01:20.848Z,2026-10-08 16:01:20,millet,13.50,28.4,93,88,monitor,stable,Moisture ya temperature threshold ke paas pahunch raha hai. Close monitoring recommended.,Ventilation check karo. Changes par nazar rakho.
+2026-10-08T16:11:20.848Z,2026-10-08 16:11:20,millet,13.30,28.5,93,86,monitor,stable,Moisture ya temperature threshold ke paas pahunch raha hai. Close monitoring recommended.,Ventilation check karo. Changes par nazar rakho.
+2026-10-08T16:21:20.848Z,2026-10-08 16:21:20,millet,13.10,28.6,94,84,monitor,stable,Moisture ya temperature threshold ke paas pahunch raha hai. Close monitoring recommended.,Ventilation check karo. Changes par nazar rakho.
+2026-10-08T16:31:20.848Z,2026-10-08 16:31:20,millet,12.90,28.6,94,82,monitor,stable,Moisture ya temperature threshold ke paas pahunch raha hai. Close monitoring recommended.,Ventilation check karo. Changes par nazar rakho.
+2026-10-08T16:41:20.848Z,2026-10-08 16:41:20,millet,12.70,28.6,94,80,safe,stable,Conditions stable hain. Monitoring window mein readings consistent hain.,Koi action nahi chahiye. Monitoring continue rakho.
+2026-10-08T16:51:20.848Z,2026-10-08 16:51:20,millet,12.50,28.6,94,78,safe,stable,Sab readings normal range mein hain.,Current storage conditions maintain karo.

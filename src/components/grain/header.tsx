@@ -6,6 +6,15 @@ import { LanguageSelector } from '@/components/grain/language-selector';
 import { useOnlineStatus } from '@/lib/pwa';
 import { BatteryHigh, BatteryLow, WifiSlash } from '@phosphor-icons/react/dist/ssr';
 
+/** Compact interval tags for the demo chip (language-neutral) */
+const DEMO_INTERVAL_COMPACT: Record<number, string> = {
+  60: '1m', 300: '5m', 600: '10m', 1800: '30m', 3600: '1h',
+};
+/** Localized interval labels for the chip's accessible name */
+const DEMO_INTERVAL_KEYS: Record<number, string> = {
+  60: 'demo.1m', 300: 'demo.5m', 600: 'demo.10m', 1800: 'demo.30m', 3600: 'demo.1h',
+};
+
 /**
  * Premium instrument header.
  * LEFT:  status indicator + GRAIN MONITOR title
@@ -16,7 +25,7 @@ import { BatteryHigh, BatteryLow, WifiSlash } from '@phosphor-icons/react/dist/s
  *   - language = utility action (compact rounded rectangle)
  */
 export function Header() {
-  const { deviceState, deviceInfo, statusBadge, settings, activeTab, demoMode } = useGrainStore();
+  const { deviceState, deviceInfo, statusBadge, settings, activeTab, demoMode, demoIntervalSec } = useGrainStore();
   const lang = settings.language as AppLanguage;
   const online = useOnlineStatus();
 
@@ -57,9 +66,14 @@ export function Header() {
             </div>
           )}
           {demoMode && (
-            <div className="grain-demo-chip" role="status" aria-label={t('demo.badge', lang)}>
+            <div
+              className="grain-demo-chip"
+              role="status"
+              aria-label={`${t('demo.active', lang)} · ${t(DEMO_INTERVAL_KEYS[demoIntervalSec] ?? 'demo.10m', lang)}`}
+            >
               <span className="grain-demo-chip-dot" />
               <span>{t('demo.badge', lang)}</span>
+              <span className="grain-demo-chip-int" aria-hidden="true">{DEMO_INTERVAL_COMPACT[demoIntervalSec] ?? '10m'}</span>
             </div>
           )}
           {!online && (

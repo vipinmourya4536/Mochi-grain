@@ -9,6 +9,7 @@ import { t, tGrain, tTrend, tp, type AppLanguage } from '@/lib/i18n';
 import { getRiskColor, getRiskBg } from '@/lib/accent-hex';
 import { computeStorageScore, scoreBandColor, type ScoreBand } from '@/lib/storage-score';
 import { haptic } from '@/lib/haptics';
+import { buildReadingsCsv, deliverCsv } from '@/lib/csv-export';
 import { HistoryTrends } from './trends-chart';
 import { DetailSparkline } from './detail-sparkline';
 import { format } from 'date-fns';
@@ -500,13 +501,15 @@ function ReadingList() {
 
 function ReadingDetail({ entry, onClose }: { entry: HistoryEntry; onClose: () => void }) {
   const { reading, decision } = entry;
-  const { settings, historyEntries, showToast } = useGrainStore();
+  const { settings, historyEntries, showToast, updateSettings } = useGrainStore();
   const lang = settings.language as AppLanguage;
   const accent = settings.accentColor;
   const dotHex = getRiskColor(decision.state, accent);
   const [shared, setShared] = useState(false);
-  // Context-sparkline metric — moisture is the primary series, temp is one tap away
-  const [sparkMetric, setSparkMetric] = useState<'moisture' | 'temp'>('moisture');
+  // Context-sparkline metric — persisted (settings.detailMetric) like the
+  // trends chart metric, so the detail view reopens on the last series used
+  const sparkMetric = settings.detailMetric;
+  const setSparkMetric = (m: typeof sparkMetric) => updateSettings({ detailMetric: m });
 
   // Use i18n keys if available, fallback to stored English
   const messageText = decision.messageKey ? t(decision.messageKey, lang) : decision.message;
@@ -661,77 +664,27 @@ function ReadingDetail({ entry, onClose }: { entry: HistoryEntry; onClose: () =>
   );
 }
 
-/** Trigger a classic blob download (desktop / share-fallback path) */
-function downloadCsv(csv: string, filename: string) {
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1200);
-}
-
 export function HistoryTab() {
   const { selectedHistoryEntry, setSelectedHistoryId, historyEntries, clearHistory, settings, showToast } = useGrainStore();
   const lang = settings.language as AppLanguage;
 
-  /* Build a CSV of every stored reading and hand it to the user.
-   * Web Share with a file when the platform supports it (mobile PWA
-   * share sheet), otherwise a classic blob download. */
-  const exportCsv = () => {
-    if (historyEntries.length === 0) return;
-    haptic(settings.hapticsEnabled, 8);
-    const header = 'timestamp,datetime,grain,moisture_pct,temperature_c,battery_pct,signal_pct,state,trend';
-    const rows = [...historyEntries]
-      .sort((a, b) => a.reading.timestamp - b.reading.timestamp)
-      .map((e) => [
-        new Date(e.reading.timestamp).toISOString(),
-        format(e.reading.timestamp, 'yyyy-MM-dd HH:mm:ss'),
-        e.reading.grainType,
-        e.reading.moisture.toFixed(2),
-        e.reading.temperature.toFixed(1),
-        Math.round(e.reading.battery),
-        Math.round(e.reading.signal),
-        e.decision.state,
-        e.decision.trend,
-      ].join(','));
-    const csv = `${header}\n${rows.join('\n')}\n`;
-    const filename = `mochi-grain-readings-${format(Date.now(), 'yyyy-MM-dd')}.csv`;
-    const toastOk = () => showToast(tp('toast.exported', lang, { n: historyEntries.length }));
-
-    // Cast mirrors shareReading(): Web Share file members are absent from the TS DOM lib
-    const navExt = (typeof navigator !== 'undefined' ? navigator : undefined) as
-      | (Navigator & {
-          canShare?: (data: { files?: File[] }) => boolean;
-          share?: (data?: { files?: File[]; title?: string; text?: string }) => Promise<void>;
-        })
-      | undefined;
-    let sharePayload: { files: File[]; title: string; text: string } | null = null;
-    try {
-      if (navExt?.share && navExt?.canShare) {
-        const file = new File([csv], filename, { type: 'text/csv' });
-        if (navExt.canShare({ files: [file] })) {
-          sharePayload = { files: [file], title: 'Grain Monitor', text: filename };
-        }
-      }
-    } catch { /* canShare can throw on odd inputs — fall through to download */ }
-
-    if (sharePayload) {
-      navExt!.share(sharePayload)
-        .then(toastOk)
-        .catch((err) => {
-          // AbortError = user dismissed the share sheet — not a failure
-          if (err instanceof DOMException && err.name === 'AbortError') return;
-          downloadCsv(csv, filename);
-          toastOk();
-        });
+  /* Build a CSV of every stored reading (shared client-side builder —
+   * the readings live in IndexedDB, so a server route could never read
+   * them) and hand it to the user: Web Share with a file when the
+   * platform supports it, otherwise a classic blob download.
+   * Decision message/action columns follow settings.exportDecisions. */
+  const exportCsv = async () => {
+    if (historyEntries.length === 0) {
+      showToast(t('toast.nothing_to_export', lang));
       return;
     }
-    downloadCsv(csv, filename);
-    toastOk();
+    haptic(settings.hapticsEnabled, 8);
+    const csv = buildReadingsCsv(historyEntries, lang, settings.exportDecisions);
+    const filename = `mochi-grain-readings-${format(Date.now(), 'yyyy-MM-dd')}.csv`;
+    const outcome = await deliverCsv(csv, filename);
+    if (outcome !== 'cancelled') {
+      showToast(tp('toast.exported', lang, { n: historyEntries.length }));
+    }
   };
 
   return (
