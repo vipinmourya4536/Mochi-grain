@@ -726,6 +726,28 @@
 .grain-sparkline { stroke: var(--gm-sparkline-stroke, rgba(255,255,255,0.8)); stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; transition: d 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
 .grain-sparkline-fill { fill: url(#grainSparkGradient); stroke: none; transition: d 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
 .grain-sparkline-dot { transition: cx 0.4s ease, cy 0.4s ease; }
+
+/* Chart text on the accent hero gradient – theme-aware legibility.
+   Dark: white glyphs with dark halo. Light: deep-brown glyphs with white
+   halo (hero bottom fades to near-white, white text vanishes there). */
+.grain-spark-text {
+  fill: rgba(255, 255, 255, 0.75);
+  stroke: rgba(0, 0, 0, 0.22);
+  paint-order: stroke;
+}
+.grain-app[data-theme="light"] .grain-spark-text {
+  fill: rgba(62, 28, 0, 0.75);
+  stroke: rgba(255, 255, 255, 0.55);
+}
+.grain-spark-count {
+  fill: #4ADE80;
+  stroke: rgba(0, 0, 0, 0.30);
+  paint-order: stroke;
+}
+.grain-app[data-theme="light"] .grain-spark-count {
+  fill: #15803D;
+  stroke: rgba(255, 255, 255, 0.6);
+}
 @keyframes spark-pulse { 0%, 100% { opacity: 0.2; r: 6; } 50% { opacity: 0.4; r: 9; } }
 .grain-sparkline-pulse { animation: spark-pulse 2.5s ease-in-out infinite; }
 /* Sparkline light mode – white still works on colored hero gradient, but increase contrast */
@@ -998,6 +1020,126 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   HISTORY TRENDS – interactive analytics chart + range segments
+   ═══════════════════════════════════════════════════════════════ */
+
+.grain-trends-card {
+  background: var(--gm-surface);
+  backdrop-filter: blur(var(--gm-blur-card, 20px)) saturate(var(--gm-saturate-card, 1.28));
+  border: 1px solid var(--gm-glass-border);
+  border-radius: 1.125rem;
+  padding: 14px 12px 14px 16px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--gm-card-shadow, 0 2px 8px rgba(0,0,0,0.11), inset 0 1px 0 var(--gm-glass-highlight));
+  animation: grain-fade-in 0.3s ease-out;
+}
+/* Diagonal accent sheen */
+.grain-trends-card::before {
+  content: '';
+  position: absolute;
+  top: -60%;
+  right: -25%;
+  width: 55%;
+  height: 170%;
+  background: radial-gradient(ellipse, rgba(var(--gm-accent-rgb), 0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.grain-trends-wrap {
+  border-radius: 0.75rem;
+  outline: none;
+  touch-action: pan-y;
+  cursor: crosshair;
+}
+.grain-trends-wrap:focus-visible {
+  box-shadow: 0 0 0 2px rgba(var(--gm-accent-rgb), 0.55);
+}
+.grain-trends-svg {
+  display: block;
+  user-select: none;
+}
+
+/* Range segmented control (iOS-style glass pill) */
+.grain-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--gm-toggle-bg);
+  border: 1px solid var(--gm-toggle-border, var(--gm-glass-border));
+  border-radius: 999px;
+  padding: 2.5px;
+}
+.grain-seg button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--gm-text-tertiary);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 4px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+  min-height: 24px;
+}
+.grain-seg button:hover {
+  color: var(--gm-text-secondary);
+}
+.grain-seg button.active {
+  background: rgba(var(--gm-accent-rgb), 0.16);
+  color: var(--gm-accent);
+  box-shadow: inset 0 0 0 1px rgba(var(--gm-accent-rgb), 0.30), 0 1px 4px rgba(0,0,0,0.10);
+}
+
+/* Per-range stats divider row */
+.grain-trends-stats {
+  border-top: 1px solid var(--gm-separator);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GLASS MODAL – destructive-action confirmation
+   ═══════════════════════════════════════════════════════════════ */
+
+.grain-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px) saturate(1.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: grain-modal-fade 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.grain-modal-card {
+  width: 100%;
+  max-width: 320px;
+  background: var(--gm-surface);
+  backdrop-filter: blur(24px) saturate(1.5);
+  border: 1px solid var(--gm-glass-border);
+  border-radius: 1.25rem;
+  padding: 20px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35), inset 0 1px 0 var(--gm-glass-highlight);
+  animation: grain-modal-pop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.grain-modal-cancel {
+  background: var(--gm-toggle-bg);
+  color: var(--gm-text-secondary);
+  border: 1px solid var(--gm-glass-border);
+}
+@keyframes grain-modal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes grain-modal-pop {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
    TOAST – accent edge detail, clears the frosted header
    ═══════════════════════════════════════════════════════════════ */
 
@@ -1213,6 +1355,15 @@
   }
   .grain-scrub-tooltip {
     animation: none !important;
+  }
+  .grain-modal-overlay,
+  .grain-modal-card,
+  .grain-trends-card {
+    animation: none !important;
+  }
+  .grain-trends-wrap,
+  .grain-seg button {
+    transition: none !important;
   }
   .grain-sparkline,
   .grain-sparkline-fill {

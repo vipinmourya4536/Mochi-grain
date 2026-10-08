@@ -433,7 +433,7 @@ export function SparklineChart({
                 cx={dot.x}
                 cy={dot.y}
                 r={2}
-                fill="rgba(255,255,255,0.25)"
+                fill="rgba(255,255,255,0.4)"
               />
             ) : null,
         )}
@@ -474,14 +474,15 @@ export function SparklineChart({
           </g>
         )}
 
-        {/* Min value annotation */}
+        {/* Min value annotation (theme-aware class for legibility) */}
         {minPt && (
           <text
             x={Math.min(Math.max(minPt.x, 50), width - 50)}
             y={Math.min(minPt.y + 14, height - 24)}
             textAnchor="middle"
-            fill="rgba(255,255,255,0.3)"
+            className="grain-spark-text"
             fontSize="8"
+            fontWeight="600"
             fontFamily="monospace"
             opacity={scrubPt ? 0.35 : 1}
           >
@@ -489,14 +490,15 @@ export function SparklineChart({
           </text>
         )}
 
-        {/* Max value annotation */}
+        {/* Max value annotation (theme-aware class for legibility) */}
         {maxPt && (
           <text
             x={Math.min(Math.max(maxPt.x, 50), width - 50)}
             y={Math.max(maxPt.y - 6, 12)}
             textAnchor="middle"
-            fill="rgba(255,255,255,0.3)"
+            className="grain-spark-text"
             fontSize="8"
+            fontWeight="600"
             fontFamily="monospace"
             opacity={scrubPt ? 0.35 : 1}
           >
@@ -504,15 +506,16 @@ export function SparklineChart({
           </text>
         )}
 
-        {/* Time axis labels */}
+        {/* Time axis labels (theme-aware class for legibility) */}
         {timeLabels.map((tl, i) => (
           <text
             key={i}
             x={tl.x}
             y={height - 4}
             textAnchor={i === 0 ? 'start' : i === timeLabels.length - 1 ? 'end' : 'middle'}
-            fill="rgba(255,255,255,0.25)"
+            className="grain-spark-text"
             fontSize="7.5"
+            fontWeight="600"
             fontFamily="system-ui, sans-serif"
           >
             {tl.label}
@@ -525,7 +528,7 @@ export function SparklineChart({
             x={width / 2}
             y={12}
             textAnchor="middle"
-            fill="rgba(255,255,255,0.28)"
+            className="grain-spark-text"
             fontSize="7.5"
             fontWeight="600"
             letterSpacing="0.12em"
@@ -553,9 +556,9 @@ export function SparklineChart({
               x={width - 24}
               y={15}
               textAnchor="end"
-              fill="#22C55E"
+              className="grain-spark-count"
               fontSize="8"
-              fontWeight="600"
+              fontWeight="700"
               fontFamily="system-ui, sans-serif"
               letterSpacing="0.05em"
             >
@@ -570,8 +573,9 @@ export function SparklineChart({
             x={width - 4}
             y={height - 4}
             textAnchor="end"
-            fill="rgba(255,255,255,0.18)"
+            className="grain-spark-text"
             fontSize="7"
+            fontWeight="600"
             fontFamily="system-ui, sans-serif"
           >
             Δ {intervalLabel}

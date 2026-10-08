@@ -151,3 +151,46 @@ Unresolved / Next-round recommendations:
 3. Mochi "LEARNING" trend label appears right after a mid-session grain switch (engine re-baselines on threshold change; self-heals on next reading) — could be softened with a transient copy variant.
 4. Next.js dev-tools "N" bubble still overlaps bottom-left nav in dev only (cosmetic).
 5. Chart scrub on the History tab's per-entry timeline or a dedicated trend page could extend the new inspection pattern.
+
+---
+Task ID: 4 (cron review round 3)
+Agent: Main Agent (Z.ai Code)
+Task: QA status assessment via agent-browser, then — since the app was stable — hero-chart legibility fix + two new features (History Trends analytics panel, backup Replace-mode import with confirmation) + styling detail polish.
+
+Work Log:
+- QA BASELINE (agent-browser, 390px): page 200, ZERO console errors, all tabs + demo + history/stats + discover functional; grain source-of-truth, themes, accents all intact. No regressions from Tasks 1–3. One QA issue found: hero-chart text (axis labels, min/max annotations, interval Δ label, scrub hint, countdown, LIVE chip) nearly illegible on the saturated accent gradient in BOTH themes (white fills at 18–30% opacity).
+- FIX — Hero chart legibility (sparkline-chart.tsx + hero-card.tsx + globals.css):
+  - New `.grain-spark-text` / `.grain-spark-count` classes with `paint-order: stroke` halo technique; theme-aware: dark = white glyphs + dark halo, light = deep-brown glyphs (rgba(62,28,0,.75)) + white halo (hero bottom fades to near-white in light mode, so white text vanished there). Applied to min/max annotations, 3 time-axis labels, Δ interval label, scrub hint, demo countdown.
+  - LIVE chip restyled: green-on-orange translucent → dark glass chip (rgba(0,0,0,.32) + blur + hairline border) with pulsing glowing green dot — readable on any accent/theme.
+  - Countdown text under chart white/30 → white/60 + tabular-nums; hero grain label white/40 → white/55; chart dot markers 0.25 → 0.4.
+- NEW FEATURE — History Trends panel (src/components/grain/history/trends-chart.tsx + history-tab.tsx + globals.css):
+  - Large interactive moisture chart (358×216 viewBox, ~210px tall) between Summary and the reading list (renders at ≥2 stored entries).
+  - Range selector: iOS-style glass segmented control (`.grain-seg`) with 24H / 7D / 30D / ALL; auto-detects the smallest range with ≥2 points on mount; switching clears any active scrub (range-scoped selection, no setState-in-effect — lint-clean).
+  - Time-proportional X axis + monotone cubic curve + accent gradient fill (stop-color via CSS var so accent switching recolors it live).
+  - Threshold zone bands from the ACTIVE grain profile (green <safe, amber safe→critical, red >critical) drawn as clamped translucent rects + dashed threshold hairlines with right-aligned % labels; accent dashed avg reference line.
+  - Dots colored by the risk state captured with each entry (getRiskColor), latest point enlarged; thinning to ≤48 dots for long ranges.
+  - Scrub inspection: same timestamp-anchored pattern as the hero sparkline (pointer drag / desktop hover / ←→ Home End keyboard, Escape/blur clear, touch auto-clear 3.2s, crosshair cursor, accent focus ring, haptic tick on point change) with the glass tooltip showing value + "MMM d · HH:mm".
+  - Per-range mini stats row: AVG (accent) / MIN / MAX / READINGS with divider line, tabular-nums.
+  - Browser-verified: 24H sine wave with zones + scrub tooltip "12.7% Oct 8 · 13:14"; ALL/24H switching re-anchors axis labels (HH:mm vs MMM d); accent teal→ flows through curve/fill/chip/avg line; Hindi renders (रुझान / औसत नमी / न्यूनतम / अधिकतम / रीडिंग).
+- NEW FEATURE — Backup import Replace mode (settings-tab.tsx + i18n):
+  - New destructive row "Replace All Data · Wipes local data, restores backup" in Settings → Data; opens a glass confirmation modal (custom, app-token themed): warning icon tile, title, undo-ability warning, Cancel (neutral, autofocus) + "Choose Backup File" (red destructive).
+  - Modal rendered via `createPortal` into `.grain-app` — required TWO fixes discovered live in browser: (1) ancestors use `.grain-tab-enter` transform/backdrop-filter which trap position:fixed (overlay rendered inline) → portal; (2) portaling to <body> loses all `--gm-*` tokens (transparent card) → portal target is `.grain-app` (has no transform → fixed still tracks viewport, and vars resolve).
+  - `importModeRef` routes the shared hidden file input to `importBackupJSON(text, 'merge' | 'replace')`; distinct toasts ("Backup restored · N" / "Local data replaced · N"); Escape + backdrop-click close the modal.
+  - FULL round-trip verified in browser with synthetic backups: merge import (3 entries) → export confirms → Replace with 1-entry backup → toast + export confirms history/readings now exactly ['test-b-0'] (old entries wiped) → Clear History cleanup. Escape-close verified.
+- i18n: 12 new keys × 4 languages (history.trends_title/trends_empty/trends_need_more/trends_count + settings.replace_data/replace_desc/replace_confirm_title/replace_confirm_desc/replace_confirm_action/cancel + toast.backup_replaced). Positional python insertion per-language-block (en/hinglish share strings, hi/mr translated); every key verified count==4.
+- STYLING DETAILS: trends card = glass with diagonal accent sheen (mirrors Summary card); seg control active = accent bg 0.16 + inset accent ring; reduced-motion block extended (modal fade/pop, trends card fade, seg/trends transitions); "READINGS STORED" → dedicated short "Readings" key (fixed 4-col truncation).
+- PROCESS NOTE: dev server CSS watcher went stale mid-round (globals.css edits stopped recompiling — trends CSS present but modal CSS absent from served bundle); fixed by fully restarting dev server (kill + `(setsid bun run dev &)` subshell detachment — plain `&`/nohup variants were reaped between tool calls).
+- VALIDATION: `bun run lint` clean; `bunx tsc --noEmit` clean (app code); zero browser console errors across all passes; screenshots: r4-trends-dark.png, r4-trends-scrub.png, r4-trends-all.png, r4-replace-modal4.png, r4-home-light2.png (dark), r4-home-light3.png (light hero fix), r4-trends-light.png, r4-trends-teal.png, r4-hindi-trends.png.
+
+Stage Summary (browser-verified):
+- Hero chart is legible on every accent × theme combination (halo-stroked, theme-aware text colors).
+- History is now a full analytics surface: Summary → Trends (rangeable, scrubable, zone-banded, risk-colored) → per-entry list.
+- Backups are now fully symmetric: export, merge-import, and guarded replace-import with confirm modal.
+- All prior behavior intact: grain source-of-truth (Soybean→Wheat mid-demo re-verified), demo isolation, BLE flow untouched, 4 languages, accent system flows through both new surfaces.
+
+Unresolved / Next-round recommendations:
+1. BLE auto-reconnect (Task 2) still needs real-hardware QA.
+2. PWA install card (Task 3) is render-tested only — needs real-device beforeinstallprompt verification.
+3. Trends chart could get a temperature series toggle (data already stored per entry) — natural extension.
+4. Next.js dev-tools "N" bubble still overlaps bottom-left nav in dev only (cosmetic, not shipped).
+5. Import modal currently doesn't trap focus (Escape + backdrop click work; full focus trap could be added if desired).

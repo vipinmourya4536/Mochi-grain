@@ -6,6 +6,7 @@ import type { HistoryEntry } from '@/lib/grain-types';
 import { X, TrendUp, TrendDown, Minus, ArrowClockwise, Trash, Gauge } from '@phosphor-icons/react/dist/ssr';
 import { t, tGrain, tTrend, type AppLanguage } from '@/lib/i18n';
 import { getRiskColor, getRiskBg } from '@/lib/accent-hex';
+import { HistoryTrends } from './trends-chart';
 import { format } from 'date-fns';
 
 function getTrendIcon(trend: string) {
@@ -174,6 +175,7 @@ function ReadingList() {
   return (
     <div className="flex flex-col gap-2 grain-fade-in">
       <HistoryStats entries={historyEntries} />
+      {historyEntries.length >= 2 && <HistoryTrends entries={historyEntries} />}
       {historyEntries.map((entry) => {
         const dotHex = getRiskColor(entry.decision.state, accent);
         return (

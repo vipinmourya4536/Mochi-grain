@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useGrainStore, DEMO_INTERVAL_PRESETS, type DemoIntervalPreset } from '@/lib/grain-store';
 import {
   Cpu, DownloadSimple, ArrowClockwise, Trash, Power, Wrench,
   Sun, Moon, CaretDown, SlidersHorizontal, Palette, Play, StopCircle, Check,
-  DeviceMobile, Archive, UploadSimple,
+  DeviceMobile, Archive, UploadSimple, ArrowsClockwise, Warning,
 } from '@phosphor-icons/react/dist/ssr';
 import { type GrainType, type AccentColor, GRAIN_OPTIONS } from '@/lib/grain-types';
 import { t, tGrain, type AppLanguage } from '@/lib/i18n';
@@ -343,18 +344,26 @@ function AdvancedSettingsContent() {
   const lang = settings.language as AppLanguage;
   const hasConnection = hasDevice && !demoMode;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const importModeRef = useRef<'merge' | 'replace'>('merge');
+  const [confirmReplace, setConfirmReplace] = useState(false);
+
+  const openImportPicker = (mode: 'merge' | 'replace') => {
+    importModeRef.current = mode;
+    fileInputRef.current?.click();
+  };
 
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = ''; // allow re-selecting the same file
     if (!file) return;
+    const mode = importModeRef.current;
     try {
       const text = await file.text();
-      const result = await importBackupJSON(text, 'merge');
+      const result = await importBackupJSON(text, mode);
       // Refresh the live store from the restored database
       await loadHistory();
       await loadSettings();
-      showToast(`${t('toast.backup_imported', lang)} · ${result.history}`);
+      showToast(`${t(mode === 'replace' ? 'toast.backup_replaced' : 'toast.backup_imported', lang)} · ${result.history}`);
     } catch (err) {
       showToast(err instanceof Error && err.message === 'invalid'
         ? t('toast.import_invalid', lang)
@@ -551,7 +560,7 @@ function AdvancedSettingsContent() {
         </button>
         <div className="grain-separator" />
         <button
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => openImportPicker('merge')}
           className="w-full flex justify-between items-center px-5 py-4 text-left"
           style={{ color: 'var(--gm-text-primary)' }}
         >
@@ -560,6 +569,18 @@ function AdvancedSettingsContent() {
             <span className="text-sm font-medium">{t('settings.import_backup', lang)}</span>
           </div>
           <span className="text-[11px]" style={{ color: 'var(--gm-text-tertiary)' }}>{t('settings.full_data', lang)}</span>
+        </button>
+        <div className="grain-separator" />
+        <button
+          onClick={() => setConfirmReplace(true)}
+          className="w-full flex justify-between items-center px-5 py-4 text-left"
+          style={{ color: '#EF4444' }}
+        >
+          <div className="flex items-center gap-3">
+            <ArrowsClockwise size={18} weight="bold" style={{ color: '#EF4444' }} />
+            <span className="text-sm font-medium">{t('settings.replace_data', lang)}</span>
+          </div>
+          <span className="text-[11px]" style={{ color: 'var(--gm-text-tertiary)' }}>{t('settings.replace_desc', lang)}</span>
         </button>
         <input
           ref={fileInputRef}
@@ -570,6 +591,52 @@ function AdvancedSettingsContent() {
           aria-hidden="true"
           tabIndex={-1}
         />
+
+        {/* Replace-all confirmation modal (glass, app-token themed)
+            Portaled into .grain-app: CSS vars are scoped there, and it has no
+            transform/filter, so position:fixed still tracks the viewport. */}
+        {confirmReplace && typeof document !== 'undefined' && createPortal(
+          <div
+            className="grain-modal-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="grain-replace-title"
+            onClick={(e) => { if (e.target === e.currentTarget) setConfirmReplace(false); }}
+            onKeyDown={(e) => { if (e.key === 'Escape') setConfirmReplace(false); }}
+          >
+            <div className="grain-modal-card">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-3" style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.25)' }}>
+                <Warning size={20} weight="fill" style={{ color: '#EF4444' }} />
+              </div>
+              <h3 id="grain-replace-title" className="text-base font-bold tracking-tight mb-1.5" style={{ color: 'var(--gm-text-primary)' }}>
+                {t('settings.replace_confirm_title', lang)}
+              </h3>
+              <p className="text-[12px] leading-relaxed mb-5" style={{ color: 'var(--gm-text-secondary)' }}>
+                {t('settings.replace_confirm_desc', lang)}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  autoFocus
+                  onClick={() => setConfirmReplace(false)}
+                  className="flex-1 py-3 rounded-xl text-xs font-bold tracking-wide transition-all active:scale-95 grain-modal-cancel"
+                >
+                  {t('settings.cancel', lang)}
+                </button>
+                <button
+                  onClick={() => {
+                    setConfirmReplace(false);
+                    openImportPicker('replace');
+                  }}
+                  className="flex-1 py-3 rounded-xl text-xs font-bold tracking-wide transition-all active:scale-95"
+                  style={{ background: 'rgba(239, 68, 68, 0.14)', color: '#EF4444', border: '1px solid rgba(239, 68, 68, 0.32)' }}
+                >
+                  {t('settings.replace_confirm_action', lang)}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.querySelector('.grain-app') ?? document.body,
+        )}
         <div className="grain-separator" />
         <button
           onClick={() => { clearHistory(); showToast(t('toast.history_cleared', lang)); }}
