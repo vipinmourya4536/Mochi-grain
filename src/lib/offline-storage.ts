@@ -7,14 +7,14 @@ import type { Reading, AppSettings, HistoryEntry, MochiDecision } from './grain-
 import { DEFAULT_SETTINGS } from './grain-types';
 
 const DB_NAME = 'grain-monitor-db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
 
 function getDB() {
   if (!dbPromise) {
     dbPromise = openDB(DB_NAME, DB_VERSION, {
-      upgrade(db) {
+      upgrade(db, oldVersion) {
         // Readings store
         if (!db.objectStoreNames.contains('readings')) {
           const readings = db.createObjectStore('readings', { keyPath: 'id' });
@@ -30,6 +30,10 @@ function getDB() {
           const history = db.createObjectStore('history', { keyPath: 'id' });
           history.createIndex('deviceId', 'reading.deviceId', { unique: false });
           history.createIndex('timestamp', 'reading.timestamp', { unique: false });
+        }
+        // v2: Saved Discover videos (keyPath = video id string)
+        if (oldVersion < 2 && !db.objectStoreNames.contains('bookmarks')) {
+          db.createObjectStore('bookmarks', { keyPath: 'id' });
         }
       },
     });
@@ -83,6 +87,8 @@ export async function getHistoryEntries(deviceId?: string, limit = 100): Promise
   } else {
     entries = await db.getAll('history');
   }
+  // Stale demo leftovers (crash mid-demo) never appear as real history
+  entries = entries.filter((e) => e.reading.deviceId !== 'DEMO-GRAIN-01');
   entries.sort((a, b) => b.reading.timestamp - a.reading.timestamp);
   return entries.slice(0, limit);
 }
@@ -96,6 +102,54 @@ export async function clearAllHistory(): Promise<void> {
   const db = await getDB();
   await db.clear('readings');
   await db.clear('history');
+}
+
+/* ── Demo data lifecycle ──
+   Demo readings live in the same stores (deviceId 'DEMO-GRAIN-01') so the
+   demo exercises the exact same persistence path as the real probe.
+   They are removed whenever the demo stops, and never surface as real
+   history after a crash (filtered above / excluded from exports). */
+export const DEMO_DEVICE_ID = 'DEMO-GRAIN-01';
+
+/** Remove every reading/history entry recorded by the demo probe */
+export async function deleteDemoData(): Promise<void> {
+  const db = await getDB();
+  const demoReadings: Reading[] = await db.getAllFromIndex('readings', 'deviceId', DEMO_DEVICE_ID);
+  if (demoReadings.length > 0) {
+    const rx = db.transaction('readings', 'readwrite');
+    await Promise.all(demoReadings.map((r) => rx.store.delete(r.id)));
+    await rx.done;
+  }
+
+  const demoHistory: HistoryEntry[] = await db.getAllFromIndex('history', 'deviceId', DEMO_DEVICE_ID);
+  if (demoHistory.length > 0) {
+    const hx = db.transaction('history', 'readwrite');
+    await Promise.all(demoHistory.map((e) => hx.store.delete(e.reading.id)));
+    await hx.done;
+  }
+}
+
+/* ── Discover video bookmarks ── */
+export async function getBookmarkedIds(): Promise<string[]> {
+  try {
+    const db = await getDB();
+    const rows: { id: string; savedAt: number }[] = await db.getAll('bookmarks');
+    return rows.map((r) => r.id);
+  } catch {
+    return [];
+  }
+}
+
+/** Toggle a video bookmark; returns the new saved state */
+export async function toggleVideoBookmark(videoId: string): Promise<boolean> {
+  const db = await getDB();
+  const existing = await db.get('bookmarks', videoId);
+  if (existing) {
+    await db.delete('bookmarks', videoId);
+    return false;
+  }
+  await db.put('bookmarks', { id: videoId, savedAt: Date.now() });
+  return true;
 }
 
 /* ── Settings ── */
@@ -117,10 +171,11 @@ export async function saveSettings(settings: AppSettings): Promise<void> {
 /* ── Export ── */
 export async function exportReadingsAsCSV(deviceId?: string): Promise<string> {
   const readings = await getReadings(deviceId, 10000);
-  if (readings.length === 0) return '';
+  const real = readings.filter((r) => r.deviceId !== DEMO_DEVICE_ID);
+  if (real.length === 0) return '';
 
   const header = 'ID,Device,Grain,Moisture,Temperature,Battery,Signal,Timestamp,Status';
-  const rows = readings.map((r) =>
+  const rows = real.map((r) =>
     `${r.id},${r.deviceId},${r.grainType},${r.moisture},${r.temperature},${r.battery},${r.signal},${new Date(r.timestamp).toISOString()},${r.deviceStatus}`
   );
   return [header, ...rows].join('\n');
@@ -137,14 +192,17 @@ export interface BackupFile {
   history: HistoryEntry[];
 }
 
-/** Serialize the complete local database (settings + all stores) as a JSON string */
+/** Serialize the complete local database (settings + all stores) as a JSON string.
+ *  Demo-probe entries are synthetic and excluded from backups. */
 export async function exportBackupJSON(): Promise<string> {
   const db = await getDB();
-  const [settings, readings, history] = await Promise.all([
+  const [settings, allReadings, allHistory] = await Promise.all([
     getSettings(),
     db.getAll('readings'),
     db.getAll('history'),
   ]);
+  const readings = allReadings.filter((r) => r.deviceId !== DEMO_DEVICE_ID);
+  const history = allHistory.filter((e) => e.reading.deviceId !== DEMO_DEVICE_ID);
   const backup: BackupFile = {
     app: 'grain-monitor',
     version: 1,

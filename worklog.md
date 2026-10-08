@@ -278,3 +278,56 @@ Unresolved / Next-round recommendations:
 3. Discover video grid is a single column; a "saved videos" (bookmarks) store would add return value.
 4. History detail could graph the surrounding 16 readings as a mini sparkline around the selected point.
 5. Marathi translations for the 12 new keys were added but only spot-verified in code (Hindi was browser-verified).
+
+---
+Task ID: 7 (cron review round 6)
+Agent: Main Agent (Z.ai Code)
+Task: QA status assessment via agent-browser, then — app stable — semantic-color contrast fixes + three feature expansions (Discover saved videos, Storage Score explainer sheet, alert sounds) + a demo-persistence bug fix + styling detail polish.
+
+Work Log:
+- QA BASELINE (agent-browser, 390px): page 200, zero NEW console errors, all tabs + demo + history/stats/score/trends + discover + settings functional; grain source-of-truth re-verified (Soybean→Wheat mid-demo, hero + countdown preserved); persisted trends metric/range survived reload. App stable → proceeded to feature work.
+- BUG FOUND IN QA — light-mode contrast: trend direction chip + per-entry delta chips used hardcoded #F59E0B/#22C55E (≈1.9:1 on light backgrounds); settings WARN/CRITICAL threshold labels and Storage Score band colors had the same issue.
+- FIX — theme-aware semantic color tokens (globals.css + 5 components):
+  - New tokens: --gm-up/--gm-down (dark #F59E0B/#22C55E → light #B45309/#15803D) and --gm-band-excellent/good/fair/risky (light variants #15803D/#4D7C0F/#B45309/#DC2626).
+  - scoreBandColor() now returns var() strings; trend chip, delta chips, score gauge/bars/band chip, settings threshold labels all follow theme. Verified computed colors both themes (dark rgb(245,158,11) / light rgb(180,83,9)).
+- NEW FEATURE — Discover saved videos (bookmarks):
+  - IndexedDB v1→v2 upgrade adds 'bookmarks' store (keyPath id, savedAt); getBookmarkedIds/toggleVideoBookmark API; optimistic UI toggle with rollback on storage failure + haptic.
+  - DiscoverCard: floating glass bookmark button over thumbnail top-right (32px, blur, accent fill + pop animation when saved, aria-pressed, localized aria-label), placed OUTSIDE the <a> so taps don't navigate.
+  - Filter chips ALL | SAVED (.grain-seg family) with accent count badge on SAVED; saved-empty state reuses bookmark icon + new copy; full round-trip verified: save 2 → badge "2" → filter → reload (persists) → unbookmark → live update → Hindi/Marathi render.
+- NEW FEATURE — Storage Score explainer bottom sheet (history-tab.tsx + globals.css):
+  - "?" glass trigger next to the band chip opens a bottom-anchored sheet via createPortal into .grain-app (established pattern: fixed positioning works, --gm-* tokens resolve).
+  - Content: per-component rows (Zones 55% / Stability 25% / Trend 20%) with icon tiles, accent weight badges, live component values, and plain-language "what it measures" copy; SCORE BANDS legend with colored dots + ranges (85–100 / 70–84 / 50–69 / 0–49).
+  - A11y: role=dialog aria-modal, Escape (capture-phase) + backdrop-click close, focus restores to the "?" trigger (verified document.activeElement after Escape).
+  - Sheet CSS: slide-up 260ms cubic-bezier, grabber handle, safe-area-inset-bottom padding, max-height 78% scrollable.
+- NEW FEATURE — Alert sounds (src/lib/alert-sound.ts + settings + insight-card):
+  - Web Audio API chimes: warn = two rising notes (C5→E5), critical = urgent D5/A5 descend-settle, all sine with soft attack/release envelopes (no clicks), quiet gains (0.045–0.07).
+  - AudioContext primed on first user gesture (pointerdown/keydown once-listeners in page.tsx) so autoplay policy never blocks a real alert; suspended-context attempts resume, else skip silently.
+  - Wired into the SAME state-transition discipline as haptics in InsightCard (critical/warn transitions only, first render skipped); new AppSettings key soundAlerts (default true, forward-merged by loadSettings); Preferences row "Alert sound" with a live preview chime when enabled.
+- BUG FOUND + FIXED — demo readings were never persisted (grain-store.ts):
+  - QA discovered demo timer tick only updated in-memory store; saveReading/saveHistoryEntry were never called → all demo history vanished on reload (BLE path persisted, demo didn't).
+  - Fix: enableDemoMode bulk-persists the generated batch (stale demo leftovers deleted first); timer tick persists each new reading (fire-and-forget with catch); disableDemoMode deletes ALL demo data (deleteDemoData via deviceId index 'DEMO-GRAIN-01') then reloads real history via loadHistory().
+  - Safety rails: getHistoryEntries filters DEMO-GRAIN-01 entries (crash mid-demo never shows synthetic rows as real history); CSV + JSON backup exports exclude demo entries.
+  - Browser-verified full lifecycle: start → +60 entries in IndexedDB → reload mid-demo → History shows only real entries (15) → start+stop → DB back to exactly the real counts; no console errors.
+- STYLING DETAILS:
+  - Trends threshold % labels: hardcoded rgba fills → .grain-trend-thresh-safe/.grain-trend-thresh-crit classes using band tokens + paint-order halo (white halo in light, dark in dark) — legible on zone tints in both themes.
+  - Bookmark pop keyframe (0.72→1.18→1 spring), accent ring when saved; count badge mini-pill inside SAVED chip.
+  - prefers-reduced-motion extended: sheet overlay/card, bookmark pop, trigger/close transitions disabled.
+- i18n: 11 new keys × 4 languages (discover.filter_all/filter_saved/saved_empty/bookmark_add/bookmark_remove, history.sheet_title/sheet_zones_desc/sheet_stability_desc/sheet_trend_desc/sheet_bands, settings.sound) via bottom-up positional script (learned from round-6 bug: inserts AFTER anchors, never replaces; anchors verified intact at count 4). Hindi + Marathi verified in browser (खोजें/सभी/सेव किए गए, स्कोर कसा मोजला जातो + full sheet content).
+- ANOMALY (unresolved, not reproducible): the 60 pre-existing history readings from earlier rounds vanished between two reloads mid-round. DB settings record survived intact (proves no wipe), all delete paths are user-gesture-only, and the demo-persistence bug explains missing NEW demo readings but not the old ones. Most plausible: agent-browser daemon profile restart. Current persistence round-trips verified working; flagged for next-round watch.
+- VALIDATION: `bun run lint` clean; `bunx tsc --noEmit` clean for app code; zero browser console errors/warnings after all features; DB left clean (test/seed data removed); screenshots: r7-qa-home, r7-qa-history2, r7-qa-discover, r7-qa-settings, r7-grain-switch, r7-trends-moisture3, r7-light-history, r7-history-seeded, r7-score-sheet, r7-discover-filter-saved, r7-hindi-discover, r7-hindi-saved-empty, r7-mr-sheet, r7-demo-home, r7-final-dark-history, r7-final-light-history.
+
+Stage Summary (browser-verified):
+- Every semantic color (risk directions, score bands, threshold labels) is now theme-aware with proper contrast in light + dark.
+- Discover videos can be saved/bookmarked with an IndexedDB-backed store, filter chips, count badge, and persistence.
+- Storage Score is self-explanatory via a polished bottom sheet (weights, plain-language descriptions, live values, band legend).
+- Readings entering warning/critical now escalate with optional soft audio chimes (gesture-primed AudioContext, user toggle, preview on enable).
+- Demo mode now exercises the REAL persistence path: synthetic readings survive reloads, never pollute real history, and are fully cleaned up on stop.
+- All prior behavior intact: grain source-of-truth, demo isolation, BLE flow/UUIDs untouched, 4 languages, accent system flows through all new surfaces.
+
+Unresolved / Next-round recommendations:
+1. BLE auto-reconnect (Task 2) + PWA install card (Task 3) still need real-device QA.
+2. Investigate the one-off history data-loss anomaly (watch whether history survives reloads across future rounds; suspect browser profile, not app code).
+3. Saved videos could get a dedicated "Saved" page with removal gestures (currently filter-only in Discover).
+4. Alert sounds could add a safe-state "all-clear" cue (playSafeAlert exists but is only used as the settings preview).
+5. Trends chart could overlay a 7-point moving average line (data already in memory; natural analytics extension).
+6. Marathi/Hinglish full-page walkthrough (all tabs) recommended once — new keys were verified in browser for hi/mr but not every tab.

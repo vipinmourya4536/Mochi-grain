@@ -11,6 +11,7 @@ import {
 import { type GrainType, type AccentColor, GRAIN_OPTIONS } from '@/lib/grain-types';
 import { t, tGrain, type AppLanguage } from '@/lib/i18n';
 import { haptic, HAPTIC_SELECT } from '@/lib/haptics';
+import { playSafeAlert } from '@/lib/alert-sound';
 import { usePwaInstall } from '@/lib/pwa';
 import { exportBackupJSON, importBackupJSON } from '@/lib/offline-storage';
 
@@ -198,7 +199,7 @@ export function SettingsTab() {
           </div>
           <div>
             <div className="flex justify-between mb-1">
-              <span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: '#F59E0B' }}>{t('settings.warn', lang)}</span>
+              <span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: 'var(--gm-band-fair)' }}>{t('settings.warn', lang)}</span>
               <span className="text-sm font-bold" style={{ color: 'var(--gm-text-primary)' }}>&gt; {settings.thresholds.warn}%</span>
             </div>
             <input
@@ -210,7 +211,7 @@ export function SettingsTab() {
           </div>
           <div>
             <div className="flex justify-between mb-1">
-              <span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: '#EF4444' }}>{t('settings.critical', lang)}</span>
+              <span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: 'var(--gm-band-risky)' }}>{t('settings.critical', lang)}</span>
               <span className="text-sm font-bold" style={{ color: 'var(--gm-text-primary)' }}>&gt; {settings.thresholds.critical}%</span>
             </div>
             <input
@@ -246,6 +247,11 @@ export function SettingsTab() {
         <label className="flex justify-between items-center px-5 py-4 cursor-pointer">
           <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.haptics', lang)}</span>
           <input type="checkbox" checked={settings.hapticsEnabled} onChange={(e) => { updateSettings({ hapticsEnabled: e.target.checked }); haptic(e.target.checked, 14); }} className="grain-toggle" />
+        </label>
+        <div className="grain-separator" />
+        <label className="flex justify-between items-center px-5 py-4 cursor-pointer">
+          <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.sound', lang)}</span>
+          <input type="checkbox" checked={settings.soundAlerts} onChange={(e) => { updateSettings({ soundAlerts: e.target.checked }); if (e.target.checked) playSafeAlert(true); }} className="grain-toggle" />
         </label>
         <div className="grain-separator" />
         <label className="flex justify-between items-center px-5 py-4 cursor-pointer">

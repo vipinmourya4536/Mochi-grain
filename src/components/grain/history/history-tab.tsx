@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useGrainStore } from '@/lib/grain-store';
 import type { HistoryEntry } from '@/lib/grain-types';
-import { X, TrendUp, TrendDown, Minus, ArrowClockwise, Trash, Gauge, ShareFat, Check } from '@phosphor-icons/react/dist/ssr';
+import { X, TrendUp, TrendDown, Minus, ArrowClockwise, Trash, Gauge, ShareFat, Check, Question, Stack, Waves, ChartLine } from '@phosphor-icons/react/dist/ssr';
 import { t, tGrain, tTrend, type AppLanguage } from '@/lib/i18n';
 import { getRiskColor, getRiskBg } from '@/lib/accent-hex';
 import { computeStorageScore, scoreBandColor, type ScoreBand } from '@/lib/storage-score';
@@ -41,8 +42,8 @@ interface Delta {
 }
 
 function deltaColor(dir: Delta['dir']): string {
-  if (dir === 'up') return '#F59E0B';
-  if (dir === 'down') return '#22C55E';
+  if (dir === 'up') return 'var(--gm-up)';
+  if (dir === 'down') return 'var(--gm-down)';
   return 'var(--gm-text-tertiary)';
 }
 
@@ -202,9 +203,150 @@ const SCORE_BAND_KEY: Record<ScoreBand, string> = {
   risky: 'history.score_risky',
 };
 
+const SCORE_BAND_RANGE: Record<ScoreBand, string> = {
+  excellent: '85–100',
+  good: '70–84',
+  fair: '50–69',
+  risky: '0–49',
+};
+
+/* ═══ Score explainer bottom sheet ═══
+   Bottom-anchored glass sheet via portal into .grain-app
+   (position:fixed works there — no transformed ancestors, and --gm-* tokens resolve). */
+function ScoreExplainerSheet({
+  open,
+  onClose,
+  score,
+  opener,
+}: {
+  open: boolean;
+  onClose: () => void;
+  score: { band: ScoreBand; parts: { zones: number; stability: number; trend: number } } | null;
+  opener: React.RefObject<HTMLButtonElement | null>;
+}) {
+  const { settings } = useGrainStore();
+  const lang = settings.language as AppLanguage;
+
+  const requestClose = useCallback(() => {
+    onClose();
+    // restore focus to the trigger
+    requestAnimationFrame(() => opener.current?.focus());
+  }, [onClose, opener]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        requestClose();
+      }
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [open, requestClose]);
+
+  if (!open || !score) return null;
+
+  const parts = [
+    {
+      icon: <Stack size={16} weight="bold" style={{ color: 'var(--gm-accent)' }} />,
+      label: t('history.score_zones', lang),
+      weight: '55%',
+      desc: t('history.sheet_zones_desc', lang),
+      value: score.parts.zones,
+    },
+    {
+      icon: <Waves size={16} weight="bold" style={{ color: 'var(--gm-accent)' }} />,
+      label: t('history.score_stability', lang),
+      weight: '25%',
+      desc: t('history.sheet_stability_desc', lang),
+      value: score.parts.stability,
+    },
+    {
+      icon: <ChartLine size={16} weight="bold" style={{ color: 'var(--gm-accent)' }} />,
+      label: t('history.score_trend', lang),
+      weight: '20%',
+      desc: t('history.sheet_trend_desc', lang),
+      value: score.parts.trend,
+    },
+  ];
+
+  const bands: ScoreBand[] = ['excellent', 'good', 'fair', 'risky'];
+
+  return createPortal(
+    <div
+      className="grain-sheet-overlay"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) requestClose();
+      }}
+    >
+      <div className="grain-sheet-card" role="dialog" aria-modal="true" aria-label={t('history.sheet_title', lang)}>
+        <div className="grain-sheet-grabber" aria-hidden="true" />
+        <div className="flex items-center gap-2 mb-1">
+          <h3 className="text-sm font-bold tracking-tight" style={{ color: 'var(--gm-text-primary)' }}>
+            {t('history.sheet_title', lang)}
+          </h3>
+          <button
+            type="button"
+            className="ml-auto grain-sheet-close"
+            onClick={requestClose}
+            aria-label={t('settings.cancel', lang)}
+          >
+            <X size={13} weight="bold" />
+          </button>
+        </div>
+
+        {/* Component rows */}
+        <div className="flex flex-col gap-3 mt-3">
+          {parts.map((p) => (
+            <div key={p.label} className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--gm-accent-dim)' }}>
+                {p.icon}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[11px] font-bold" style={{ color: 'var(--gm-text-primary)' }}>{p.label}</span>
+                  <span className="grain-sheet-weight grain-tabular">{p.weight}</span>
+                  <span className="ml-auto text-[10px] font-bold grain-tabular" style={{ color: 'var(--gm-accent)' }}>{p.value}</span>
+                </div>
+                <p className="text-[10.5px] leading-relaxed" style={{ color: 'var(--gm-text-secondary)' }}>
+                  {p.desc}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Band legend */}
+        <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--gm-separator)' }}>
+          <p className="text-[9px] font-bold tracking-[0.18em] uppercase mb-2" style={{ color: 'var(--gm-text-tertiary)' }}>
+            {t('history.sheet_bands', lang)}
+          </p>
+          <div className="grid grid-cols-4 gap-2">
+            {bands.map((b) => (
+              <div key={b} className="flex flex-col items-center gap-1">
+                <span className="w-2 h-2 rounded-full" style={{ background: scoreBandColor(b) }} />
+                <span className="text-[8.5px] font-bold text-center leading-tight" style={{ color: 'var(--gm-text-secondary)' }}>
+                  {t(SCORE_BAND_KEY[b], lang)}
+                </span>
+                <span className="text-[8px] grain-tabular" style={{ color: 'var(--gm-text-tertiary)' }}>
+                  {SCORE_BAND_RANGE[b]}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.querySelector('.grain-app') ?? document.body,
+  );
+}
+
 function StorageScoreCard({ entries }: { entries: HistoryEntry[] }) {
   const { settings } = useGrainStore();
   const lang = settings.language as AppLanguage;
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const score = useMemo(
     () => computeStorageScore(entries, settings.thresholds),
@@ -238,6 +380,17 @@ function StorageScoreCard({ entries }: { entries: HistoryEntry[] }) {
         >
           {t(SCORE_BAND_KEY[score.band], lang)}
         </span>
+        <button
+          ref={triggerRef}
+          type="button"
+          className="grain-sheet-trigger"
+          aria-haspopup="dialog"
+          aria-expanded={sheetOpen}
+          aria-label={t('history.sheet_title', lang)}
+          onClick={() => setSheetOpen(true)}
+        >
+          <Question size={12} weight="bold" />
+        </button>
       </div>
 
       <div className="flex items-center gap-4">
@@ -282,6 +435,13 @@ function StorageScoreCard({ entries }: { entries: HistoryEntry[] }) {
           ))}
         </div>
       </div>
+
+      <ScoreExplainerSheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        score={score}
+        opener={triggerRef}
+      />
     </div>
   );
 }

@@ -14,6 +14,7 @@ import { DiscoverTab } from '@/components/grain/discover/discover-tab';
 import { HistoryTab } from '@/components/grain/history/history-tab';
 import { SettingsTab } from '@/components/grain/settings/settings-tab';
 import type { AppLanguage } from '@/lib/i18n';
+import { primeAlertSound } from '@/lib/alert-sound';
 
 const LANG_MAP: Record<string, string> = {
   en: 'en', hi: 'hi', mr: 'mr', hinglish: 'en',
@@ -101,6 +102,18 @@ export default function GrainMonitorPage() {
   useEffect(() => {
     document.body.style.background = isDark ? '#09090b' : '#f5f5f7';
   }, [isDark]);
+
+  // Prime the alert-sound AudioContext on the first user gesture so browser
+  // autoplay policies never block the warning/critical chimes later.
+  useEffect(() => {
+    const prime = () => primeAlertSound();
+    window.addEventListener('pointerdown', prime, { once: true, passive: true });
+    window.addEventListener('keydown', prime, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', prime);
+      window.removeEventListener('keydown', prime);
+    };
+  }, []);
 
   // Sync <meta name="theme-color"> with accent + dark/light mode
   useEffect(() => {

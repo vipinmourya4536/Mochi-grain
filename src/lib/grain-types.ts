@@ -215,6 +215,7 @@ export interface AppSettings {
   language: string; // AppLanguage code
   glassOpacity: number; // 0.3–1.0, controls glassmorphism blur intensity
   hapticsEnabled: boolean; // subtle vibration taps on interaction (mobile)
+  soundAlerts: boolean; // soft chime when readings enter warning/critical state
   trendsMetric: TrendsMetric; // which series the History trends chart shows
   trendsRange: TrendsRange;   // 'auto' picks the smallest range with ≥2 points
 }
@@ -253,6 +254,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   language: 'en',
   glassOpacity: 0.75,
   hapticsEnabled: true,
+  soundAlerts: true,
   trendsMetric: 'moisture',
   trendsRange: 'auto',
 };

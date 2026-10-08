@@ -435,7 +435,7 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
               color: trend.dir === 'flat'
                 ? 'var(--gm-text-secondary)'
                 : isMoisture
-                  ? (trend.dir === 'up' ? '#F59E0B' : '#22C55E')
+                  ? (trend.dir === 'up' ? 'var(--gm-up)' : 'var(--gm-down)')
                   : 'var(--gm-accent)',
             }}
             role="status"
@@ -551,14 +551,14 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
                   <line x1={PAD_X} y1={geo.criticalY} x2={W - PAD_X} y2={geo.criticalY} stroke="rgba(239,68,68,0.35)" strokeWidth="0.75" strokeDasharray="3,4" />
                   <text
                     x={W - PAD_X - 2} y={geo.safeY - 3} textAnchor="end"
-                    fill="rgba(34,197,94,0.75)" stroke="rgba(0,0,0,0.18)" strokeWidth={2} paintOrder="stroke"
+                    className="grain-trend-thresh grain-trend-thresh-safe"
                     fontSize="7" fontWeight="700" fontFamily="system-ui, sans-serif"
                   >
                     {safe}%
                   </text>
                   <text
                     x={W - PAD_X - 2} y={geo.criticalY - 3} textAnchor="end"
-                    fill="rgba(239,68,68,0.75)" stroke="rgba(0,0,0,0.18)" strokeWidth={2} paintOrder="stroke"
+                    className="grain-trend-thresh grain-trend-thresh-crit"
                     fontSize="7" fontWeight="700" fontFamily="system-ui, sans-serif"
                   >
                     {critical}%

@@ -20,13 +20,13 @@ export interface StorageScore {
   parts: { zones: number; stability: number; trend: number }; // 0–100 each
 }
 
-/** Band → display color (semantic, accent-independent) */
+/** Band → display color (semantic, accent-independent, theme-aware via CSS vars) */
 export function scoreBandColor(band: ScoreBand): string {
   switch (band) {
-    case 'excellent': return '#22C55E';
-    case 'good':      return '#84CC16';
-    case 'fair':      return '#F59E0B';
-    default:          return '#EF4444';
+    case 'excellent': return 'var(--gm-band-excellent)';
+    case 'good':      return 'var(--gm-band-good)';
+    case 'fair':      return 'var(--gm-band-fair)';
+    default:          return 'var(--gm-band-risky)';
   }
 }
 

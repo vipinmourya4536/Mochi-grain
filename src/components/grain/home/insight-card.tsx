@@ -17,6 +17,7 @@ import {
 } from '@phosphor-icons/react/dist/ssr';
 import { t, type AppLanguage } from '@/lib/i18n';
 import { haptic, HAPTIC_ALERT, HAPTIC_CRITICAL } from '@/lib/haptics';
+import { playWarnAlert, playCriticalAlert } from '@/lib/alert-sound';
 
 /* ── Expression → Icon mapping ── */
 const EXPRESSION_ICONS: Record<MochiExpression, React.ElementType> = {
@@ -44,7 +45,7 @@ export function InsightCard() {
   const { decision, deviceState, currentReading, settings } = useGrainStore();
   const lang = settings.language as AppLanguage;
 
-  // Subtle haptic escalation when the decision worsens (skip first render)
+  // Subtle haptic + audio escalation when the decision worsens (skip first render)
   const prevStateRef = useRef<string | null>(null);
   useEffect(() => {
     if (!decision) {
@@ -56,10 +57,12 @@ export function InsightCard() {
     if (prev === null || prev === decision.state) return;
     if (decision.state === STATE.CRITICAL) {
       haptic(settings.hapticsEnabled, HAPTIC_CRITICAL);
+      playCriticalAlert(settings.soundAlerts);
     } else if (decision.state === STATE.WARNING && prev !== STATE.WARNING) {
       haptic(settings.hapticsEnabled, HAPTIC_ALERT);
+      playWarnAlert(settings.soundAlerts);
     }
-  }, [decision, settings.hapticsEnabled]);
+  }, [decision, settings.hapticsEnabled, settings.soundAlerts]);
 
   // Handle non-connected device states
   if (deviceState === 'sleeping') {

@@ -98,6 +98,12 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'discover.condition_elevated': 'Elevated',
     'discover.condition_critical': 'Critical',
     'discover.no_results': 'No recommendations available for this combination yet.',
+    'discover.filter_all': 'All',
+    'discover.filter_saved': 'Saved',
+    'discover.saved_empty': 'No saved videos yet. Tap the bookmark on any video to keep it here.',
+    'discover.bookmark_add': 'Save video',
+    'discover.bookmark_remove': 'Remove from saved',
+
 
     // ── History ──
     'history.title': 'History',
@@ -141,6 +147,12 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'history.score_zones': 'Zones',
     'history.score_stability': 'Stability',
     'history.score_trend': 'Trend',
+    'history.sheet_title': 'How the score is calculated',
+    'history.sheet_zones_desc': 'Share of readings sitting below the safe line for your grain — more in the safe zone means a higher score.',
+    'history.sheet_stability_desc': 'How steady your moisture has been. Wild swings between readings cost marks even if the average is fine.',
+    'history.sheet_trend_desc': 'Direction of the last few readings. Rising moisture is the first sign of spoilage risk and lowers the score.',
+    'history.sheet_bands': 'Score bands',
+
     'history.delta_prev': 'vs previous reading',
     'history.share': 'Share reading',
 
@@ -167,6 +179,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'settings.auto_reconnect': 'Auto-reconnect',
     'settings.wake_on_connect': 'Wake on Connect',
     'settings.haptics': 'Haptic feedback',
+    'settings.sound': 'Alert sound',
+
     'settings.data': 'Data',
     'settings.export_csv': 'Export CSV',
     'settings.download': 'Download',
@@ -440,6 +454,12 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'discover.condition_elevated': 'बढ़ा हुआ',
     'discover.condition_critical': 'गंभीर',
     'discover.no_results': 'इस संयोजन के लिए अभी तक कोई सिफारिश उपलब्ध नहीं है।',
+    'discover.filter_all': 'सभी',
+    'discover.filter_saved': 'सेव किए गए',
+    'discover.saved_empty': 'अभी कोई सेव किया वीडियो नहीं। किसी भी वीडियो पर बुकमार्क दबाएं और उसे यहां रखें।',
+    'discover.bookmark_add': 'वीडियो सेव करें',
+    'discover.bookmark_remove': 'सेव से हटाएं',
+
 
     // ── History ──
     'history.title': 'इतिहास',
@@ -483,6 +503,12 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'history.score_zones': 'क्षेत्र',
     'history.score_stability': 'स्थिरता',
     'history.score_trend': 'रुझान',
+    'history.sheet_title': 'स्कोर कैसे बनता है',
+    'history.sheet_zones_desc': 'आपके अनाज की सुरक्षित रेखा से नीचे बैठी रीडिंग का हिस्सा — जितनी अधिक रीडिंग सेफ ज़ोन में, स्कोर उतना बेहतर।',
+    'history.sheet_stability_desc': 'आपकी नमी कितनी स्थिर रही है। औसत ठीक होने पर भी रीडिंग में भारी उतार-चढ़ाव अंक कम करते हैं।',
+    'history.sheet_trend_desc': 'पिछली कुछ रीडिंग की दिशा। बढ़ती नमी सड़ांध के जोखिम का पहला संकेत है और स्कोर घटाती है।',
+    'history.sheet_bands': 'स्कोर श्रेणियां',
+
     'history.delta_prev': 'पिछली रीडिंग से',
     'history.share': 'रीडिंग साझा करें',
 
@@ -509,6 +535,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'settings.auto_reconnect': 'ऑटो-रीकनेक्ट',
     'settings.wake_on_connect': 'कनेक्ट पर जगाएं',
     'settings.haptics': 'हैप्टिक फीडबैक',
+    'settings.sound': 'अलर्ट ध्वनि',
+
     'settings.data': 'डेटा',
     'settings.export_csv': 'CSV निर्यात',
     'settings.download': 'डाउनलोड',
@@ -782,6 +810,12 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'discover.condition_elevated': 'वाढलेले',
     'discover.condition_critical': 'गंभीर',
     'discover.no_results': 'या संयोजनासाठी अद्याप कोणतीही शिफारस उपलब्ध नाही.',
+    'discover.filter_all': 'सर्व',
+    'discover.filter_saved': 'सेव्ह केलेले',
+    'discover.saved_empty': 'अजून कोणताही सेव्ह केलेला व्हिडिओ नाही. कोणत्याही व्हिडिओवर बुकमार्क दाबा आणि तो येथे ठेवा.',
+    'discover.bookmark_add': 'व्हिडिओ सेव्ह करा',
+    'discover.bookmark_remove': 'सेव्हमधून काढा',
+
 
     // ── History ──
     'history.title': 'इतिहास',
@@ -825,6 +859,12 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'history.score_zones': 'क्षेत्रे',
     'history.score_stability': 'स्थिरता',
     'history.score_trend': 'कल',
+    'history.sheet_title': 'स्कोर कसा मोजला जातो',
+    'history.sheet_zones_desc': 'तुमच्या धान्याच्या सुरक्षित रेषेखाली असलेल्या वाचनांचा वाटा — जास्त वाचने सेफ झोनमध्ये असतील तर स्कोर जास्त.',
+    'history.sheet_stability_desc': 'तुमची ओलावा किती स्थिर होती. सरासरी बरोबर असली तरी वाचनांमधील मोठे बदल गुण कमी करतात.',
+    'history.sheet_trend_desc': 'शेवटच्या काही वाचनांची दिशा. वाढणारी ओलावा हा कुजण्याच्या धोक्याचे पहिले लक्षण आहे आणि स्कोर कमी करतो.',
+    'history.sheet_bands': 'स्कोर श्रेणी',
+
     'history.delta_prev': 'मागील वाचनापासून',
     'history.share': 'वाचन सामायिक करा',
 
@@ -851,6 +891,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'settings.auto_reconnect': 'ऑटो-रीकनेक्ट',
     'settings.wake_on_connect': 'कनेक्ट वर जागा करा',
     'settings.haptics': 'हॅप्टिक फीडबॅक',
+    'settings.sound': 'अलर्ट आवाज',
+
     'settings.data': 'डेटा',
     'settings.export_csv': 'CSV निर्यात',
     'settings.download': 'डाउनलोड',
@@ -1124,6 +1166,12 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'discover.condition_elevated': 'Elevated',
     'discover.condition_critical': 'Critical',
     'discover.no_results': 'Is combination ke liye abhi tak koi recommendation available nahi hai.',
+    'discover.filter_all': 'Sabhi',
+    'discover.filter_saved': 'Saved',
+    'discover.saved_empty': 'Abhi tak koi saved video nahi. Kisi bhi video par bookmark dabao aur use yahan rakho.',
+    'discover.bookmark_add': 'Video save karo',
+    'discover.bookmark_remove': 'Saved se hatao',
+
 
     // ── History ──
     'history.title': 'History',
@@ -1167,6 +1215,12 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'history.score_zones': 'Zones',
     'history.score_stability': 'Stability',
     'history.score_trend': 'Trend',
+    'history.sheet_title': 'Score kaise banta hai',
+    'history.sheet_zones_desc': 'Aapke grain ki safe line ke neeche baithe readings ka hissa — jitni zyada readings safe zone mein, score utna behtar.',
+    'history.sheet_stability_desc': 'Aapki moisture kitni steady rahi. Average theek hone par bhi readings ke bade utar-chadhav marks kam karte hain.',
+    'history.sheet_trend_desc': 'Pichli kuch readings ki direction. Badhti hui moisture spoilage risk ka pehla sign hai aur score ghatati hai.',
+    'history.sheet_bands': 'Score bands',
+
     'history.delta_prev': 'pichli reading se',
     'history.share': 'Reading share karo',
 
@@ -1193,6 +1247,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'settings.auto_reconnect': 'Auto-reconnect',
     'settings.wake_on_connect': 'Wake on Connect',
     'settings.haptics': 'Haptic feedback',
+    'settings.sound': 'Alert sound',
+
     'settings.data': 'Data',
     'settings.export_csv': 'Export CSV',
     'settings.download': 'Download',

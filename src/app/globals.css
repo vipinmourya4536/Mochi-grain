@@ -170,6 +170,14 @@
   --gm-btn-primary-text: #09090b;
   --gm-toast-border: #3f3f46;
   --gm-toast-text: #f4f4f5;
+  /* Semantic direction colors (storage-risk semantics) – dark theme */
+  --gm-up: #F59E0B;   /* rising moisture = warning */
+  --gm-down: #22C55E; /* falling moisture = good */
+  /* Storage Score band colors (semantic, theme-aware) */
+  --gm-band-excellent: #22C55E;
+  --gm-band-good: #84CC16;
+  --gm-band-fair: #F59E0B;
+  --gm-band-risky: #EF4444;
 
   /* Glass opacity – controlled by slider, JS computes derived values */
   --gm-glass-opacity: 0.75;
@@ -234,6 +242,14 @@
   --gm-btn-primary-text: #f4f4f5;
   --gm-toast-border: #e4e4e7;
   --gm-toast-text: #18181b;
+  /* Semantic direction colors – darkened for light backgrounds (contrast ≥ 4.5:1) */
+  --gm-up: #B45309;
+  --gm-down: #15803D;
+  /* Storage Score band colors – darkened for light backgrounds */
+  --gm-band-excellent: #15803D;
+  --gm-band-good: #4D7C0F;
+  --gm-band-fair: #B45309;
+  --gm-band-risky: #DC2626;
 
   --gm-glass-bg: rgba(var(--gm-bg-r), var(--gm-bg-g), var(--gm-bg-b), 0.75);
   --gm-surface: rgba(255, 255, 255, 0.64);
@@ -1079,6 +1095,26 @@
   user-select: none;
 }
 
+/* Threshold hairline labels in the trends chart — theme-aware, halo-stroked */
+.grain-trend-thresh {
+  paint-order: stroke;
+  stroke-width: 2;
+}
+.grain-trend-thresh-safe {
+  fill: var(--gm-band-excellent);
+  stroke: rgba(0, 0, 0, 0.25);
+}
+.grain-trend-thresh-crit {
+  fill: var(--gm-band-risky);
+  stroke: rgba(0, 0, 0, 0.25);
+}
+.grain-app[data-theme="light"] .grain-trend-thresh-safe {
+  stroke: rgba(255, 255, 255, 0.65);
+}
+.grain-app[data-theme="light"] .grain-trend-thresh-crit {
+  stroke: rgba(255, 255, 255, 0.65);
+}
+
 /* Trend direction chip (header, right of TRENDS title) */
 .grain-trend-chip {
   display: inline-flex;
@@ -1197,6 +1233,90 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   BOTTOM SHEET – score explainer (portal into .grain-app)
+   ═══════════════════════════════════════════════════════════════ */
+
+.grain-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px) saturate(1.1);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: grain-modal-fade 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.grain-sheet-card {
+  width: 100%;
+  max-width: 430px;
+  max-height: 78%;
+  overflow-y: auto;
+  background: var(--gm-surface-solid);
+  backdrop-filter: blur(24px) saturate(1.5);
+  border: 1px solid var(--gm-glass-border);
+  border-bottom: none;
+  border-radius: 1.25rem 1.25rem 0 0;
+  padding: 10px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.32), inset 0 1px 0 var(--gm-glass-highlight);
+  animation: grain-sheet-up 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes grain-sheet-up {
+  from { transform: translateY(28px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.grain-sheet-grabber {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--gm-separator);
+  margin: 2px auto 12px;
+}
+.grain-sheet-trigger {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  color: var(--gm-text-tertiary);
+  background: var(--gm-toggle-bg);
+  border: 1px solid var(--gm-toggle-border, var(--gm-glass-border));
+  transition: color 0.18s ease, background 0.18s ease, transform 0.14s ease;
+}
+.grain-sheet-trigger:hover {
+  color: var(--gm-accent);
+  background: rgba(var(--gm-accent-rgb), 0.12);
+}
+.grain-sheet-trigger:active { transform: scale(0.9); }
+.grain-sheet-close {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--gm-text-tertiary);
+  background: var(--gm-toggle-bg);
+  border: 1px solid var(--gm-toggle-border, var(--gm-glass-border));
+  transition: color 0.18s ease, transform 0.14s ease;
+}
+.grain-sheet-close:active { transform: scale(0.9); }
+.grain-sheet-weight {
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: var(--gm-accent);
+  background: rgba(var(--gm-accent-rgb), 0.12);
+  border: 1px solid rgba(var(--gm-accent-rgb), 0.2);
+}
+
+/* ═══════════════════════════════════════════════════════════════
    GLASS MODAL – destructive-action confirmation
    ═══════════════════════════════════════════════════════════════ */
 
@@ -1300,6 +1420,60 @@
 }
 .grain-discover-card:hover { border-color: var(--gm-border-hover); }
 .grain-discover-card:active { transform: scale(0.98); }
+
+/* Save (bookmark) button — floats over the card's top-right thumbnail corner */
+.grain-bookmark-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(6px) saturate(1.3);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  transition: transform 0.16s cubic-bezier(0.34, 1.4, 0.64, 1), background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.grain-bookmark-btn:hover {
+  background: rgba(0, 0, 0, 0.52);
+}
+.grain-bookmark-btn:active {
+  transform: scale(0.86);
+}
+.grain-bookmark-btn.saved {
+  color: var(--gm-accent);
+  background: rgba(0, 0, 0, 0.55);
+  border-color: rgba(var(--gm-accent-rgb), 0.55);
+  animation: grain-bookmark-pop 0.32s cubic-bezier(0.34, 1.6, 0.64, 1);
+}
+@keyframes grain-bookmark-pop {
+  0% { transform: scale(0.72); }
+  55% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+/* Saved-count mini badge inside the SAVED filter chip */
+.grain-bookmark-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 5px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 999px;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: #fff;
+  background: rgba(var(--gm-accent-rgb), 0.85);
+}
 
 /* ═══════════════════════════════════════════════════════════════
    LANGUAGE PANEL – liquid glass overlay
@@ -1475,6 +1649,16 @@
     animation: none !important;
   }
   .grain-share-btn {
+    transition: none !important;
+  }
+  .grain-sheet-overlay,
+  .grain-sheet-card,
+  .grain-bookmark-btn.saved {
+    animation: none !important;
+  }
+  .grain-bookmark-btn,
+  .grain-sheet-trigger,
+  .grain-sheet-close {
     transition: none !important;
   }
   .grain-scroll {

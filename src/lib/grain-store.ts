@@ -24,6 +24,7 @@ import {
   getHistoryEntries,
   getHistoryEntry,
   clearAllHistory,
+  deleteDemoData,
   getSettings as getStoredSettings,
   saveSettings as storeSettings,
 } from './offline-storage';
@@ -265,6 +266,16 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
 
     get().showToast(t('toast.demo_on', lang));
 
+    // Persist the synthetic batch so demo exercises the REAL persistence path
+    // (history/stats/trends survive reloads while the demo is running).
+    // Stale leftovers from a previous crashed demo session are removed first.
+    deleteDemoData()
+      .then(() => Promise.all([
+        ...historyEntries.map((e) => saveReading(e.reading)),
+        ...historyEntries.map((e) => saveHistoryEntry(e)),
+      ]))
+      .catch(() => {/* persistence is best-effort in demo */});
+
     // Live updates at the REAL configured interval (no simulation acceleration)
     const intervalMs = demoIntervalSec * 1000;
     const timer = setInterval(() => {
@@ -303,6 +314,10 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
         sparklineData: newSparkline,
         historyEntries: [newEntry, ...s.historyEntries].slice(0, 100),
       });
+
+      // Persist like the real probe path — fire-and-forget
+      saveReading(newReading).catch(() => {});
+      saveHistoryEntry(newEntry).catch(() => {});
     }, intervalMs);
 
     set({ _demoTimer: timer });
@@ -331,6 +346,10 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
       activeTab: 'settings',
     });
     get().showToast(t('toast.demo_off', lang));
+    // Remove synthetic readings and bring back the user's real history
+    deleteDemoData()
+      .catch(() => {})
+      .then(() => get().loadHistory());
   },
 
   setDemoIntervalSec: (sec: DemoIntervalPreset) => {
