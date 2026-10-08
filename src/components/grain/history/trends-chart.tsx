@@ -6,7 +6,7 @@ import type { HistoryEntry } from '@/lib/grain-types';
 import { getAccentHex, getRiskColor } from '@/lib/accent-hex';
 import { t, type AppLanguage } from '@/lib/i18n';
 import { haptic } from '@/lib/haptics';
-import { ChartLine } from '@phosphor-icons/react/dist/ssr';
+import { ChartLine, TrendUp, TrendDown, Minus } from '@phosphor-icons/react/dist/ssr';
 import { format } from 'date-fns';
 
 /* ═══════════════════════════════════════════════════════════════
@@ -21,6 +21,7 @@ import { format } from 'date-fns';
    ═══════════════════════════════════════════════════════════════ */
 
 type RangeId = '24h' | '7d' | '30d' | 'all';
+type MetricId = 'moisture' | 'temp';
 
 const RANGES: { id: RangeId; label: string; ms: number | null }[] = [
   { id: '24h', label: '24H', ms: 24 * 3600e3 },
@@ -44,6 +45,20 @@ interface TrendPt {
   v: number;
   t: number;
   state: string;
+}
+
+interface TrendDir {
+  dir: 'up' | 'down' | 'flat';
+  delta: number;
+  labelKey: string;
+}
+
+/** Direction + signed delta across the visible range (per metric) */
+function trendDirection(delta: number, metric: MetricId): TrendDir {
+  const eps = metric === 'moisture' ? 0.15 : 0.3;
+  if (delta > eps) return { dir: 'up', delta, labelKey: 'history.trend_rising' };
+  if (delta < -eps) return { dir: 'down', delta, labelKey: 'history.trend_falling' };
+  return { dir: 'flat', delta, labelKey: 'history.trend_stable' };
 }
 
 function filterEntries(entries: HistoryEntry[], range: RangeId): HistoryEntry[] {
@@ -111,6 +126,7 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
   const { safe, warn, critical } = settings.thresholds;
 
   const [rangeSel, setRangeSel] = useState<RangeId>(() => detectRange(entries));
+  const [metric, setMetric] = useState<MetricId>('moisture');
 
   const filtered = useMemo(() => filterEntries(entries, rangeSel), [entries, rangeSel]);
 
@@ -120,18 +136,33 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
 
     // Ascending by time
     const sorted = [...filtered].sort((a, b) => a.reading.timestamp - b.reading.timestamp);
-    const values = sorted.map((e) => e.reading.moisture);
+    const getV = (e: HistoryEntry) =>
+      metric === 'moisture' ? e.reading.moisture : e.reading.temperature;
+    // Temperature is required for temp mode — tolerate legacy entries without it
+    const usable = metric === 'temp'
+      ? sorted.filter((e) => typeof e.reading.temperature === 'number')
+      : sorted;
+    if (usable.length < 2) return null;
 
-    const tMin = sorted[0].reading.timestamp;
-    const tMax = sorted[sorted.length - 1].reading.timestamp;
+    const values = usable.map(getV);
+
+    const tMin = usable[0].reading.timestamp;
+    const tMax = usable[usable.length - 1].reading.timestamp;
     const tRange = tMax - tMin || 1;
 
-    const vMin = Math.min(...values, safe - 1);
-    const vMax = Math.max(...values, critical + 1);
-    // Include thresholds in the domain so zone bands are always visible
-    const lo = Math.min(...values, safe);
-    const hi = Math.max(...values, critical);
-    const vPad = Math.max((hi - lo) * 0.25, 1.2);
+    let lo: number;
+    let hi: number;
+    let vPad: number;
+    if (metric === 'moisture') {
+      // Include thresholds in the domain so zone bands are always visible
+      lo = Math.min(...values, safe);
+      hi = Math.max(...values, critical);
+      vPad = Math.max((hi - lo) * 0.25, 1.2);
+    } else {
+      lo = Math.min(...values);
+      hi = Math.max(...values);
+      vPad = Math.max((hi - lo) * 0.3, 1.5);
+    }
     const vLo = lo - vPad;
     const vHi = hi + vPad;
     const vSpan = vHi - vLo;
@@ -142,10 +173,10 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
     const xOf = (ts: number) => PAD_X + ((ts - tMin) / tRange) * drawW;
     const yOf = (v: number) => PAD_TOP + drawH - ((v - vLo) / vSpan) * drawH;
 
-    const pts: TrendPt[] = sorted.map((e) => ({
+    const pts: TrendPt[] = usable.map((e) => ({
       x: xOf(e.reading.timestamp),
-      y: yOf(e.reading.moisture),
-      v: e.reading.moisture,
+      y: yOf(getV(e)),
+      v: getV(e),
       t: e.reading.timestamp,
       state: e.decision.state,
     }));
@@ -157,7 +188,7 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
     }
     const fillD = `${pathD} L${pts[pts.length - 1].x.toFixed(2)},${H - PAD_BOT} L${pts[0].x.toFixed(2)},${H - PAD_BOT} Z`;
 
-    // Zone bands (clamped to the plot area)
+    // Zone bands (clamped to the plot area) — moisture only (thresholds are moisture-specific)
     const plotBottom = H - PAD_BOT;
     const band = (vFrom: number, vTo: number) => {
       const yA = Math.max(PAD_TOP, Math.min(plotBottom, yOf(vFrom)));
@@ -181,12 +212,17 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
     const fmt = (ts: number) => (rangeSel === '24h' ? format(ts, 'HH:mm') : format(ts, 'MMM d'));
     const timeLabels = [
       { x: pts[0].x, anchor: 'start' as const, label: fmt(tMin) },
-      ...(pts.length > 6 ? [{ x: pts[midIdx].x, anchor: 'middle' as const, label: fmt(sorted[midIdx].reading.timestamp) }] : []),
+      ...(pts.length > 6 ? [{ x: pts[midIdx].x, anchor: 'middle' as const, label: fmt(usable[midIdx].reading.timestamp) }] : []),
       { x: pts[pts.length - 1].x, anchor: 'end' as const, label: fmt(tMax) },
     ];
 
-    return { pts, pathD, fillD, critBand, warnBand, safeBand, avg, min, max, avgY: yOf(avg), dotStep, timeLabels, safeY: yOf(safe), criticalY: yOf(critical) };
-  }, [filtered, safe, critical, rangeSel]);
+    return {
+      pts, pathD, fillD, critBand, warnBand, safeBand, avg, min, max,
+      avgY: yOf(avg), dotStep, timeLabels,
+      safeY: yOf(safe), criticalY: yOf(critical),
+      trend: trendDirection(values[values.length - 1] - values[0], metric),
+    };
+  }, [filtered, safe, critical, rangeSel, metric]);
 
   /* ── Scrub state (timestamp-anchored, same pattern as hero sparkline) ── */
   const [scrubSel, setScrubSel] = useState<{ t: number; leftPx: number; topPx: number } | null>(null);
@@ -219,13 +255,23 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
 
   useEffect(() => () => clearAutoTimer(), [clearAutoTimer]);
 
-  /** Switch range: clears any active scrub (selection is range-scoped) */
+  /** Switch range or metric: clears any active scrub (selection is scope-scoped) */
   const selectRange = useCallback(
     (id: RangeId) => {
       clearAutoTimer();
       draggingRef.current = false;
       setScrubSel(null);
       setRangeSel(id);
+    },
+    [clearAutoTimer],
+  );
+
+  const selectMetric = useCallback(
+    (m: MetricId) => {
+      clearAutoTimer();
+      draggingRef.current = false;
+      setScrubSel(null);
+      setMetric(m);
     },
     [clearAutoTimer],
   );
@@ -364,15 +410,62 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
   const onBlur = useCallback(() => clearScrub(), [clearScrub]);
 
   /* ── Render ── */
+  const trend = geo?.trend ?? null;
+  const unitSuffix = metric === 'moisture' ? '%' : '°C';
+  const isMoisture = metric === 'moisture';
+
   return (
     <div className="grain-trends-card mb-4" role="group" aria-label={t('history.trends_title', lang)}>
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-3">
+      {/* Header row 1: title + trend direction chip */}
+      <div className="flex items-center gap-2 mb-2">
         <ChartLine size={13} weight="bold" style={{ color: 'var(--gm-accent)' }} />
         <span className="text-[9px] font-bold tracking-[0.18em] uppercase" style={{ color: 'var(--gm-text-tertiary)' }}>
           {t('history.trends_title', lang)}
         </span>
-        <div className="ml-auto grain-seg" role="tablist" aria-label={t('history.trends_title', lang)}>
+        {trend && geo && (
+          <span
+            className="grain-trend-chip grain-tabular ml-auto"
+            style={{
+              color: trend.dir === 'flat'
+                ? 'var(--gm-text-secondary)'
+                : isMoisture
+                  ? (trend.dir === 'up' ? '#F59E0B' : '#22C55E')
+                  : 'var(--gm-accent)',
+            }}
+            role="status"
+            aria-label={`${t(trend.labelKey, lang)} ${Math.abs(trend.delta).toFixed(1)}${unitSuffix}`}
+          >
+            {trend.dir === 'up'
+              ? <TrendUp size={11} weight="bold" />
+              : trend.dir === 'down'
+                ? <TrendDown size={11} weight="bold" />
+                : <Minus size={11} weight="bold" />}
+            {(trend.delta > 0 ? '+' : '') + trend.delta.toFixed(1)}{unitSuffix}
+          </span>
+        )}
+      </div>
+
+      {/* Header row 2: metric toggle + range selector */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="grain-seg grain-seg-metric" role="tablist" aria-label={t('history.trends_title', lang)}>
+          <button
+            role="tab"
+            aria-selected={metric === 'moisture'}
+            className={metric === 'moisture' ? 'active' : ''}
+            onClick={() => { selectMetric('moisture'); haptic(settings.hapticsEnabled, 6); }}
+          >
+            {t('hero.moisture', lang)}
+          </button>
+          <button
+            role="tab"
+            aria-selected={metric === 'temp'}
+            className={metric === 'temp' ? 'active' : ''}
+            onClick={() => { selectMetric('temp'); haptic(settings.hapticsEnabled, 6); }}
+          >
+            {t('metric.temp', lang)}
+          </button>
+        </div>
+        <div className="grain-seg" role="tablist" aria-label={t('history.trends_title', lang)}>
           {RANGES.map((r) => (
             <button
               key={r.id}
@@ -424,28 +517,48 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
                 </linearGradient>
               </defs>
 
-              {/* Threshold zone bands */}
-              <rect x={PAD_X} y={geo.critBand.y} width={W - PAD_X * 2} height={geo.critBand.h} fill="rgba(239, 68, 68, 0.10)" rx="4" />
-              <rect x={PAD_X} y={geo.warnBand.y} width={W - PAD_X * 2} height={geo.warnBand.h} fill="rgba(245, 158, 11, 0.09)" rx="4" />
-              <rect x={PAD_X} y={geo.safeBand.y} width={W - PAD_X * 2} height={geo.safeBand.h} fill="rgba(34, 197, 94, 0.09)" rx="4" />
+              {/* Horizontal grid hairlines – subtle instrument feel */}
+              {[0.25, 0.5, 0.75].map((f) => {
+                const gy = PAD_TOP + (H - PAD_TOP - PAD_BOT) * f;
+                return (
+                  <line
+                    key={f}
+                    x1={PAD_X} y1={gy} x2={W - PAD_X} y2={gy}
+                    stroke="var(--gm-separator)" strokeWidth="0.6"
+                  />
+                );
+              })}
 
-              {/* Threshold hairlines + labels */}
-              <line x1={PAD_X} y1={geo.safeY} x2={W - PAD_X} y2={geo.safeY} stroke="rgba(34,197,94,0.35)" strokeWidth="0.75" strokeDasharray="3,4" />
-              <line x1={PAD_X} y1={geo.criticalY} x2={W - PAD_X} y2={geo.criticalY} stroke="rgba(239,68,68,0.35)" strokeWidth="0.75" strokeDasharray="3,4" />
-              <text
-                x={W - PAD_X - 2} y={geo.safeY - 3} textAnchor="end"
-                fill="rgba(34,197,94,0.75)" stroke="rgba(0,0,0,0.18)" strokeWidth={2} paintOrder="stroke"
-                fontSize="7" fontWeight="700" fontFamily="system-ui, sans-serif"
-              >
-                {safe}%
-              </text>
-              <text
-                x={W - PAD_X - 2} y={geo.criticalY - 3} textAnchor="end"
-                fill="rgba(239,68,68,0.75)" stroke="rgba(0,0,0,0.18)" strokeWidth={2} paintOrder="stroke"
-                fontSize="7" fontWeight="700" fontFamily="system-ui, sans-serif"
-              >
-                {critical}%
-              </text>
+              {/* Threshold zone bands — moisture only (thresholds are moisture-specific) */}
+              {isMoisture && (
+                <>
+                  <rect x={PAD_X} y={geo.critBand.y} width={W - PAD_X * 2} height={geo.critBand.h} fill="rgba(239, 68, 68, 0.10)" rx="4" />
+                  <rect x={PAD_X} y={geo.warnBand.y} width={W - PAD_X * 2} height={geo.warnBand.h} fill="rgba(245, 158, 11, 0.09)" rx="4" />
+                  <rect x={PAD_X} y={geo.safeBand.y} width={W - PAD_X * 2} height={geo.safeBand.h} fill="rgba(34, 197, 94, 0.09)" rx="4" />
+                </>
+              )}
+
+              {/* Threshold hairlines + labels — moisture only */}
+              {isMoisture && (
+                <>
+                  <line x1={PAD_X} y1={geo.safeY} x2={W - PAD_X} y2={geo.safeY} stroke="rgba(34,197,94,0.35)" strokeWidth="0.75" strokeDasharray="3,4" />
+                  <line x1={PAD_X} y1={geo.criticalY} x2={W - PAD_X} y2={geo.criticalY} stroke="rgba(239,68,68,0.35)" strokeWidth="0.75" strokeDasharray="3,4" />
+                  <text
+                    x={W - PAD_X - 2} y={geo.safeY - 3} textAnchor="end"
+                    fill="rgba(34,197,94,0.75)" stroke="rgba(0,0,0,0.18)" strokeWidth={2} paintOrder="stroke"
+                    fontSize="7" fontWeight="700" fontFamily="system-ui, sans-serif"
+                  >
+                    {safe}%
+                  </text>
+                  <text
+                    x={W - PAD_X - 2} y={geo.criticalY - 3} textAnchor="end"
+                    fill="rgba(239,68,68,0.75)" stroke="rgba(0,0,0,0.18)" strokeWidth={2} paintOrder="stroke"
+                    fontSize="7" fontWeight="700" fontFamily="system-ui, sans-serif"
+                  >
+                    {critical}%
+                  </text>
+                </>
+              )}
 
               {/* Area + curve */}
               <path d={geo.fillD} fill="url(#trendFill)" stroke="none" />
@@ -465,14 +578,14 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
                 opacity={scrubPt ? 0.35 : 1}
               />
 
-              {/* Risk-colored dots */}
+              {/* Risk-colored dots (moisture) / accent dots (temp) */}
               {geo.pts.map((p, i) =>
                 (i % geo.dotStep === 0 || i === geo.pts.length - 1) ? (
                   <circle
                     key={p.t}
                     cx={p.x} cy={p.y}
                     r={i === geo.pts.length - 1 ? 3.2 : 2.1}
-                    fill={getRiskColor(p.state, settings.accentColor)}
+                    fill={isMoisture ? getRiskColor(p.state, settings.accentColor) : accentHex}
                     stroke="rgba(0,0,0,0.18)"
                     strokeWidth="0.6"
                     opacity={scrubPt && scrubPt.t !== p.t ? 0.55 : 1}
@@ -486,14 +599,15 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
                   <line
                     x1={scrubPt.x} y1={PAD_TOP - 4}
                     x2={scrubPt.x} y2={H - PAD_BOT + 4}
-                    stroke="rgba(255,255,255,0.45)"
+                    stroke="var(--gm-text-tertiary)"
+                    strokeOpacity="0.55"
                     strokeWidth="1"
                     strokeDasharray="2,3"
                   />
                   <circle cx={scrubPt.x} cy={scrubPt.y} r={7} fill="rgba(255,255,255,0.14)" />
                   <circle
                     cx={scrubPt.x} cy={scrubPt.y} r={4}
-                    fill={getRiskColor(scrubPt.state, settings.accentColor)}
+                    fill={isMoisture ? getRiskColor(scrubPt.state, settings.accentColor) : accentHex}
                     stroke="#ffffff" strokeWidth="1.4"
                   />
                 </g>
@@ -524,7 +638,7 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
                 style={{ left: scrubSel.leftPx, top: scrubSel.topPx }}
                 role="status"
               >
-                <span className="v">{scrubPt.v.toFixed(1)}%</span>
+                <span className="v">{scrubPt.v.toFixed(1)}{unitSuffix}</span>
                 <span className="t">{format(scrubPt.t, 'MMM d · HH:mm')}</span>
               </div>
             )}
@@ -532,9 +646,13 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
 
           {/* Per-range mini stats */}
           <div className="grid grid-cols-4 gap-2 mt-3 pt-3 grain-trends-stats grain-tabular">
-            <MiniStat label={t('history.stat_avg', lang)} value={`${geo.avg.toFixed(1)}%`} color={accentHex} />
-            <MiniStat label={t('history.stat_min', lang)} value={`${geo.min.toFixed(1)}%`} />
-            <MiniStat label={t('history.stat_max', lang)} value={`${geo.max.toFixed(1)}%`} />
+            <MiniStat
+              label={isMoisture ? t('history.stat_avg', lang) : t('history.stat_temp', lang)}
+              value={`${geo.avg.toFixed(1)}${unitSuffix}`}
+              color={accentHex}
+            />
+            <MiniStat label={t('history.stat_min', lang)} value={`${geo.min.toFixed(1)}${unitSuffix}`} />
+            <MiniStat label={t('history.stat_max', lang)} value={`${geo.max.toFixed(1)}${unitSuffix}`} />
             <MiniStat label={t('history.trends_count', lang)} value={String(geo.pts.length)} />
           </div>
         </>

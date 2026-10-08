@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useGrainStore, DEMO_INTERVAL_PRESETS, type DemoIntervalPreset } from '@/lib/grain-store';
 import {
@@ -346,6 +346,54 @@ function AdvancedSettingsContent() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const importModeRef = useRef<'merge' | 'replace'>('merge');
   const [confirmReplace, setConfirmReplace] = useState(false);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
+  const lastFocusRef = useRef<HTMLElement | null>(null);
+
+  /* Focus trap + focus restore for the destructive confirmation modal.
+     Tab/Shift+Tab cycle inside the dialog; Escape closes (capture-phase,
+     works even when focus sits on body); on close, focus returns to the
+     element that opened the dialog (captured in the click handler — by the
+     time the open-effect runs, React has already applied autoFocus to the
+     Cancel button, so the effect would otherwise capture the dialog itself). */
+  const openReplaceModal = () => {
+    lastFocusRef.current = document.activeElement as HTMLElement | null;
+    setConfirmReplace(true);
+  };
+
+  useEffect(() => {
+    if (!confirmReplace) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        setConfirmReplace(false);
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const overlay = overlayRef.current;
+      if (!overlay) return;
+      const focusables = Array.from(
+        overlay.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => !el.hasAttribute('disabled'));
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || !overlay.contains(active))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (active === last || !overlay.contains(active))) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => {
+      document.removeEventListener('keydown', onKey, true);
+      lastFocusRef.current?.focus?.();
+    };
+  }, [confirmReplace]);
 
   const openImportPicker = (mode: 'merge' | 'replace') => {
     importModeRef.current = mode;
@@ -572,7 +620,7 @@ function AdvancedSettingsContent() {
         </button>
         <div className="grain-separator" />
         <button
-          onClick={() => setConfirmReplace(true)}
+          onClick={openReplaceModal}
           className="w-full flex justify-between items-center px-5 py-4 text-left"
           style={{ color: '#EF4444' }}
         >
@@ -597,6 +645,7 @@ function AdvancedSettingsContent() {
             transform/filter, so position:fixed still tracks the viewport. */}
         {confirmReplace && typeof document !== 'undefined' && createPortal(
           <div
+            ref={overlayRef}
             className="grain-modal-overlay"
             role="dialog"
             aria-modal="true"

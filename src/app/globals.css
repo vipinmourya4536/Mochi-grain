@@ -748,6 +748,25 @@
   fill: #15803D;
   stroke: rgba(255, 255, 255, 0.6);
 }
+
+/* Hero HTML sub-text (unit %, grain label) + demo countdown under the chart.
+   The hero gradient fades toward near-white at its bottom in light mode, so
+   white translucent text vanishes there — mirror the SVG halo treatment with
+   theme-aware colors + a soft light halo (text-shadow). */
+.grain-hero-sub {
+  color: rgba(255, 255, 255, 0.6);
+}
+.grain-app[data-theme="light"] .grain-hero-sub {
+  color: rgba(62, 28, 0, 0.62);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+.grain-hero-countdown {
+  color: rgba(255, 255, 255, 0.62);
+}
+.grain-app[data-theme="light"] .grain-hero-countdown {
+  color: rgba(62, 28, 0, 0.66);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.55);
+}
 @keyframes spark-pulse { 0%, 100% { opacity: 0.2; r: 6; } 50% { opacity: 0.4; r: 9; } }
 .grain-sparkline-pulse { animation: spark-pulse 2.5s ease-in-out infinite; }
 /* Sparkline light mode – white still works on colored hero gradient, but increase contrast */
@@ -1058,6 +1077,27 @@
 .grain-trends-svg {
   display: block;
   user-select: none;
+}
+
+/* Trend direction chip (header, right of TRENDS title) */
+.grain-trend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--gm-toggle-bg);
+  border: 1px solid var(--gm-toggle-border, var(--gm-glass-border));
+  animation: grain-fade-in 0.24s ease-out;
+}
+/* Metric toggle (Moisture | Temp) — same pill family, slightly wider hit area */
+.grain-seg-metric button {
+  text-transform: uppercase;
+  padding: 4px 10px;
 }
 
 /* Range segmented control (iOS-style glass pill) */

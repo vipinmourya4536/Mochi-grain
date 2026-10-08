@@ -194,3 +194,47 @@ Unresolved / Next-round recommendations:
 3. Trends chart could get a temperature series toggle (data already stored per entry) — natural extension.
 4. Next.js dev-tools "N" bubble still overlaps bottom-left nav in dev only (cosmetic, not shipped).
 5. Import modal currently doesn't trap focus (Escape + backdrop click work; full focus trap could be added if desired).
+
+---
+Task ID: 5 (cron review round 4)
+Agent: Main Agent (Z.ai Code)
+Task: QA status assessment via agent-browser, then — app stable — bug fixes + two feature expansions (Trends metric toggle, modal focus trap) + styling detail polish.
+
+Work Log:
+- QA BASELINE (agent-browser, 390px): page 200, ZERO console errors/warnings, all tabs + demo + history/stats/trends + discover + settings functional. Grain source-of-truth re-verified (Wheat→Soybean mid-demo: hero label + zone bar <12%·<16% update live). No regressions from Tasks 1–4.
+- BUG FOUND: demo countdown "Next reading in X" (text-white/60) nearly invisible in LIGHT mode — hero gradient fades to near-white at its bottom. Same issue affecting the hero "%" sign and grain label (white/55-60 on light orange).
+- FIX — Hero light-mode legibility (hero-card.tsx + globals.css):
+  - New theme-aware classes: `.grain-hero-sub` (unit %, grain label) and `.grain-hero-countdown` (demo countdown) — dark: unchanged white translucency; light: deep-brown rgba(62,28,0,.62-.66) + soft white text-shadow halo (mirrors the SVG .grain-spark-text halo pattern). Verified legible in light, unchanged in dark.
+- NEW FEATURE — Trends metric toggle (MOISTURE | TEMP) (trends-chart.tsx + globals.css):
+  - Second segmented control (reuses .grain-seg) in a new header row; metric-scoped scrub clearing (selectMetric same pattern as selectRange).
+  - Temp mode: own auto domain (±30% pad), accent curve/dots (no risk coloring), NO moisture threshold zones/hairlines (correct — thresholds are moisture-specific), scrub tooltip with °C suffix, per-range mini stats swap to AVG TEMP/MIN/MAX (°C) via existing history.stat_temp key.
+  - Legacy-entry tolerance: temp mode filters entries lacking numeric temperature; <2 usable → trends_need_more state.
+  - Reuses existing i18n keys (hero.moisture / metric.temp) — no new keys.
+- NEW FEATURE — Trend direction chip (trends header):
+  - Glass pill next to TRENDS title: TrendUp/TrendDown/Minus icon + signed delta over the selected range (e.g. ↗ +0.4% / ↘ -0.5% / — +0.2°C), tabular-nums, grain-fade-in.
+  - Color semantics: moisture rising=amber/falling=green (storage-risk semantics); temp mode uses accent for any direction. aria-label = localized direction (existing history.trend_* keys) + magnitude. role=status.
+- NEW FEATURE — Replace-modal focus trap + focus restore (settings-tab.tsx):
+  - Tab/Shift+Tab cycle within the dialog (disabled-filtered focusables), capture-phase Escape (works even when focus is on body), focus restored to the opener on close.
+  - LIVE-FOUND SUBTLE BUG during implementation: capturing lastFocus in the open-effect grabbed the Cancel button (React already applied autoFocus by passive-effect time) → restore targeted a detached node (silent no-op). Fixed by capturing document.activeElement in the click handler (openReplaceModal) BEFORE setState.
+  - Browser-verified: open→Cancel focused; Tab cycles Cancel→Choose Backup File→(wrap)Cancel; Shift+Tab reverse; Escape→modal closes→focus back on "Replace All Data"; backdrop-click close still works.
+- STYLING DETAILS:
+  - Scrub guide line in trends chart: fixed rgba(255,255,255,.45) → theme-aware var(--gm-text-tertiary) @ 0.55 opacity (was weak in light mode).
+  - 3 horizontal grid hairlines (25/50/75% of plot) in trends chart via var(--gm-separator) — subtle instrument feel, both metrics, both themes.
+  - `.grain-trend-chip` glass pill (toggle-bg + hairline border); `.grain-seg-metric` uppercase + slightly wider padding.
+- INFRA FIX: Next.js dev-tools "1 Issue" badge (cross-origin dev warning from preview host loading /_next/* assets) → added `allowedDevOrigins: ["preview-chat-*.space-z.ai"]` to next.config.ts + full dev-server restart (setsid). Badge gone; warning no longer logged.
+- i18n NOTE: initially added 3 new trend keys, then discovered `history.trend_rising/falling/stable` (plus spike/drop) already existed in all 4 languages (Mochi engine labels) — removed my duplicates (object would have had dupe keys), reused existing. All counts verified = 4.
+- VALIDATION: `bun run lint` clean; `bunx tsc --noEmit` clean for app code (remaining 4 errors pre-existing in examples/ + skills/); zero browser console errors/warnings across dark+light × moisture+temp × pointer+keyboard scrub; demo + IndexedDB persistence verified across a dev-server restart (62 readings survived clear-test via accidental "Clear History" click, then regenerated at 1-min demo interval).
+- Screenshots (download/): r5-qa-home.png, r5-qa-settings.png, r5-qa-demo-home.png, r5-qa-history.png, r5-qa-discover.png, r5-qa-soybean.png, r5-qa-light-home.png, r5-qa-light-trends.png, r5-light-countdown.png (legibility fix), r5-trends-moisture.png, r5-trends-temp.png, r5-trends-temp-scrub.png, r5-dark-countdown.png, r5-dark-trends.png, r5-dark-trends-temp.png, r5-kbd-scrub.png, r5-final-dark-history.png, r5-final-home.png.
+
+Stage Summary (browser-verified):
+- Trends is now a dual-metric instrument (moisture with storage zones / temperature) with at-a-glance direction chip, and hero text is fully legible in both themes.
+- The destructive-data modal now meets keyboard a11y expectations (trap + Escape + focus restore).
+- Dev-tools issue badge eliminated (allowedDevOrigins).
+- All prior behavior intact: grain source-of-truth, demo isolation, BLE flow untouched, 4 languages, accents flow through all new surfaces (temp curve/dot/chip use accent var).
+
+Unresolved / Next-round recommendations:
+1. BLE auto-reconnect (Task 2) + PWA install card (Task 3) still need real-device QA.
+2. Trends metric selection could persist across sessions (currently resets to Moisture on remount) — one AppSettings key.
+3. Discover tab video cards use gray placeholder thumbnails — real thumbnails (image-search or YouTube thumb URLs) would lift visual quality noticeably.
+4. History per-entry detail could show delta vs previous reading (small trend arrow per row).
+5. Dev-tools "N" bubble still overlaps bottom-left nav in dev only (cosmetic, not shipped).

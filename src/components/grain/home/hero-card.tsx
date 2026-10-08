@@ -116,10 +116,10 @@ export function HeroCard() {
           <span className="text-7xl font-bold tracking-tight text-white">
             {currentReading.moisture.toFixed(1)}
           </span>
-          <span className="text-2xl font-semibold text-white/60">%</span>
+          <span className="text-2xl font-semibold grain-hero-sub">%</span>
         </div>
 
-        <p className="text-xs text-white/55 mb-4">{grainLabel} {t('hero.moisture_content', lang)}</p>
+        <p className="text-xs grain-hero-sub mb-4">{grainLabel} {t('hero.moisture_content', lang)}</p>
 
         {/* Professional sparkline chart with time axis, countdown and scrub inspection */}
         <div className="h-[120px] -mx-1">
@@ -135,7 +135,7 @@ export function HeroCard() {
 
         {/* Next reading countdown text for demo */}
         {demoMode && countdown !== null && (
-          <p className="text-[10px] text-white/60 mt-2 text-center tracking-wide grain-tabular">
+          <p className="text-[10px] grain-hero-countdown mt-2 text-center tracking-wide grain-tabular">
             {t('demo.next_reading', lang)} {formatCountdownText(countdown)}
           </p>
         )}
