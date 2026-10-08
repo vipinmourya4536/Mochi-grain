@@ -1,0 +1,1506 @@
+You are working on an existing Next.js 16 + React 19 + TypeScript PWA called “Mochi Grain” for an ESP32 grain-moisture monitoring probe.
+
+Repository:
+https://github.com/vipinmourya4536/Mochi-grain.git
+
+IMPORTANT:
+Do not blindly redesign the application.
+First inspect the current implementation and preserve all working functionality, especially:
+- ESP32 Web Bluetooth connection
+- BLE notifications
+- IndexedDB history
+- Mochi Decision Engine
+- demo mode
+- multilingual support
+- light/dark themes
+- existing Home / History / Discover / Settings navigation
+- PWA behavior
+- current data persistence
+
+The goal is refinement into a finished, coherent product, not a rewrite.
+
+I have reviewed the current UI through a 1m46s screen recording and multiple screenshots. The requested changes below are based on both the actual UX and the current source code.
+
+==================================================
+1. PRIMARY FUNCTIONAL BUG: GRAIN SELECTION IS NOT A SINGLE SOURCE OF TRUTH
+==================================================
+
+Current problem:
+
+The Settings screen allows selecting Wheat, Rice, Corn, Barley, Soybean, Sorghum, Oats, Millet, etc.
+
+However:
+- `selectGrainType()` updates `settings.grainType`
+- Home `MetricPills` currently displays `currentReading.grainType`
+- `HeroCard` also currently uses `currentReading.grainType`
+- BLE data is parsed with a grain code inside `bluetooth.ts`
+- `handleReading()` updates `deviceInfo.grainType` from the incoming BLE reading
+
+This creates a mismatch.
+
+Observed behavior:
+I can change the grain in Settings from Corn to Wheat/Soybean/Rice/etc, return Home, and Home can still visually say Corn.
+
+This must be completely fixed.
+
+NEW ARCHITECTURE:
+
+`settings.grainType` must be the authoritative user-selected grain for the application.
+
+The selected grain determines:
+- Home UI grain label
+- Mochi thresholds
+- Mochi decision evaluation
+- risk state
+- Discover recommendations
+- current reading’s displayed grain
+- new history records captured by the app
+
+The ESP32 BLE packet may still contain a grain code, but that should NOT silently overwrite the user’s selected grain.
+
+Do NOT allow this flow anymore:
+
+BLE grain code
+→ overwrite app grain selection
+→ Home changes unexpectedly
+
+Instead:
+
+User-selected grain in Settings
+→ application source of truth
+→ Home
+→ Mochi thresholds
+→ Mochi decision
+→ history
+
+BLE should primarily provide:
+- moisture
+- temperature
+- battery
+- signal
+- device state
+
+If the firmware grain code is useful, preserve it only as optional diagnostic/device metadata. It must not override the application-selected grain unless there is an explicit future “use device grain” action.
+
+==================================================
+2. FIX `selectGrainType()` BEHAVIOR
+==================================================
+
+Modify `src/lib/grain-store.ts`.
+
+When the user selects a grain:
+
+1. Update `settings.grainType`
+2. Update `settings.thresholds` from `GRAIN_PROFILES[grain]`
+3. Persist settings using the existing IndexedDB storage
+4. Immediately update the current Home UI
+5. Immediately recalculate Mochi for the current reading using the newly selected grain thresholds
+6. Update `deviceInfo.grainType`
+7. Do NOT wait for the next BLE packet
+8. Do NOT reset the Bluetooth connection
+9. Do NOT clear current reading
+10. Do NOT create a fake new history reading merely because the user changed grain
+
+The user should see the Home screen change immediately after returning to Home.
+
+Example:
+
+Current live reading:
+12.5% moisture, 29°C
+
+Switch:
+Corn → Millet
+
+The currently displayed reading should remain 12.5%, 29°C, battery, signal.
+
+Only the interpretation should change:
+- selected grain label
+- applicable thresholds
+- Mochi decision
+- risk state if thresholds differ
+- Discover contextual recommendations
+
+Do not mutate historical timestamps merely because the selected grain changes.
+
+==================================================
+3. NORMALIZE NEW BLE READINGS TO THE SELECTED APP GRAIN
+==================================================
+
+Modify the reading flow in:
+
+`src/lib/bluetooth.ts`
+`src/lib/grain-store.ts`
+
+The BLE parser can continue reading the raw grain code if needed.
+
+However, before the reading enters:
+- IndexedDB
+- Mochi
+- Home state
+- history
+
+normalize the application-level grain to:
+
+`settings.grainType`
+
+In other words, the app should know:
+
+“this moisture/temperature reading was interpreted for Wheat because Wheat is the currently selected monitoring profile.”
+
+Do not let future BLE notifications switch the Home grain back to Corn/Wheat/etc automatically.
+
+This is especially important after:
+
+Settings → select Soybean → Home → wait for a BLE notification
+
+Soybean must remain selected.
+
+==================================================
+4. REMOVE THE HOME-PAGE GRAIN DROPDOWN COMPLETELY
+==================================================
+
+Current file:
+`src/components/grain/home/metric-pills.tsx`
+
+The third metric card currently contains a clickable grain dropdown.
+
+This is visually poor and conceptually wrong.
+
+REMOVE:
+- the grain dropdown from Home
+- `GrainTypeDropdown`
+- the Home grain selector interaction
+- the down chevron
+- all dropdown-specific behavior from Home
+
+Home should NOT allow grain selection.
+
+Home should simply show information.
+
+Keep grain selection only inside:
+
+`Settings → Grain Type`
+
+The Home screen already has the selected grain displayed in the hero card.
+
+After removing the dropdown, redesign the metric section.
+
+Current:
+TEMP | SIGNAL | GRAIN dropdown
+
+Preferred:
+TEMP | SIGNAL
+
+Use a balanced 2-column layout.
+
+Do NOT replace it with a disabled dropdown or fake selector.
+
+The selected grain is already visible in the hero card, so the third interactive card is unnecessary.
+
+==================================================
+5. REMOVE “OTHER” GRAIN COMPLETELY
+==================================================
+
+There is currently a grain type:
+
+`other`
+
+Remove it completely.
+
+It should no longer appear anywhere in the application.
+
+Audit and update all references in:
+- `src/lib/grain-types.ts`
+- `src/lib/grain-store.ts`
+- `src/components/grain/home/metric-pills.tsx`
+- `src/components/grain/settings/settings-tab.tsx`
+- `src/lib/i18n.ts`
+- `src/lib/discover-content.ts`
+- any other file containing `"other"`
+
+The final supported grains should be exactly:
+
+- Wheat
+- Rice
+- Corn
+- Barley
+- Soybean
+- Sorghum
+- Oats
+- Millet
+
+Do not leave dead “other” types in TypeScript unions, profiles, labels, translations, content rules, or UI arrays.
+
+After removing it, run a repository-wide search for:
+- `other`
+- `GrainType`
+- `GRAIN_OPTIONS`
+- `GRAIN_PROFILES`
+
+and verify there are no broken references.
+
+==================================================
+6. HOME HERO MUST USE THE SELECTED GRAIN
+==================================================
+
+Current file:
+`src/components/grain/home/hero-card.tsx`
+
+Current implementation uses:
+
+`currentReading.grainType`
+
+Change this so the displayed grain is based on:
+
+`settings.grainType`
+
+The hero should therefore remain synchronized with the Settings choice.
+
+Example:
+
+Settings:
+Soybean
+
+Home:
+“Soybean moisture content”
+
+NOT:
+“Corn moisture content”
+
+The number itself should still come from the current sensor reading.
+
+Do not confuse:
+- sensor reading values
+with
+- application interpretation profile.
+
+==================================================
+7. MOCHI ENGINE MUST FOLLOW THE SELECTED GRAIN
+==================================================
+
+The existing Mochi engine is already substantial and should NOT be rewritten unnecessarily.
+
+Preserve the existing engine architecture:
+- trend detection
+- history analysis
+- risk evaluation
+- recovery logic
+- confidence
+- rule selection
+- message resolution
+
+But make sure the thresholds passed into the engine always come from the currently selected grain.
+
+The flow should be:
+
+settings.grainType
+→ GRAIN_PROFILES[grain]
+→ settings.thresholds
+→ evaluate(...)
+→ decision
+
+When the user changes grain, recompute the current decision immediately.
+
+Do not change the actual engine rules unless required to fix this source-of-truth issue.
+
+==================================================
+8. HEADER VISUAL HIERARCHY IS CURRENTLY WEAK
+==================================================
+
+Current file:
+`src/components/grain/header.tsx`
+
+Current visual problem:
+
+The top-right controls are all circular:
+- battery
+- DEMO
+- language selector
+
+They all have roughly equal visual importance.
+
+This makes the header look like a collection of floating bubbles instead of a deliberate product header.
+
+I do NOT want these circular controls.
+
+Replace them with a more refined compact status system.
+
+DESIRED HEADER HIERARCHY:
+
+LEFT:
+small status indicator
++
+“GRAIN MONITOR”
+
+RIGHT:
+battery status
++
+demo status when active
++
+language control only when applicable
+
+Use compact rounded pills / compact glass capsules rather than circles.
+
+Suggested visual direction:
+
+Battery:
+small horizontal capsule, for example:
+[ battery icon 94% ]
+
+Demo:
+small lightweight chip:
+[ ● DEMO ]
+
+Language:
+compact rounded rectangle:
+[ EN ]
+
+Do NOT make all three the same shape and size.
+
+Battery should read as device telemetry.
+Demo should read as a state label.
+Language should read as a utility action.
+
+They should have deliberately different visual weights.
+
+The overall header should feel like a premium instrument interface rather than three app-store bubbles.
+
+==================================================
+9. REDESIGN LANGUAGE SELECTOR
+==================================================
+
+Current file:
+`src/components/grain/language-selector.tsx`
+
+Current control is a 36px circular button.
+
+Replace it with a compact rounded rectangular glass control.
+
+Example visual idea:
+
+┌────────┐
+│  EN  ˅ │
+└────────┘
+
+or:
+
+[ EN ]
+
+The control should:
+- remain compact
+- retain accessibility
+- retain all existing languages
+- keep the current selection indicator
+- keep Escape/outside-click behavior
+- preserve translations
+
+The modal/panel itself can keep its current general behavior, but polish spacing and transitions.
+
+Do not introduce a heavy select component.
+
+==================================================
+10. IMPROVE BATTERY STATUS VISUAL
+==================================================
+
+Current class:
+`.grain-battery-badge`
+
+It is explicitly circular:
+
+width: 32px
+height: 32px
+border-radius: 50%
+
+Do not keep this.
+
+Make it an elongated compact status capsule.
+
+Suggested:
+
+icon + “94%”
+
+Use:
+- subtle glass background
+- tiny border
+- appropriate battery icon
+- accent color when normal
+- warning color when low
+
+Keep low-battery red behavior.
+
+Avoid excessive shadows.
+
+==================================================
+11. DEMO BADGE SHOULD NOT LOOK LIKE ANOTHER BUTTON
+==================================================
+
+Current DEMO badge visually resembles another circular status button.
+
+Redesign as a lightweight status chip.
+
+Example:
+
+● DEMO
+
+with:
+- tiny pulsing green dot
+- restrained green tint
+- subtle border
+- no giant circle
+- no excessive padding
+
+It should be secondary to battery.
+
+==================================================
+12. THE TOP HEADER MUST BECOME REAL FROSTED GLASS
+==================================================
+
+Current problem:
+
+The header itself is basically a solid/normal-flow header.
+
+The desired behavior is a very subtle depth gradient.
+
+Reference direction from the provided image:
+
+At the very top:
+HIGH FROST
+HIGH BLUR
+HIGH OPACITY
+
+As the user looks lower:
+LESS FROST
+LESS OPACITY
+MORE TRANSPARENT
+
+Eventually:
+ALMOST CLEAR
+
+Think of it as:
+
+TOP
+████████████████
+strong frosted glass
+
+████████████████
+medium frosted glass
+
+████████████████
+light frost
+
+████████████████
+almost transparent
+
+This MUST NOT be implemented as one flat blur layer.
+
+Use layered pseudo-elements.
+
+Suggested architecture:
+
+`.grain-glass-header`
+- positioned above the scrolling content
+- remains pointer-safe
+- respects safe-area inset
+- short visual height
+
+Pseudo layer 1:
+vertical translucent background gradient
+
+Pseudo layer 2:
+backdrop-filter blur + saturate
+with a mask/opacity gradient so the blur intensity visibly fades downward
+
+Example conceptual direction:
+
+background:
+linear-gradient(
+  to bottom,
+  rgba(surface, 0.88) 0%,
+  rgba(surface, 0.55) 45%,
+  rgba(surface, 0.20) 72%,
+  transparent 100%
+)
+
+backdrop-filter:
+blur(24px) saturate(1.35)
+
+Then use a mask/gradient to fade the backdrop effect downward.
+
+IMPORTANT:
+Do not simply set:
+`background: rgba(...)`
+and
+`backdrop-filter: blur(...)`
+uniformly over the entire header.
+
+The whole point is the gradient of frost.
+
+==================================================
+13. TOP HEADER SHOULD OVERLAP SCROLL CONTENT
+==================================================
+
+To create actual depth, the header should visually sit over the page content instead of consuming a completely opaque strip above it.
+
+You may change:
+
+`.grain-glass-header`
+
+to a positioned overlay/frosted layer if necessary.
+
+However:
+- respect safe-area insets
+- keep content readable
+- avoid hiding the first card
+- add appropriate top padding to `.grain-scroll`
+- verify mobile viewport behavior
+- verify both light and dark modes
+
+The header should feel like a glass layer floating above the app.
+
+==================================================
+14. BOTTOM NAV CURRENTLY HAS A CODE-LEVEL REASON WHY IT IS NOT FROSTED
+==================================================
+
+Current files:
+`src/components/grain/bottom-nav.tsx`
+`src/app/globals.css`
+
+The JSX currently applies:
+
+`grain-nav-solid`
+
+And CSS explicitly contains:
+
+`.grain-nav-solid {
+  background: var(--gm-surface-solid) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}`
+
+This is directly fighting the glass system.
+
+REMOVE this solid override.
+
+The bottom navigation should be a proper glass surface.
+
+Remove the `grain-nav-solid` class from the JSX and remove the override CSS.
+
+==================================================
+15. REDESIGN THE BOTTOM NAV AS PREMIUM FROSTED GLASS
+==================================================
+
+The bottom navigation should feel like a physical glass control floating above the interface.
+
+Desired characteristics:
+
+- translucent
+- blurred
+- layered
+- subtle reflection
+- subtle border
+- subtle shadow
+- accent light bleed
+- not opaque
+- not overly glossy
+- not too large
+
+Use:
+
+background:
+semi-transparent surface gradient
+
+backdrop-filter:
+blur(24px–32px) saturate(1.4–1.7)
+
+border:
+very subtle
+
+box-shadow:
+soft ambient shadow
++
+small inset highlight
+
+Add a subtle upper highlight line.
+
+The visual inspiration is real frosted glass, not “white rounded rectangle with opacity”.
+
+==================================================
+16. BOTTOM NAV SHOULD HAVE A GRADIENT OF GLASS TOO
+==================================================
+
+Do not make the whole bottom nav visually uniform.
+
+The upper edge can have slightly stronger light/reflection.
+
+The lower area should be a little less bright / less frosted.
+
+Example concept:
+
+TOP:
+more reflection
+more highlight
+more visible glass
+
+CENTER:
+main translucent surface
+
+BOTTOM:
+slightly darker
+slightly less reflective
+
+This should produce physical depth.
+
+==================================================
+17. BOTTOM NAV SHOULD EMIT SUBTLE ACCENT LIGHT
+==================================================
+
+The active tab should create a tiny ambient color glow.
+
+Not a neon effect.
+
+Not a giant colored blob.
+
+Think of light passing through glass.
+
+Use subtle:
+- accent radial gradient
+- small glow
+- inset highlight
+- soft bloom behind active icon
+
+For example:
+
+active tab:
+soft `radial-gradient`
+centered near the active icon
+with very low opacity
+
+and:
+
+box-shadow:
+0 0 18px rgba(accent, 0.14)
+
+The glow should be visible enough to give depth but subtle enough that it still looks professional.
+
+==================================================
+18. ACTIVE NAV TAB NEEDS BETTER VISUAL HIERARCHY
+==================================================
+
+Current active state is mostly:
+accent color + background capsule.
+
+Make it more refined.
+
+Suggested hierarchy:
+
+Inactive:
+- muted icon
+- muted label
+
+Active:
+- accent icon
+- slightly brighter label
+- subtle glass highlight behind the active item
+- soft ambient accent glow
+- tiny spring-like scale transition
+
+Do not make the active item oversized.
+
+==================================================
+19. ADD SUBTLE APP-WIDE MOTION
+==================================================
+
+Current tab switching is functional but visually static.
+
+I want useful, restrained motion throughout the interface.
+
+Do NOT introduce flashy animations.
+
+Use:
+- 180–280ms transitions
+- small opacity shifts
+- 4–10px translation
+- tiny scale adjustments
+- spring-like active-nav motion
+- soft card entrance
+
+Use CSS where possible.
+
+Avoid adding a new dependency.
+
+The app already has animation infrastructure.
+
+Improve it instead of replacing everything.
+
+==================================================
+20. TAB TRANSITION ANIMATION
+==================================================
+
+When switching:
+
+Home
+History
+Discover
+Settings
+
+Use a short subtle content transition.
+
+Suggested:
+
+enter:
+opacity 0
+transform: translateY(6px) scale(0.995)
+
+then:
+
+opacity 1
+transform: translateY(0) scale(1)
+
+Timing:
+approximately 220ms
+
+Easing:
+cubic-bezier similar to:
+0.16, 1, 0.3, 1
+
+Do not animate the entire viewport dramatically.
+
+Do not cause layout jumps.
+
+Do not reset scroll unexpectedly except where current intended behavior requires it.
+
+==================================================
+21. ACTIVE NAV ICON ANIMATION
+==================================================
+
+When a tab becomes active:
+
+- icon scales very slightly
+- active background fades/slides in
+- accent glow appears softly
+- label becomes slightly more prominent
+
+Use something like:
+scale(1.03–1.06)
+
+Do NOT bounce aggressively.
+
+The animation should be felt rather than noticed.
+
+==================================================
+22. HOME CARD MICRO-INTERACTIONS
+==================================================
+
+Add restrained interaction to clickable Home elements.
+
+For example:
+- recent reading card: slight scale-down on press
+- buttons: subtle pressure effect
+- dropdown removal means no dropdown interaction
+- settings selections: quick highlight transition
+- language selection: soft selected-state animation
+
+Do not animate static telemetry cards unnecessarily.
+
+==================================================
+23. REDUCE VISUAL NOISE AND IMPROVE HIERARCHY
+==================================================
+
+The Home screen currently has too many similarly weighted rectangular components.
+
+The hierarchy should become:
+
+1. Header status
+2. Hero moisture reading
+3. Current grain context
+4. Supporting metrics
+5. Mochi insight
+6. Recent readings
+
+The selected grain should not compete with the main moisture number.
+
+The battery and demo controls should not compete with the app title.
+
+The bottom nav should not visually compete with the Hero.
+
+Use spacing and scale rather than adding more effects.
+
+==================================================
+24. HERO CARD SHOULD REMAIN THE PRIMARY VISUAL ANCHOR
+==================================================
+
+Do not destroy the existing hero card.
+
+Preserve:
+- large moisture number
+- sparkline
+- live/demo countdown
+- risk-aware visual treatment
+
+But make sure:
+- the grain label reflects `settings.grainType`
+- the status remains correct
+- no broken dropdown exists under it
+
+The Hero should remain the main visual anchor.
+
+==================================================
+25. HISTORY MUST REMAIN CONSISTENT
+==================================================
+
+History records should show the grain profile that was active when the reading was captured.
+
+Do not rewrite old history every time the user changes the current grain selection.
+
+For new readings:
+selected application grain should be saved with the reading/history record.
+
+For old readings:
+keep their stored metadata intact.
+
+The History detail screen should therefore remain internally consistent.
+
+==================================================
+26. DISCOVER MUST FOLLOW THE SELECTED GRAIN
+==================================================
+
+`src/components/grain/discover/discover-tab.tsx`
+`src/lib/discover-content.ts`
+
+Discover should use:
+
+`settings.grainType`
+
+and the Mochi risk state.
+
+Make sure changing:
+Wheat → Soybean
+
+updates Discover recommendations correctly.
+
+Remove any “other” grain content rules.
+
+==================================================
+27. SETTINGS GRAIN UI SHOULD REMAIN THE ONLY GRAIN SELECTOR
+==================================================
+
+In Settings:
+
+Keep the current visual grain selection concept.
+
+Polish it, but do not turn it into a native dropdown.
+
+The user should see a compact grid or segmented selection.
+
+Recommended visual direction:
+- selected grain = accent highlight + subtle glass fill
+- unselected = neutral
+- selected check indicator can remain
+- no excessive pill shapes
+- good spacing
+- wraps cleanly on small screens
+
+Supported grains only:
+
+Wheat
+Rice
+Corn
+Barley
+Soybean
+Sorghum
+Oats
+Millet
+
+==================================================
+28. REMOVE DEAD / UNUSED HOME GRAIN LOGIC
+==================================================
+
+After removing the Home dropdown:
+
+Clean up:
+- GrainTypeDropdown
+- unused imports
+- unused callbacks
+- unused refs
+- unused grain-option arrays in Home
+- dead dropdown CSS
+
+Do not leave obsolete code behind.
+
+==================================================
+29. LIGHT MODE MUST BE VERIFIED
+==================================================
+
+Do not solve this only for dark mode.
+
+The application supports:
+- dark
+- light
+
+Verify:
+
+Dark mode:
+- frosted glass is visible
+- text contrast is strong
+- glass layers are subtle
+- accent glow works
+
+Light mode:
+- frost remains visible
+- header does not become an opaque white strip
+- bottom nav does not become a white rectangle
+- shadows remain subtle
+- text remains readable
+
+Avoid the previous problem where light mode produced pitch-black decision cards.
+
+==================================================
+30. RESPECT THE EXISTING ACCENT SYSTEM
+==================================================
+
+The application already supports:
+
+Orange
+Green
+Purple
+Blue
+Teal
+
+The new glass effects should use:
+`--gm-accent`
+`--gm-accent-rgb`
+existing theme variables
+
+Do not hardcode orange into new components.
+
+The header and bottom nav should respond naturally when the user changes accent color.
+
+The subtle glass glow should therefore change from:
+orange → green → purple → blue → teal
+
+without requiring separate component implementations.
+
+==================================================
+31. USE EXISTING CSS VARIABLES WHERE POSSIBLE
+==================================================
+
+The project already has an extensive liquid-glass token system in:
+
+`src/app/globals.css`
+
+Reuse the existing variables and refine them.
+
+Do not create a second completely unrelated design-token system.
+
+However, introduce new variables when useful, for example:
+
+--gm-header-frost-strength
+--gm-header-frost-fade
+--gm-nav-frost
+--gm-nav-glow
+--gm-glass-highlight-strong
+--gm-glass-highlight-soft
+
+Keep the design system coherent.
+
+==================================================
+32. ACCESSIBILITY / REDUCED MOTION
+==================================================
+
+All new animations must respect:
+
+`prefers-reduced-motion: reduce`
+
+When reduced motion is enabled:
+- disable entrance translation
+- remove active-tab scaling
+- minimize glow pulsing
+- retain functional state changes
+
+Do not let animations interfere with:
+- BLE
+- scrolling
+- button tapping
+- keyboard interaction
+
+==================================================
+33. MOBILE-FIRST REQUIREMENT
+==================================================
+
+This is primarily a mobile PWA.
+
+The final result must look excellent around:
+- 360px
+- 375px
+- 390px
+- 412px
+- 430px
+
+The app shell is currently max-width 430px.
+
+Preserve this concept.
+
+Avoid horizontal overflow.
+
+Make sure the bottom nav respects:
+`env(safe-area-inset-bottom)`
+
+Make sure the header respects:
+`env(safe-area-inset-top)`
+
+==================================================
+34. DO NOT BREAK BLE
+==================================================
+
+This is extremely important.
+
+Do NOT alter BLE UUIDs.
+
+Keep:
+- service UUID
+- data characteristic
+- command characteristic
+- notification flow
+- wake
+- calibrate
+- sync
+- sleep
+
+Do not introduce an unnecessary reconnect rewrite in this task unless required to fix the grain state synchronization.
+
+==================================================
+35. DO NOT BREAK DEMO MODE
+==================================================
+
+Demo mode must continue to work.
+
+Test:
+
+Settings
+→ Demo ON
+→ choose Wheat
+→ Home
+
+Then:
+
+Settings
+→ choose Soybean
+→ Home
+
+The Home should immediately show Soybean context and Mochi should immediately use Soybean thresholds.
+
+The demo timer must continue working.
+
+Do not restart the demo timer merely because the grain changed unless absolutely necessary.
+
+==================================================
+36. PRESERVE THE CURRENT MOCHI ENGINE UX
+==================================================
+
+The current Mochi insight system is already a strong part of the application.
+
+Keep:
+- SAFE
+- MONITOR
+- WARNING
+- CRITICAL
+- RECOVERY
+- LEARNING / insufficient-data behavior
+- confidence
+- trend
+- rule ID where currently used
+- action recommendations
+- language translations
+
+The refinement should make Mochi feel more polished, not remove its logic.
+
+==================================================
+37. CLEAN UP THE HEADER HEIGHT
+==================================================
+
+The header should feel more compact.
+
+The current visual mass can be reduced slightly.
+
+Suggested target:
+around 52–60px visual height excluding safe-area inset.
+
+Do not make the logo/title tiny.
+
+The hierarchy should be:
+status dot → GRAIN MONITOR → compact telemetry cluster
+
+==================================================
+38. APP ICON / BRAND MARK
+==================================================
+
+Audit the existing PWA assets:
+
+`public/icon-192.png`
+`public/icon-512.png`
+`public/apple-touch-icon.png`
+`public/logo.svg`
+`public/favicon-32.png`
+
+There is a visual-brand inconsistency concern.
+
+Do not randomly redesign the entire branding.
+
+The icon/brand should feel:
+- clean
+- minimal
+- agricultural/monitoring related
+- recognizable at small size
+- not like a generic circular app icon
+- consistent with the Mochi Grain identity
+
+If the existing launcher icon is already appropriate, leave it alone.
+
+Do not spend the majority of the task on this.
+
+The primary “circle problem” being fixed here is the in-app header control styling.
+
+==================================================
+39. REMOVE THE SOLID NAV WORKAROUND
+==================================================
+
+Specifically clean:
+
+`grain-nav-solid`
+
+Remove:
+- JSX usage
+- CSS override
+- comments describing it as solid
+
+Replace with the actual glass navigation.
+
+==================================================
+40. FINAL FILES TO REVIEW
+==================================================
+
+At minimum inspect and modify as needed:
+
+src/lib/grain-types.ts
+src/lib/grain-store.ts
+src/lib/bluetooth.ts
+src/lib/mochi-engine.ts
+src/lib/i18n.ts
+src/lib/discover-content.ts
+src/components/grain/header.tsx
+src/components/grain/language-selector.tsx
+src/components/grain/bottom-nav.tsx
+src/components/grain/home/hero-card.tsx
+src/components/grain/home/metric-pills.tsx
+src/components/grain/settings/settings-tab.tsx
+src/components/grain/discover/discover-tab.tsx
+src/components/grain/history/history-tab.tsx
+src/app/globals.css
+
+Also search the entire project for:
+- `other`
+- `grainType`
+- `grain-nav-solid`
+- `grain-battery-badge`
+- `LanguageSelector`
+- `GRAIN_OPTIONS`
+- `GRAIN_PROFILES`
+
+==================================================
+41. EXPECTED HOME RESULT
+==================================================
+
+The refined Home screen should conceptually look like:
+
+┌──────────────────────────────────────┐
+│ ● GRAIN MONITOR          🔋94% DEMO │
+│                                      │
+│ ┌──────────────────────────────────┐ │
+│ │ MOISTURE                LIVE SAFE │ │
+│ │                                  │ │
+│ │ 12.5 %                           │ │
+│ │ Soybean moisture content         │ │
+│ │                                  │ │
+│ │      smooth moisture chart       │ │
+│ │                                  │ │
+│ └──────────────────────────────────┘ │
+│                                      │
+│ ┌──────────────┐ ┌──────────────┐   │
+│ │ TEMP         │ │ SIGNAL       │   │
+│ │ 29 °C        │ │ 78 %         │   │
+│ └──────────────┘ └──────────────┘   │
+│                                      │
+│ ┌──────────────────────────────────┐ │
+│ │ SAFE · STABLE                    │ │
+│ │ Storage is Safe                  │ │
+│ │ All readings within normal range │ │
+│ │ Maintain current conditions      │ │
+│ └──────────────────────────────────┘ │
+│                                      │
+│ Recent readings ...                  │
+│                                      │
+│      ╭──────────────────────╮        │
+│      │  Home History Discover ⚙ │     │
+│      │       frosted glass    │       │
+│      ╰──────────────────────╯        │
+└──────────────────────────────────────┘
+
+There must be NO grain dropdown on Home.
+
+==================================================
+42. EXPECTED SETTINGS RESULT
+==================================================
+
+Settings remains the place where grain is selected.
+
+The grain selector should feel intentional:
+
+GRAIN TYPE
+
+┌────────┐ ┌────────┐ ┌────────┐
+│ Wheat ✓│ │ Rice   │ │ Corn   │
+└────────┘ └────────┘ └────────┘
+
+┌────────┐ ┌────────┐ ┌────────┐
+│ Barley │ │Soybean │ │Sorghum │
+└────────┘ └────────┘ └────────┘
+
+┌────────┐ ┌────────┐
+│ Oats   │ │ Millet │
+└────────┘ └────────┘
+
+No “Other”.
+
+==================================================
+43. EXPECTED HEADER GLASS
+==================================================
+
+The top should visually fade like:
+
+STRONG FROST
+████████████████████
+
+MEDIUM FROST
+████████████████████
+
+LIGHT FROST
+--------------------
+
+CLEAR
+....................
+
+The hero card must still be visible naturally behind it.
+
+==================================================
+44. EXPECTED BOTTOM NAV GLASS
+==================================================
+
+The bottom nav should feel physically separated from the content:
+
+content
+   ↓
+soft shadow
+   ↓
+translucent frosted glass
+   ↓
+slight upper reflection
+   ↓
+accent glow behind active tab
+   ↓
+rounded lower edge
+
+Avoid:
+- solid black rectangle
+- solid white rectangle
+- giant neon glow
+- excessive blur that hides everything underneath
+
+==================================================
+45. DO NOT USE HEAVY ANIMATION
+==================================================
+
+This is a monitoring application.
+
+Motion should communicate:
+- navigation
+- state changes
+- focus
+- interaction
+
+It should never make the app feel like a game.
+
+No:
+- large zooms
+- bouncing cards
+- spinning screens
+- aggressive parallax
+- continuous distracting movement
+
+==================================================
+46. TEST PLAN
+==================================================
+
+After implementation, test all of the following.
+
+FUNCTIONAL:
+
+A.
+Settings → Wheat
+Home → Wheat
+
+B.
+Settings → Rice
+Home → Rice
+
+C.
+Settings → Soybean
+Home → Soybean
+
+D.
+While Demo Mode is active:
+Corn → Wheat
+verify current Home data remains the same but interpretation/profile updates immediately
+
+E.
+While real BLE is connected:
+Wheat → Soybean
+receive another BLE notification
+verify Soybean remains selected
+
+F.
+Switch grain
+verify Bluetooth stays connected
+
+G.
+Switch grain
+verify no duplicate history entry is created
+
+H.
+Verify history entries remain internally consistent
+
+I.
+Verify Discover follows selected grain
+
+J.
+Verify no “Other” exists anywhere
+
+VISUAL:
+
+K.
+Dark mode header frost
+
+L.
+Light mode header frost
+
+M.
+Dark mode bottom nav glass
+
+N.
+Light mode bottom nav glass
+
+O.
+Orange accent
+
+P.
+Green accent
+
+Q.
+Purple accent
+
+R.
+Blue accent
+
+S.
+Teal accent
+
+T.
+Reduced motion mode
+
+RESPONSIVE:
+
+U.
+360px width
+
+V.
+390px width
+
+W.
+430px width
+
+==================================================
+47. CODE QUALITY
+==================================================
+
+Keep TypeScript strict and clean.
+
+Do not:
+- add unnecessary libraries
+- duplicate logic
+- leave dead components
+- leave dead CSS
+- suppress TypeScript errors
+- add random `any`
+- disable lint rules
+
+Prefer existing architecture.
+
+Do not change `next.config.ts` just to hide warnings.
+
+Do not weaken type safety.
+
+==================================================
+48. BEFORE FINISHING
+==================================================
+
+Run:
+
+- repository-wide search for old grain dropdown code
+- repository-wide search for `other`
+- TypeScript/build validation
+- lint
+- existing available tests/checks
+
+Verify no runtime console errors.
+
+Then give a concise implementation summary containing:
+1. files changed
+2. grain source-of-truth fix
+3. UI changes
+4. glass navigation changes
+5. animation changes
+6. validation results
+
+Do not claim something works unless you actually verified it.
+
+==================================================
+FINAL DESIGN PRINCIPLE
+==================================================
+
+The finished Mochi Grain app should feel like:
+
+a precision agricultural instrument wrapped in subtle physical glass.
+
+Not:
+- a generic dashboard
+- a UI kit demo
+- a collection of rounded cards
+- an overly animated mobile app
+- a black-and-white glassmorphism template
+
+The visual hierarchy must be clear.
+
+The selected grain must have one source of truth.
+
+Settings chooses the grain.
+
+Home interprets the grain.
+
+Mochi evaluates the grain.
+
+History records the grain.
+
+Discover teaches the grain.
+
+BLE provides measurements, not authority over the user’s selected monitoring profile.
+
+Make the interface feel calm, precise, tactile, and finished.
