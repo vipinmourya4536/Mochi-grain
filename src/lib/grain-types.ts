@@ -218,7 +218,8 @@ export interface AppSettings {
   soundAlerts: boolean; // soft chime when readings enter warning/critical state
   trendsMetric: TrendsMetric; // which series the History trends chart shows
   trendsRange: TrendsRange;   // 'auto' picks the smallest range with ≥2 points
-  trendsMovingAvg: boolean; // overlay a trailing 7-reading moving-average line on the trends chart
+  trendsMovingAvg: boolean; // overlay a trailing moving-average line on the trends chart
+  trendsMaWindow: number;   // moving-average window in readings (5 | 7 | 14)
 }
 
 export const DEFAULT_THRESHOLDS: GrainThresholds = {
@@ -259,7 +260,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
   trendsMetric: 'moisture',
   trendsRange: 'auto',
   trendsMovingAvg: true,
+  trendsMaWindow: 7,
 };
+
+/** Allowed moving-average window sizes (segmented control in the trends header) */
+export const MA_WINDOW_OPTIONS: number[] = [5, 7, 14];
 
 /* Grain label map */
 export const GRAIN_LABELS: Record<GrainType, string> = {

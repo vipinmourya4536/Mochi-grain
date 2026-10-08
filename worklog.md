@@ -377,3 +377,44 @@ Unresolved / Next-round recommendations:
 4. Detail context sparkline is display-only; adding SparklineChart-style scrub would let users inspect neighbors.
 5. All-clear cue shares the single soundAlerts toggle with escalations; a separate "safe sounds" toggle is trivial if users find the settle chime chatty.
 6. Marathi + Hinglish walkthrough of the new surfaces (Hindi was browser-verified this round; mr/hinglish code-verified only).
+
+---
+Task ID: 9 (cron review round 8)
+Agent: Main Agent (Z.ai Code)
+Task: QA status assessment via agent-browser, then — app stable — three feature expansions from the round-8 recommendation list (detail-sparkline scrub inspection, configurable MA window, MA-crossover momentum markers) + styling detail polish.
+
+Work Log:
+- QA BASELINE (agent-browser, 390px): page 200, ZERO console errors/warnings (verified after console clear + fresh reload), all 4 tabs + demo + history stats/score/trends + discover + settings functional in dark + light. Demo persistence lifecycle re-confirmed incidentally: reload mid-demo cleans demo rows (round-7 rails working). App STABLE → proceeded to feature work per round-8 recommendations #2/#3/#4.
+- FEATURE — Configurable MA window (5 | 7 | 14) (grain-types.ts + trends-chart.tsx + globals.css):
+  - New AppSettings key `trendsMaWindow: number` (default 7) + exported `MA_WINDOW_OPTIONS = [5, 7, 14]`; generic `{...DEFAULT_SETTINGS, ...stored}` merge already forward-migrates.
+  - `movingAverage(values, win)` parametrized (was a fixed 7); `maWin` falls back to 7 when the persisted value is out of range.
+  - New UI: when MA is ON, the header chip expands into a 4-button accent-tinted glass segmented control `.grain-ma-seg` [WaveSine(off) | 5 | 7 | 14]; the WaveSine button toggles MA off (returns to the single `MA{win}` chip), numbers select the window (aria-pressed, haptics, persisted). When OFF, the chip re-enables with the last window.
+  - Scrub tooltip MA row now reads "MA5/MA7/MA14" per selection.
+  - Browser-verified: 5/7/14 switching changes the overlay line + marker count (MA5→3 crossings, MA7→2, MA14→3 on the demo wave), `trendsMaWindow=14` confirmed persisted in IndexedDB settings record and restored after full reload; off→chip→on round-trip works.
+- FEATURE — MA-crossover momentum markers (trends-chart.tsx):
+  - `detectCrossings()` marks points where the raw curve crosses the MA line (sign flip with at least ONE side clearly off the line — first implementation required BOTH sides beyond the eps dead-band and silently missed gradual crossings on slow waves; caught live in browser QA when the demo data produced 0 markers, fixed to the one-side rule, verified against a local replica of the demo generator).
+  - Hollow rings (r=2.9, card fill, 1.3 stroke) rendered under a .grain-scrub-group; moisture semantics: up-cross = amber (--gm-up, rising momentum = risk direction), down-cross = green (--gm-down); temp mode uses accent for both directions. Subsampled to ≤40 on long ranges; dim to 0.45 while scrubbing elsewhere; <title> hover text localized.
+  - Scrub tooltip gains a third row `.x`: "↗ Crossed above average" / "↘ Crossed below average" in the semantic color (verified in EN + Hindi).
+- FEATURE — Detail context sparkline scrub inspection (detail-sparkline.tsx rewritten):
+  - The ~16-reading window around a selected reading is now scrubable with the shared interaction pattern: pointer drag + desktop hover, timestamp-anchored selection (new readings never invalidate an active scrub), touch auto-clear 2.8s, ←/→/Home/End keyboard on a focusable wrapper (role=application, localized aria via new `history.detail_scrub_aria`), Escape/blur clear, 4ms haptic tick on point change.
+  - Glass tooltip (reuses .grain-scrub-tooltip) shows moisture % + HH:mm (MMM d · HH:mm when the window spans >36h); scrub marker ring + dashed guide; neighbor dots and the selected point's halo dim while scrubbing.
+  - Verified: hover scrub "13.5% 15:14", keyboard 2×ArrowLeft → "13.7% 14:54", Home → "13.8% 14:44", Escape clears; light mode dark-glass tooltip legible.
+- i18n: 4 new keys × 4 languages (history.trends_ma_win, history.cross_up, history.cross_down, history.detail_scrub_aria) inserted AFTER the unique per-language `history.detail_context` anchors via corrected positional script (insert-after, never replace); counts verified =4 each; prior keys (toast.demo_off, history.trend_drop, history.score_title, settings.sound) verified intact; Hindi verified IN BROWSER (seg aria "चल औसत अवधि", tooltip "औसत से ऊपर गया"); Marathi/Hinglish code-verified.
+- STYLING DETAILS:
+  - `.grain-ma-seg`: accent-tinted glass pill group (accent-dim bg + color-mix accent border, active = accent bg 0.20 + inset accent ring, :active scale 0.92, tabular-nums).
+  - `.grain-cross-marker` rings + `.grain-scrub-tooltip .x` row follow the theme-aware semantic token system (light mode auto-darkens: verified green rgb(21,128,61) in light vs rgb(34,197,94) in dark).
+  - Detail sparkline inherits `.grain-trends-wrap` crosshair cursor + accent focus ring; reduced-motion block extended (`.grain-ma-seg button`, `.grain-cross-marker`).
+- VALIDATION: `bun run lint` clean; `bunx tsc --noEmit` clean for app code; ZERO browser console errors/warnings across the entire pass (dark + light, EN + Hindi, moisture + temp, pointer + keyboard scrub); app left in clean default state (EN, dark, no demo data, 0 readings, maWindow reset to 7).
+- Screenshots (download/): r9-qa-home/history/discover/settings, r9-qa-demo-home2, r9-qa-history2, r9-qa-light-history, r9-trends-ma-seg, r9-trends-moisture-cross, r9-cross-zoom, r9-scrub-cross (tooltip with MA + crossover rows), r9-ma14, r9-detail-spark, r9-detail-scrub (detail tooltip), r9-light-detail-scrub, r9-light-trends-ma, r9-hindi-trends, r9-hindi-cross-tooltip, r9-final-home.
+
+Stage Summary (browser-verified):
+- Trends MA is now a configurable instrument (5/7/14, persisted) with momentum-shift crossover rings in storage-risk semantics, and the tooltip explains the signal in the user's language.
+- The detail view's context sparkline is now inspectable with the same scrub interaction learned on Home + Trends — one consistent chart language across the app.
+- All prior behavior intact: grain source-of-truth, demo isolation/persistence, BLE flow/UUIDs untouched, 4 languages, light/dark themes, accent system flows through all new surfaces.
+
+Unresolved / Next-round recommendations:
+1. BLE auto-reconnect (Task 2) + PWA install card (Task 3) still need real-device QA.
+2. Crossover markers could pulse briefly when a NEW crossing appears in live mode (attention cue; needs the engine tie-in).
+3. Detail context sparkline could also offer a TEMP metric variant (moisture-only today).
+4. The MA seg could show a small "window" caption for discoverability (current label relies on the aria-label + title).
+5. Marathi + Hinglish walkthrough of the newest surfaces (hi verified in browser again this round; mr/hinglish code-verified only).

@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState, useEffect, useCallback } from 'react';
 import { useGrainStore } from '@/lib/grain-store';
 import type { HistoryEntry, TrendsMetric, TrendsRange } from '@/lib/grain-types';
+import { MA_WINDOW_OPTIONS } from '@/lib/grain-types';
 import { getAccentHex, getRiskColor } from '@/lib/accent-hex';
 import { t, type AppLanguage } from '@/lib/i18n';
 import { haptic } from '@/lib/haptics';
@@ -32,7 +33,7 @@ const RANGES: { id: RangeId; label: string; ms: number | null }[] = [
 
 const SCRUB_AUTO_CLEAR_MS = 3200;
 const TOOLTIP_CLAMP = 50;
-const MA_WINDOW = 7; // trailing moving-average window (readings)
+const MA_DEFAULT = 7; // fallback when the persisted window is out of range
 
 const W = 358;
 const H = 216;
@@ -46,6 +47,14 @@ interface TrendPt {
   v: number;
   t: number;
   state: string;
+}
+
+/** A point where the raw curve crosses the moving-average line (momentum shift) */
+interface CrossPt {
+  i: number;              // index into geo.pts
+  x: number;
+  y: number;
+  dir: 'up' | 'down';
 }
 
 interface TrendDir {
@@ -70,16 +79,38 @@ function filterEntries(entries: HistoryEntry[], range: RangeId): HistoryEntry[] 
 }
 
 /** Trailing moving average with a shrinking window at the series head, so the
- *  overlay spans the full chart even for the first MA_WINDOW-1 readings. */
-function movingAverage(values: number[]): number[] {
+ *  overlay spans the full chart even for the first win-1 readings. */
+function movingAverage(values: number[], win: number): number[] {
   const out: number[] = [];
   let sum = 0;
   for (let i = 0; i < values.length; i++) {
     sum += values[i];
-    if (i >= MA_WINDOW) sum -= values[i - MA_WINDOW];
-    out.push(sum / Math.min(i + 1, MA_WINDOW));
+    if (i >= win) sum -= values[i - win];
+    out.push(sum / Math.min(i + 1, win));
   }
   return out;
+}
+
+/** Points where the raw curve crosses the MA line — the classic momentum-shift
+ *  signal. A crossing counts when the sign flips with at least one side clearly
+ *  off the line; when BOTH sides hug the line it is jitter and skipped. */
+function detectCrossings(values: number[], ma: number[], xOf: (i: number) => number, yOf: (v: number) => number): CrossPt[] {
+  const eps = 0.05;
+  const crossings: CrossPt[] = [];
+  for (let i = 1; i < values.length; i++) {
+    const dPrev = values[i - 1] - ma[i - 1];
+    const dCur = values[i] - ma[i];
+    if (Math.abs(dPrev) < eps && Math.abs(dCur) < eps) continue;
+    if (dPrev < 0 && dCur > 0) crossings.push({ i, x: xOf(i), y: yOf(values[i]), dir: 'up' });
+    else if (dPrev > 0 && dCur < 0) crossings.push({ i, x: xOf(i), y: yOf(values[i]), dir: 'down' });
+  }
+  // Long ranges: subsample so the chart stays readable (keeps most recent)
+  const MAX_CROSS = 40;
+  if (crossings.length > MAX_CROSS) {
+    const step = Math.ceil(crossings.length / MAX_CROSS);
+    return crossings.filter((_, k) => k % step === 0);
+  }
+  return crossings;
 }
 
 /** Smallest range with ≥2 points, falling back to ALL */
@@ -138,6 +169,9 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
   const lang = settings.language as AppLanguage;
   const accentHex = getAccentHex(settings.accentColor);
   const { safe, warn, critical } = settings.thresholds;
+
+  // Moving-average window (persisted; falls back to 7 for out-of-range values)
+  const maWin = MA_WINDOW_OPTIONS.includes(settings.trendsMaWindow) ? settings.trendsMaWindow : MA_DEFAULT;
 
   // Metric + range persist across sessions via AppSettings ('auto' re-detects)
   const [rangeSel, setRangeSel] = useState<RangeId>(() =>
@@ -199,7 +233,7 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
     }));
 
     // Trailing moving average overlay (same x coordinates as the raw curve)
-    const maValues = movingAverage(values);
+    const maValues = movingAverage(values, maWin);
     const maPts = pts.map((p, i) => ({ x: p.x, y: yOf(maValues[i]) }));
     let maPathD = '';
     if (maPts.length >= 2) {
@@ -208,6 +242,11 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
         maPathD += ` C${seg.cp1x.toFixed(2)},${seg.cp1y.toFixed(2)} ${seg.cp2x.toFixed(2)},${seg.cp2y.toFixed(2)} ${seg.x.toFixed(2)},${seg.y.toFixed(2)}`;
       }
     }
+
+    // Momentum-shift markers: raw curve crossing the MA line
+    const crossings = settings.trendsMovingAvg
+      ? detectCrossings(values, maValues, (i) => pts[i].x, yOf)
+      : [];
 
     // Curve path
     let pathD = `M${pts[0].x.toFixed(2)},${pts[0].y.toFixed(2)}`;
@@ -249,9 +288,9 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
       avgY: yOf(avg), dotStep, timeLabels,
       safeY: yOf(safe), criticalY: yOf(critical),
       trend: trendDirection(values[values.length - 1] - values[0], metric),
-      maPathD, maValues,
+      maPathD, maValues, crossings,
     };
-  }, [filtered, safe, critical, rangeSel, metric]);
+  }, [filtered, safe, critical, rangeSel, metric, maWin, settings.trendsMovingAvg]);
 
   /* ── Scrub state (timestamp-anchored, same pattern as hero sparkline) ── */
   const [scrubSel, setScrubSel] = useState<{ t: number; leftPx: number; topPx: number } | null>(null);
@@ -307,6 +346,27 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
     },
     [clearAutoTimer, updateSettings],
   );
+
+  /** MA window select / MA toggle — persists like metric + range. */
+  const selectMaWindow = useCallback(
+    (w: number) => {
+      haptic(settings.hapticsEnabled, 6);
+      updateSettings({ trendsMaWindow: w, trendsMovingAvg: true });
+    },
+    [settings.hapticsEnabled, updateSettings],
+  );
+
+  const toggleMaOff = useCallback(() => {
+    haptic(settings.hapticsEnabled, 6);
+    updateSettings({ trendsMovingAvg: false });
+  }, [settings.hapticsEnabled, updateSettings]);
+
+  /** Index set of crossing points, for the scrub tooltip crossover row */
+  const crossByIdx = useMemo(() => {
+    const m = new Map<number, CrossPt>();
+    if (geo) for (const c of geo.crossings) m.set(c.i, c);
+    return m;
+  }, [geo]);
 
   const anchorFor = useCallback(
     (i: number): { leftPx: number; topPx: number } | null => {
@@ -456,20 +516,42 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
         </span>
         {geo && (
           <div className="ml-auto flex items-center gap-1.5">
-            <button
-              type="button"
-              className={`grain-ma-chip grain-tabular ${settings.trendsMovingAvg ? 'on' : ''}`}
-              aria-pressed={settings.trendsMovingAvg}
-              aria-label={t('history.trends_ma', lang)}
-              title={t('history.trends_ma', lang)}
-              onClick={() => {
-                updateSettings({ trendsMovingAvg: !settings.trendsMovingAvg });
-                haptic(settings.hapticsEnabled, 6);
-              }}
-            >
-              <WaveSine size={10} weight="bold" />
-              MA{MA_WINDOW}
-            </button>
+            {settings.trendsMovingAvg ? (
+              <div className="grain-ma-seg grain-tabular" role="group" aria-label={t('history.trends_ma_win', lang)}>
+                <button
+                  type="button"
+                  className="ma-off"
+                  onClick={toggleMaOff}
+                  aria-label={t('history.trends_ma', lang)}
+                  title={t('history.trends_ma', lang)}
+                >
+                  <WaveSine size={10} weight="bold" />
+                </button>
+                {MA_WINDOW_OPTIONS.map((w) => (
+                  <button
+                    key={w}
+                    type="button"
+                    className={w === maWin ? 'active' : ''}
+                    aria-pressed={w === maWin}
+                    onClick={() => selectMaWindow(w)}
+                  >
+                    {w}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <button
+                type="button"
+                className={`grain-ma-chip grain-tabular ${settings.trendsMovingAvg ? 'on' : ''}`}
+                aria-pressed={settings.trendsMovingAvg}
+                aria-label={t('history.trends_ma', lang)}
+                title={t('history.trends_ma', lang)}
+                onClick={() => selectMaWindow(maWin)}
+              >
+                <WaveSine size={10} weight="bold" />
+                MA{maWin}
+              </button>
+            )}
             {trend && (
               <span
                 className="grain-trend-chip grain-tabular"
@@ -633,6 +715,29 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
                 />
               )}
 
+              {/* MA-crossover momentum markers (raw × MA sign change) */}
+              {settings.trendsMovingAvg && geo.crossings.length > 0 && (
+                <g className="grain-scrub-group">
+                  {geo.crossings.map((c) => (
+                    <circle
+                      key={`cx-${c.i}`}
+                      cx={c.x}
+                      cy={c.y}
+                      r={2.9}
+                      fill="var(--gm-card)"
+                      className="grain-cross-marker"
+                      stroke={isMoisture
+                        ? (c.dir === 'up' ? 'var(--gm-up)' : 'var(--gm-down)')
+                        : accentHex}
+                      strokeWidth="1.3"
+                      opacity={scrubPt && scrubIdx !== c.i ? 0.45 : 1}
+                    >
+                      <title>{t(c.dir === 'up' ? 'history.cross_up' : 'history.cross_down', lang)}</title>
+                    </circle>
+                  ))}
+                </g>
+              )}
+
               {/* Avg reference line */}
               <line
                 x1={PAD_X} y1={geo.avgY} x2={W - PAD_X} y2={geo.avgY}
@@ -702,7 +807,14 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
               >
                 <span className="v">{scrubPt.v.toFixed(1)}{unitSuffix}</span>
                 {settings.trendsMovingAvg && geo && scrubIdx >= 0 && geo.maValues[scrubIdx] != null && (
-                  <span className="ma">MA{MA_WINDOW} {geo.maValues[scrubIdx].toFixed(1)}{unitSuffix}</span>
+                  <span className="ma">MA{maWin} {geo.maValues[scrubIdx].toFixed(1)}{unitSuffix}</span>
+                )}
+                {crossByIdx.has(scrubIdx) && (
+                  <span className="x" style={{ color: isMoisture
+                    ? (crossByIdx.get(scrubIdx)!.dir === 'up' ? 'var(--gm-up)' : 'var(--gm-down)')
+                    : 'var(--gm-accent)' }}>
+                    {crossByIdx.get(scrubIdx)!.dir === 'up' ? '↗' : '↘'} {t(crossByIdx.get(scrubIdx)!.dir === 'up' ? 'history.cross_up' : 'history.cross_down', lang)}
+                  </span>
                 )}
                 <span className="t">{format(scrubPt.t, 'MMM d · HH:mm')}</span>
               </div>

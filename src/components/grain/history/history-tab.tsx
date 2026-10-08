@@ -612,6 +612,7 @@ function ReadingDetail({ entry, onClose }: { entry: HistoryEntry; onClose: () =>
           safe={settings.thresholds.safe}
           critical={settings.thresholds.critical}
           positionLabel={t('history.detail_context', lang)}
+          scrubAria={t('history.detail_scrub_aria', lang)}
         />
       </div>
 

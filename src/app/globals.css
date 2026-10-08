@@ -1170,6 +1170,59 @@
   letter-spacing: 0.05em;
   font-variant-numeric: tabular-nums;
 }
+/* Crossover row inside the scrub tooltip (semantic color set inline) */
+.grain-scrub-tooltip .x {
+  font-size: 8.5px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+/* MA-crossover momentum markers — hollow rings on the raw curve */
+.grain-cross-marker {
+  transition: opacity 0.2s ease;
+}
+/* MA window segmented control (shown while MA is on) — accent-tinted glass */
+.grain-ma-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 2.5px;
+  border-radius: 999px;
+  background: var(--gm-accent-dim);
+  border: 1px solid color-mix(in srgb, var(--gm-accent) 38%, transparent);
+}
+.grain-ma-seg button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--gm-text-secondary);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  padding: 4px 7px;
+  min-height: 22px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.12s ease;
+}
+.grain-ma-seg button:hover {
+  color: var(--gm-accent);
+}
+.grain-ma-seg button.active {
+  background: rgba(var(--gm-accent-rgb), 0.20);
+  color: var(--gm-accent);
+  box-shadow: inset 0 0 0 1px rgba(var(--gm-accent-rgb), 0.30);
+}
+.grain-ma-seg button:active {
+  transform: scale(0.92);
+}
+.grain-ma-seg .ma-off {
+  display: inline-flex;
+  align-items: center;
+  color: var(--gm-accent);
+}
 /* Detail-view context sparkline */
 .grain-detail-spark {
   animation: grain-fade-in 0.3s ease-out;
@@ -1696,6 +1749,10 @@
     animation: none !important;
   }
   .grain-ma-chip {
+    transition: none !important;
+  }
+  .grain-ma-seg button,
+  .grain-cross-marker {
     transition: none !important;
   }
   .grain-trends-ma {

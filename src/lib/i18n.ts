@@ -157,6 +157,11 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'history.delta_prev': 'vs previous reading',
     'history.trends_ma': '7-reading average',
     'history.detail_context': 'Surrounding readings',
+    'history.trends_ma_win': 'Moving-average window',
+    'history.cross_up': 'Crossed above average',
+    'history.cross_down': 'Crossed below average',
+    'history.detail_scrub_aria': 'Surrounding readings chart. Use arrow keys to inspect readings.',
+
     'history.share': 'Share reading',
 
     // ── Settings ──
@@ -518,6 +523,11 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'history.delta_prev': 'पिछली रीडिंग से',
     'history.trends_ma': '7 रीडिंग का औसत',
     'history.detail_context': 'आसपास की रीडिंग',
+    'history.trends_ma_win': 'चल औसत अवधि',
+    'history.cross_up': 'औसत से ऊपर गया',
+    'history.cross_down': 'औसत से नीचे गया',
+    'history.detail_scrub_aria': 'आसपास की रीडिंग का चार्ट। रीडिंग देखने के लिए तीर कुंजियाँ दबाएँ।',
+
     'history.share': 'रीडिंग साझा करें',
 
     // ── Settings ──
@@ -879,6 +889,11 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'history.delta_prev': 'मागील वाचनापासून',
     'history.trends_ma': '7 वाचनांचा सरासरी',
     'history.detail_context': 'आजूबाजूची वाचने',
+    'history.trends_ma_win': 'चल सरासरी कालावधी',
+    'history.cross_up': 'सरासरीच्या वर गेले',
+    'history.cross_down': 'सरासरीच्या खाली गेले',
+    'history.detail_scrub_aria': 'आजूबाजूची वाचने तक्ता. वाचने पाहण्यासाठी अॅरो कळा वापरा.',
+
     'history.share': 'वाचन सामायिक करा',
 
     // ── Settings ──
@@ -1240,6 +1255,11 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'history.delta_prev': 'pichli reading se',
     'history.trends_ma': '7 reading ka average',
     'history.detail_context': 'Aas-paas ki readings',
+    'history.trends_ma_win': 'Moving average window',
+    'history.cross_up': 'Average ke upar gaya',
+    'history.cross_down': 'Average ke neeche gaya',
+    'history.detail_scrub_aria': 'Aas-paas readings ka chart. Arrow keys se readings dekho.',
+
     'history.share': 'Reading share karo',
 
     // ── Settings ──

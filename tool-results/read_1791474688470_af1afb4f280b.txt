@@ -1,0 +1,737 @@
+     1→'use client';
+     2→
+     3→import { useMemo, useRef, useState, useEffect, useCallback } from 'react';
+     4→import { useGrainStore } from '@/lib/grain-store';
+     5→import type { HistoryEntry, TrendsMetric, TrendsRange } from '@/lib/grain-types';
+     6→import { getAccentHex, getRiskColor } from '@/lib/accent-hex';
+     7→import { t, type AppLanguage } from '@/lib/i18n';
+     8→import { haptic } from '@/lib/haptics';
+     9→import { ChartLine, TrendUp, TrendDown, Minus, WaveSine } from '@phosphor-icons/react/dist/ssr';
+    10→import { format } from 'date-fns';
+    11→
+    12→/* ═══════════════════════════════════════════════════════════════
+    13→   History Trends – large interactive moisture chart
+    14→   ─────────────────────────────────────────────────────────────
+    15→   • Range selector (24H / 7D / 30D / ALL) with auto-detect
+    16→   • Time-proportional X axis, monotone cubic curve, accent fill
+    17→   • Threshold zone bands from the ACTIVE grain profile
+    18→   • Dots colored by the risk state captured with each reading
+    19→   • Avg reference line + threshold hairlines
+    20→   • Scrub inspection (drag / hover / arrow keys) with glass tooltip
+    21→   ═══════════════════════════════════════════════════════════════ */
+    22→
+    23→type RangeId = Exclude<TrendsRange, 'auto'>;
+    24→type MetricId = TrendsMetric;
+    25→
+    26→const RANGES: { id: RangeId; label: string; ms: number | null }[] = [
+    27→  { id: '24h', label: '24H', ms: 24 * 3600e3 },
+    28→  { id: '7d', label: '7D', ms: 7 * 24 * 3600e3 },
+    29→  { id: '30d', label: '30D', ms: 30 * 24 * 3600e3 },
+    30→  { id: 'all', label: 'ALL', ms: null },
+    31→];
+    32→
+    33→const SCRUB_AUTO_CLEAR_MS = 3200;
+    34→const TOOLTIP_CLAMP = 50;
+    35→const MA_WINDOW = 7; // trailing moving-average window (readings)
+    36→
+    37→const W = 358;
+    38→const H = 216;
+    39→const PAD_X = 18;
+    40→const PAD_TOP = 18;
+    41→const PAD_BOT = 24;
+    42→
+    43→interface TrendPt {
+    44→  x: number;
+    45→  y: number;
+    46→  v: number;
+    47→  t: number;
+    48→  state: string;
+    49→}
+    50→
+    51→interface TrendDir {
+    52→  dir: 'up' | 'down' | 'flat';
+    53→  delta: number;
+    54→  labelKey: string;
+    55→}
+    56→
+    57→/** Direction + signed delta across the visible range (per metric) */
+    58→function trendDirection(delta: number, metric: MetricId): TrendDir {
+    59→  const eps = metric === 'moisture' ? 0.15 : 0.3;
+    60→  if (delta > eps) return { dir: 'up', delta, labelKey: 'history.trend_rising' };
+    61→  if (delta < -eps) return { dir: 'down', delta, labelKey: 'history.trend_falling' };
+    62→  return { dir: 'flat', delta, labelKey: 'history.trend_stable' };
+    63→}
+    64→
+    65→function filterEntries(entries: HistoryEntry[], range: RangeId): HistoryEntry[] {
+    66→  const r = RANGES.find((x) => x.id === range);
+    67→  if (!r || r.ms == null) return entries;
+    68→  const cutoff = Date.now() - r.ms;
+    69→  return entries.filter((e) => e.reading.timestamp >= cutoff);
+    70→}
+    71→
+    72→/** Trailing moving average with a shrinking window at the series head, so the
+    73→ *  overlay spans the full chart even for the first MA_WINDOW-1 readings. */
+    74→function movingAverage(values: number[]): number[] {
+    75→  const out: number[] = [];
+    76→  let sum = 0;
+    77→  for (let i = 0; i < values.length; i++) {
+    78→    sum += values[i];
+    79→    if (i >= MA_WINDOW) sum -= values[i - MA_WINDOW];
+    80→    out.push(sum / Math.min(i + 1, MA_WINDOW));
+    81→  }
+    82→  return out;
+    83→}
+    84→
+    85→/** Smallest range with ≥2 points, falling back to ALL */
+    86→function detectRange(entries: HistoryEntry[]): RangeId {
+    87→  for (const r of RANGES) {
+    88→    if (filterEntries(entries, r.id).length >= 2) return r.id;
+    89→  }
+    90→  return 'all';
+    91→}
+    92→
+    93→/** Monotone cubic Bézier (Fritsch–Carlson) — shared curve algorithm */
+    94→function monotoneCubic(pts: { x: number; y: number }[]) {
+    95→  const n = pts.length;
+    96→  if (n < 2) return [];
+    97→  const dx: number[] = [];
+    98→  const dy: number[] = [];
+    99→  const m: number[] = [];
+   100→  for (let i = 0; i < n - 1; i++) {
+   101→    dx.push(pts[i + 1].x - pts[i].x);
+   102→    dy.push(pts[i + 1].y - pts[i].y);
+   103→    m.push(dy[i] / (dx[i] || 1));
+   104→  }
+   105→  const c: number[] = [m[0]];
+   106→  for (let i = 1; i < n - 1; i++) {
+   107→    if (m[i - 1] * m[i] <= 0) c.push(0);
+   108→    else {
+   109→      const common = dx[i - 1] + dx[i];
+   110→      c.push((3 * common) / ((common + dx[i]) / m[i - 1] + (common + dx[i - 1]) / m[i]));
+   111→    }
+   112→  }
+   113→  c.push(m[n - 2]);
+   114→  for (let i = 0; i < n - 1; i++) {
+   115→    const acc = c[i] / (m[i] || 1);
+   116→    const succ = c[i + 1] / (m[i] || 1);
+   117→    if (acc < 0 || succ < 0) {
+   118→      c[i] = 0;
+   119→      c[i + 1] = 0;
+   120→    }
+   121→  }
+   122→  const segs: { x: number; y: number; cp1x: number; cp1y: number; cp2x: number; cp2y: number }[] = [];
+   123→  for (let i = 0; i < n - 1; i++) {
+   124→    const p0 = pts[i];
+   125→    const p1 = pts[i + 1];
+   126→    const segDx = dx[i];
+   127→    segs.push({
+   128→      x: p1.x, y: p1.y,
+   129→      cp1x: p0.x + segDx / 3, cp1y: p0.y + (segDx / 3) * c[i],
+   130→      cp2x: p1.x - segDx / 3, cp2y: p1.y - (segDx / 3) * c[i + 1],
+   131→    });
+   132→  }
+   133→  return segs;
+   134→}
+   135→
+   136→export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
+   137→  const { settings, updateSettings } = useGrainStore();
+   138→  const lang = settings.language as AppLanguage;
+   139→  const accentHex = getAccentHex(settings.accentColor);
+   140→  const { safe, warn, critical } = settings.thresholds;
+   141→
+   142→  // Metric + range persist across sessions via AppSettings ('auto' re-detects)
+   143→  const [rangeSel, setRangeSel] = useState<RangeId>(() =>
+   144→    settings.trendsRange === 'auto' ? detectRange(entries) : settings.trendsRange,
+   145→  );
+   146→  const [metric, setMetric] = useState<MetricId>(settings.trendsMetric);
+   147→
+   148→  const filtered = useMemo(() => filterEntries(entries, rangeSel), [entries, rangeSel]);
+   149→
+   150→  /* ── Geometry ── */
+   151→  const geo = useMemo(() => {
+   152→    if (filtered.length < 2) return null;
+   153→
+   154→    // Ascending by time
+   155→    const sorted = [...filtered].sort((a, b) => a.reading.timestamp - b.reading.timestamp);
+   156→    const getV = (e: HistoryEntry) =>
+   157→      metric === 'moisture' ? e.reading.moisture : e.reading.temperature;
+   158→    // Temperature is required for temp mode — tolerate legacy entries without it
+   159→    const usable = metric === 'temp'
+   160→      ? sorted.filter((e) => typeof e.reading.temperature === 'number')
+   161→      : sorted;
+   162→    if (usable.length < 2) return null;
+   163→
+   164→    const values = usable.map(getV);
+   165→
+   166→    const tMin = usable[0].reading.timestamp;
+   167→    const tMax = usable[usable.length - 1].reading.timestamp;
+   168→    const tRange = tMax - tMin || 1;
+   169→
+   170→    let lo: number;
+   171→    let hi: number;
+   172→    let vPad: number;
+   173→    if (metric === 'moisture') {
+   174→      // Include thresholds in the domain so zone bands are always visible
+   175→      lo = Math.min(...values, safe);
+   176→      hi = Math.max(...values, critical);
+   177→      vPad = Math.max((hi - lo) * 0.25, 1.2);
+   178→    } else {
+   179→      lo = Math.min(...values);
+   180→      hi = Math.max(...values);
+   181→      vPad = Math.max((hi - lo) * 0.3, 1.5);
+   182→    }
+   183→    const vLo = lo - vPad;
+   184→    const vHi = hi + vPad;
+   185→    const vSpan = vHi - vLo;
+   186→
+   187→    const drawW = W - PAD_X * 2;
+   188→    const drawH = H - PAD_TOP - PAD_BOT;
+   189→
+   190→    const xOf = (ts: number) => PAD_X + ((ts - tMin) / tRange) * drawW;
+   191→    const yOf = (v: number) => PAD_TOP + drawH - ((v - vLo) / vSpan) * drawH;
+   192→
+   193→    const pts: TrendPt[] = usable.map((e) => ({
+   194→      x: xOf(e.reading.timestamp),
+   195→      y: yOf(getV(e)),
+   196→      v: getV(e),
+   197→      t: e.reading.timestamp,
+   198→      state: e.decision.state,
+   199→    }));
+   200→
+   201→    // Trailing moving average overlay (same x coordinates as the raw curve)
+   202→    const maValues = movingAverage(values);
+   203→    const maPts = pts.map((p, i) => ({ x: p.x, y: yOf(maValues[i]) }));
+   204→    let maPathD = '';
+   205→    if (maPts.length >= 2) {
+   206→      maPathD = `M${maPts[0].x.toFixed(2)},${maPts[0].y.toFixed(2)}`;
+   207→      for (const seg of monotoneCubic(maPts)) {
+   208→        maPathD += ` C${seg.cp1x.toFixed(2)},${seg.cp1y.toFixed(2)} ${seg.cp2x.toFixed(2)},${seg.cp2y.toFixed(2)} ${seg.x.toFixed(2)},${seg.y.toFixed(2)}`;
+   209→      }
+   210→    }
+   211→
+   212→    // Curve path
+   213→    let pathD = `M${pts[0].x.toFixed(2)},${pts[0].y.toFixed(2)}`;
+   214→    for (const seg of monotoneCubic(pts)) {
+   215→      pathD += ` C${seg.cp1x.toFixed(2)},${seg.cp1y.toFixed(2)} ${seg.cp2x.toFixed(2)},${seg.cp2y.toFixed(2)} ${seg.x.toFixed(2)},${seg.y.toFixed(2)}`;
+   216→    }
+   217→    const fillD = `${pathD} L${pts[pts.length - 1].x.toFixed(2)},${H - PAD_BOT} L${pts[0].x.toFixed(2)},${H - PAD_BOT} Z`;
+   218→
+   219→    // Zone bands (clamped to the plot area) — moisture only (thresholds are moisture-specific)
+   220→    const plotBottom = H - PAD_BOT;
+   221→    const band = (vFrom: number, vTo: number) => {
+   222→      const yA = Math.max(PAD_TOP, Math.min(plotBottom, yOf(vFrom)));
+   223→      const yB = Math.max(PAD_TOP, Math.min(plotBottom, yOf(vTo)));
+   224→      return { y: Math.min(yA, yB), h: Math.abs(yB - yA) };
+   225→    };
+   226→    const critBand = band(Math.max(critical, vLo), vHi);        // above critical
+   227→    const warnBand = band(safe, critical);                       // between safe and critical
+   228→    const safeBand = band(vLo, safe);                            // below safe
+   229→
+   230→    // Stats
+   231→    const avg = values.reduce((s, v) => s + v, 0) / values.length;
+   232→    const min = Math.min(...values);
+   233→    const max = Math.max(...values);
+   234→
+   235→    // Dot thinning for long ranges
+   236→    const dotStep = pts.length > 60 ? Math.ceil(pts.length / 48) : 1;
+   237→
+   238→    // Time axis labels: first / mid / last
+   239→    const midIdx = Math.floor(pts.length / 2);
+   240→    const fmt = (ts: number) => (rangeSel === '24h' ? format(ts, 'HH:mm') : format(ts, 'MMM d'));
+   241→    const timeLabels = [
+   242→      { x: pts[0].x, anchor: 'start' as const, label: fmt(tMin) },
+   243→      ...(pts.length > 6 ? [{ x: pts[midIdx].x, anchor: 'middle' as const, label: fmt(usable[midIdx].reading.timestamp) }] : []),
+   244→      { x: pts[pts.length - 1].x, anchor: 'end' as const, label: fmt(tMax) },
+   245→    ];
+   246→
+   247→    return {
+   248→      pts, pathD, fillD, critBand, warnBand, safeBand, avg, min, max,
+   249→      avgY: yOf(avg), dotStep, timeLabels,
+   250→      safeY: yOf(safe), criticalY: yOf(critical),
+   251→      trend: trendDirection(values[values.length - 1] - values[0], metric),
+   252→      maPathD, maValues,
+   253→    };
+   254→  }, [filtered, safe, critical, rangeSel, metric]);
+   255→
+   256→  /* ── Scrub state (timestamp-anchored, same pattern as hero sparkline) ── */
+   257→  const [scrubSel, setScrubSel] = useState<{ t: number; leftPx: number; topPx: number } | null>(null);
+   258→  const svgRef = useRef<SVGSVGElement | null>(null);
+   259→  const wrapRef = useRef<HTMLDivElement | null>(null);
+   260→  const draggingRef = useRef(false);
+   261→  const autoClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+   262→
+   263→  const scrubPt = useMemo(
+   264→    () => (scrubSel && geo ? geo.pts.find((p) => p.t === scrubSel.t) ?? null : null),
+   265→    [geo, scrubSel],
+   266→  );
+   267→  const scrubIdx = useMemo(
+   268→    () => (geo && scrubSel ? geo.pts.findIndex((p) => p.t === scrubSel.t) : -1),
+   269→    [geo, scrubSel],
+   270→  );
+   271→
+   272→  const clearAutoTimer = useCallback(() => {
+   273→    if (autoClearRef.current) {
+   274→      clearTimeout(autoClearRef.current);
+   275→      autoClearRef.current = null;
+   276→    }
+   277→  }, []);
+   278→
+   279→  const clearScrub = useCallback(() => {
+   280→    clearAutoTimer();
+   281→    draggingRef.current = false;
+   282→    setScrubSel(null);
+   283→  }, [clearAutoTimer]);
+   284→
+   285→  useEffect(() => () => clearAutoTimer(), [clearAutoTimer]);
+   286→
+   287→  /** Switch range or metric: clears any active scrub (selection is scope-scoped)
+   288→   *  and persists the choice so the chart reopens in the same configuration. */
+   289→  const selectRange = useCallback(
+   290→    (id: RangeId) => {
+   291→      clearAutoTimer();
+   292→      draggingRef.current = false;
+   293→      setScrubSel(null);
+   294→      setRangeSel(id);
+   295→      updateSettings({ trendsRange: id });
+   296→    },
+   297→    [clearAutoTimer, updateSettings],
+   298→  );
+   299→
+   300→  const selectMetric = useCallback(
+   301→    (m: MetricId) => {
+   302→      clearAutoTimer();
+   303→      draggingRef.current = false;
+   304→      setScrubSel(null);
+   305→      setMetric(m);
+   306→      updateSettings({ trendsMetric: m });
+   307→    },
+   308→    [clearAutoTimer, updateSettings],
+   309→  );
+   310→
+   311→  const anchorFor = useCallback(
+   312→    (i: number): { leftPx: number; topPx: number } | null => {
+   313→      const svg = svgRef.current;
+   314→      const wrap = wrapRef.current;
+   315→      if (!svg || !wrap || !geo || i < 0 || i >= geo.pts.length) return null;
+   316→      const ctm = svg.getScreenCTM();
+   317→      if (!ctm) return null;
+   318→      const pt = geo.pts[i];
+   319→      let cx: number;
+   320→      let cy: number;
+   321→      if (typeof DOMPoint === 'function') {
+   322→        const sp = new DOMPoint(pt.x, pt.y).matrixTransform(ctm);
+   323→        cx = sp.x; cy = sp.y;
+   324→      } else {
+   325→        cx = pt.x * ctm.a + pt.y * ctm.c + ctm.e;
+   326→        cy = pt.x * ctm.b + pt.y * ctm.d + ctm.f;
+   327→      }
+   328→      const rect = wrap.getBoundingClientRect();
+   329→      const leftPx = Math.min(Math.max(cx - rect.left, TOOLTIP_CLAMP), Math.max(rect.width - TOOLTIP_CLAMP, TOOLTIP_CLAMP));
+   330→      const topPx = cy - rect.top;
+   331→      return { leftPx, topPx };
+   332→    },
+   333→    [geo],
+   334→  );
+   335→
+   336→  const nearestIndex = useCallback(
+   337→    (vx: number): number => {
+   338→      if (!geo || geo.pts.length === 0) return -1;
+   339→      const pts = geo.pts;
+   340→      let lo = 0;
+   341→      let hi = pts.length - 1;
+   342→      while (hi - lo > 1) {
+   343→        const mid = (lo + hi) >> 1;
+   344→        if (pts[mid].x < vx) lo = mid;
+   345→        else hi = mid;
+   346→      }
+   347→      return Math.abs(pts[lo].x - vx) <= Math.abs(pts[hi].x - vx) ? lo : hi;
+   348→    },
+   349→    [geo],
+   350→  );
+   351→
+   352→  const scrubTo = useCallback(
+   353→    (i: number) => {
+   354→      const anchor = anchorFor(i);
+   355→      if (!anchor || !geo) return;
+   356→      const sel = { t: geo.pts[i].t, ...anchor };
+   357→      setScrubSel((prev) => {
+   358→        if (prev && prev.t !== sel.t) haptic(settings.hapticsEnabled, 4);
+   359→        return sel;
+   360→      });
+   361→    },
+   362→    [anchorFor, geo, settings.hapticsEnabled],
+   363→  );
+   364→
+   365→  const clientToViewBox = useCallback((clientX: number, clientY: number) => {
+   366→    const svg = svgRef.current;
+   367→    if (!svg) return null;
+   368→    const ctm = svg.getScreenCTM();
+   369→    if (!ctm) return null;
+   370→    if (typeof DOMPoint === 'function') {
+   371→      const p = new DOMPoint(clientX, clientY).matrixTransform(ctm.inverse());
+   372→      return { x: p.x, y: p.y };
+   373→    }
+   374→    const inv = ctm.inverse();
+   375→    return {
+   376→      x: clientX * inv.a + clientY * inv.c + inv.e,
+   377→      y: clientX * inv.b + clientY * inv.d + inv.f,
+   378→    };
+   379→  }, []);
+   380→
+   381→  const onPointerDown = useCallback(
+   382→    (e: React.PointerEvent<SVGSVGElement>) => {
+   383→      if (!geo || geo.pts.length < 2) return;
+   384→      clearAutoTimer();
+   385→      draggingRef.current = true;
+   386→      try { svgRef.current?.setPointerCapture(e.pointerId); } catch { /* no-op */ }
+   387→      const p = clientToViewBox(e.clientX, e.clientY);
+   388→      if (p) scrubTo(nearestIndex(p.x));
+   389→    },
+   390→    [geo, clearAutoTimer, clientToViewBox, nearestIndex, scrubTo],
+   391→  );
+   392→
+   393→  const onPointerMove = useCallback(
+   394→    (e: React.PointerEvent<SVGSVGElement>) => {
+   395→      if (!geo || geo.pts.length < 2) return;
+   396→      const hoverScrub = e.pointerType === 'mouse' && e.buttons === 0;
+   397→      if (!draggingRef.current && !hoverScrub) return;
+   398→      const p = clientToViewBox(e.clientX, e.clientY);
+   399→      if (p) scrubTo(nearestIndex(p.x));
+   400→    },
+   401→    [geo, clientToViewBox, nearestIndex, scrubTo],
+   402→  );
+   403→
+   404→  const onPointerUp = useCallback(
+   405→    (e: React.PointerEvent<SVGSVGElement>) => {
+   406→      draggingRef.current = false;
+   407→      try { svgRef.current?.releasePointerCapture(e.pointerId); } catch { /* no-op */ }
+   408→      if (e.pointerType !== 'mouse') {
+   409→        clearAutoTimer();
+   410→        autoClearRef.current = setTimeout(() => setScrubSel(null), SCRUB_AUTO_CLEAR_MS);
+   411→      }
+   412→    },
+   413→    [clearAutoTimer],
+   414→  );
+   415→
+   416→  const onPointerLeave = useCallback(
+   417→    (e: React.PointerEvent<SVGSVGElement>) => {
+   418→      if (e.pointerType === 'mouse' && !draggingRef.current) setScrubSel(null);
+   419→    },
+   420→    [],
+   421→  );
+   422→
+   423→  const onKeyDown = useCallback(
+   424→    (e: React.KeyboardEvent<HTMLDivElement>) => {
+   425→      if (!geo || geo.pts.length < 2) return;
+   426→      const lastIdx = geo.pts.length - 1;
+   427→      if (e.key === 'Escape') { clearScrub(); return; }
+   428→      let next: number | null = null;
+   429→      const cur = scrubIdx >= 0 ? scrubIdx : null;
+   430→      if (e.key === 'ArrowLeft') next = Math.max(0, (cur ?? lastIdx) - 1);
+   431→      else if (e.key === 'ArrowRight') next = Math.min(lastIdx, (cur ?? lastIdx - 1) + 1);
+   432→      else if (e.key === 'Home') next = 0;
+   433→      else if (e.key === 'End') next = lastIdx;
+   434→      if (next === null) return;
+   435→      e.preventDefault();
+   436→      clearAutoTimer();
+   437→      scrubTo(next);
+   438→    },
+   439→    [geo, scrubIdx, clearScrub, clearAutoTimer, scrubTo],
+   440→  );
+   441→
+   442→  const onBlur = useCallback(() => clearScrub(), [clearScrub]);
+   443→
+   444→  /* ── Render ── */
+   445→  const trend = geo?.trend ?? null;
+   446→  const unitSuffix = metric === 'moisture' ? '%' : '°C';
+   447→  const isMoisture = metric === 'moisture';
+   448→
+   449→  return (
+   450→    <div className="grain-trends-card mb-4" role="group" aria-label={t('history.trends_title', lang)}>
+   451→      {/* Header row 1: title + moving-average toggle + trend direction chip */}
+   452→      <div className="flex items-center gap-2 mb-2">
+   453→        <ChartLine size={13} weight="bold" style={{ color: 'var(--gm-accent)' }} />
+   454→        <span className="text-[9px] font-bold tracking-[0.18em] uppercase" style={{ color: 'var(--gm-text-tertiary)' }}>
+   455→          {t('history.trends_title', lang)}
+   456→        </span>
+   457→        {geo && (
+   458→          <div className="ml-auto flex items-center gap-1.5">
+   459→            <button
+   460→              type="button"
+   461→              className={`grain-ma-chip grain-tabular ${settings.trendsMovingAvg ? 'on' : ''}`}
+   462→              aria-pressed={settings.trendsMovingAvg}
+   463→              aria-label={t('history.trends_ma', lang)}
+   464→              title={t('history.trends_ma', lang)}
+   465→              onClick={() => {
+   466→                updateSettings({ trendsMovingAvg: !settings.trendsMovingAvg });
+   467→                haptic(settings.hapticsEnabled, 6);
+   468→              }}
+   469→            >
+   470→              <WaveSine size={10} weight="bold" />
+   471→              MA{MA_WINDOW}
+   472→            </button>
+   473→            {trend && (
+   474→              <span
+   475→                className="grain-trend-chip grain-tabular"
+   476→                style={{
+   477→                  color: trend.dir === 'flat'
+   478→                    ? 'var(--gm-text-secondary)'
+   479→                    : isMoisture
+   480→                      ? (trend.dir === 'up' ? 'var(--gm-up)' : 'var(--gm-down)')
+   481→                      : 'var(--gm-accent)',
+   482→                }}
+   483→                role="status"
+   484→                aria-label={`${t(trend.labelKey, lang)} ${Math.abs(trend.delta).toFixed(1)}${unitSuffix}`}
+   485→              >
+   486→                {trend.dir === 'up'
+   487→                  ? <TrendUp size={11} weight="bold" />
+   488→                  : trend.dir === 'down'
+   489→                    ? <TrendDown size={11} weight="bold" />
+   490→                    : <Minus size={11} weight="bold" />}
+   491→                {(trend.delta > 0 ? '+' : '') + trend.delta.toFixed(1)}{unitSuffix}
+   492→              </span>
+   493→            )}
+   494→          </div>
+   495→        )}
+   496→      </div>
+   497→
+   498→      {/* Header row 2: metric toggle + range selector */}
+   499→      <div className="flex items-center justify-between mb-3">
+   500→        <div className="grain-seg grain-seg-metric" role="tablist" aria-label={t('history.trends_title', lang)}>
+   501→          <button
+   502→            role="tab"
+   503→            aria-selected={metric === 'moisture'}
+   504→            className={metric === 'moisture' ? 'active' : ''}
+   505→            onClick={() => { selectMetric('moisture'); haptic(settings.hapticsEnabled, 6); }}
+   506→          >
+   507→            {t('hero.moisture', lang)}
+   508→          </button>
+   509→          <button
+   510→            role="tab"
+   511→            aria-selected={metric === 'temp'}
+   512→            className={metric === 'temp' ? 'active' : ''}
+   513→            onClick={() => { selectMetric('temp'); haptic(settings.hapticsEnabled, 6); }}
+   514→          >
+   515→            {t('metric.temp', lang)}
+   516→          </button>
+   517→        </div>
+   518→        <div className="grain-seg" role="tablist" aria-label={t('history.trends_title', lang)}>
+   519→          {RANGES.map((r) => (
+   520→            <button
+   521→              key={r.id}
+   522→              role="tab"
+   523→              aria-selected={rangeSel === r.id}
+   524→              className={rangeSel === r.id ? 'active' : ''}
+   525→              onClick={() => { selectRange(r.id); haptic(settings.hapticsEnabled, 6); }}
+   526→            >
+   527→              {r.label}
+   528→            </button>
+   529→          ))}
+   530→        </div>
+   531→      </div>
+   532→
+   533→      {/* Chart / states */}
+   534→      {!geo ? (
+   535→        <p className="text-[11px] leading-relaxed py-6 text-center" style={{ color: 'var(--gm-text-tertiary)' }}>
+   536→          {filtered.length === 0
+   537→            ? t('history.trends_empty', lang)
+   538→            : t('history.trends_need_more', lang)}
+   539→        </p>
+   540→      ) : (
+   541→        <>
+   542→          <div
+   543→            ref={wrapRef}
+   544→            className="relative w-full grain-trends-wrap"
+   545→            tabIndex={0}
+   546→            role="application"
+   547→            aria-label="Moisture trend chart. Use left and right arrow keys to inspect readings."
+   548→            onKeyDown={onKeyDown}
+   549→            onBlur={onBlur}
+   550→          >
+   551→            <svg
+   552→              ref={svgRef}
+   553→              viewBox={`0 0 ${W} ${H}`}
+   554→              className="w-full h-auto grain-trends-svg"
+   555→              preserveAspectRatio="xMidYMid meet"
+   556→              onPointerDown={onPointerDown}
+   557→              onPointerMove={onPointerMove}
+   558→              onPointerUp={onPointerUp}
+   559→              onPointerCancel={onPointerUp}
+   560→              onPointerLeave={onPointerLeave}
+   561→            >
+   562→              <defs>
+   563→                <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+   564→                  <stop offset="0%" style={{ stopColor: 'var(--gm-accent)' }} stopOpacity="0.26" />
+   565→                  <stop offset="70%" style={{ stopColor: 'var(--gm-accent)' }} stopOpacity="0.05" />
+   566→                  <stop offset="100%" style={{ stopColor: 'var(--gm-accent)' }} stopOpacity="0" />
+   567→                </linearGradient>
+   568→              </defs>
+   569→
+   570→              {/* Horizontal grid hairlines – subtle instrument feel */}
+   571→              {[0.25, 0.5, 0.75].map((f) => {
+   572→                const gy = PAD_TOP + (H - PAD_TOP - PAD_BOT) * f;
+   573→                return (
+   574→                  <line
+   575→                    key={f}
+   576→                    x1={PAD_X} y1={gy} x2={W - PAD_X} y2={gy}
+   577→                    stroke="var(--gm-separator)" strokeWidth="0.6"
+   578→                  />
+   579→                );
+   580→              })}
+   581→
+   582→              {/* Threshold zone bands — moisture only (thresholds are moisture-specific) */}
+   583→              {isMoisture && (
+   584→                <>
+   585→                  <rect x={PAD_X} y={geo.critBand.y} width={W - PAD_X * 2} height={geo.critBand.h} fill="rgba(239, 68, 68, 0.10)" rx="4" />
+   586→                  <rect x={PAD_X} y={geo.warnBand.y} width={W - PAD_X * 2} height={geo.warnBand.h} fill="rgba(245, 158, 11, 0.09)" rx="4" />
+   587→                  <rect x={PAD_X} y={geo.safeBand.y} width={W - PAD_X * 2} height={geo.safeBand.h} fill="rgba(34, 197, 94, 0.09)" rx="4" />
+   588→                </>
+   589→              )}
+   590→
+   591→              {/* Threshold hairlines + labels — moisture only */}
+   592→              {isMoisture && (
+   593→                <>
+   594→                  <line x1={PAD_X} y1={geo.safeY} x2={W - PAD_X} y2={geo.safeY} stroke="rgba(34,197,94,0.35)" strokeWidth="0.75" strokeDasharray="3,4" />
+   595→                  <line x1={PAD_X} y1={geo.criticalY} x2={W - PAD_X} y2={geo.criticalY} stroke="rgba(239,68,68,0.35)" strokeWidth="0.75" strokeDasharray="3,4" />
+   596→                  <text
+   597→                    x={W - PAD_X - 2} y={geo.safeY - 3} textAnchor="end"
+   598→                    className="grain-trend-thresh grain-trend-thresh-safe"
+   599→                    fontSize="7" fontWeight="700" fontFamily="system-ui, sans-serif"
+   600→                  >
+   601→                    {safe}%
+   602→                  </text>
+   603→                  <text
+   604→                    x={W - PAD_X - 2} y={geo.criticalY - 3} textAnchor="end"
+   605→                    className="grain-trend-thresh grain-trend-thresh-crit"
+   606→                    fontSize="7" fontWeight="700" fontFamily="system-ui, sans-serif"
+   607→                  >
+   608→                    {critical}%
+   609→                  </text>
+   610→                </>
+   611→              )}
+   612→
+   613→              {/* Area + curve */}
+   614→              <path d={geo.fillD} fill="url(#trendFill)" stroke="none" />
+   615→              <path
+   616→                d={geo.pathD}
+   617→                fill="none"
+   618→                stroke={accentHex}
+   619→                strokeWidth="2"
+   620→                strokeLinecap="round"
+   621→                strokeLinejoin="round"
+   622→              />
+   623→
+   624→              {/* Trailing moving-average overlay (dotted neutral line) */}
+   625→              {settings.trendsMovingAvg && geo.maPathD && (
+   626→                <path
+   627→                  d={geo.maPathD}
+   628→                  fill="none"
+   629→                  className="grain-trends-ma"
+   630→                  strokeWidth="1.5"
+   631→                  strokeLinecap="round"
+   632→                  opacity={scrubPt ? 0.45 : 0.95}
+   633→                />
+   634→              )}
+   635→
+   636→              {/* Avg reference line */}
+   637→              <line
+   638→                x1={PAD_X} y1={geo.avgY} x2={W - PAD_X} y2={geo.avgY}
+   639→                stroke={accentHex} strokeOpacity="0.4" strokeWidth="0.9" strokeDasharray="5,4"
+   640→                opacity={scrubPt ? 0.35 : 1}
+   641→              />
+   642→
+   643→              {/* Risk-colored dots (moisture) / accent dots (temp) */}
+   644→              {geo.pts.map((p, i) =>
+   645→                (i % geo.dotStep === 0 || i === geo.pts.length - 1) ? (
+   646→                  <circle
+   647→                    key={p.t}
+   648→                    cx={p.x} cy={p.y}
+   649→                    r={i === geo.pts.length - 1 ? 3.2 : 2.1}
+   650→                    fill={isMoisture ? getRiskColor(p.state, settings.accentColor) : accentHex}
+   651→                    stroke="rgba(0,0,0,0.18)"
+   652→                    strokeWidth="0.6"
+   653→                    opacity={scrubPt && scrubPt.t !== p.t ? 0.55 : 1}
+   654→                  />
+   655→                ) : null,
+   656→              )}
+   657→
+   658→              {/* Scrub guide + marker */}
+   659→              {scrubPt && (
+   660→                <g>
+   661→                  <line
+   662→                    x1={scrubPt.x} y1={PAD_TOP - 4}
+   663→                    x2={scrubPt.x} y2={H - PAD_BOT + 4}
+   664→                    stroke="var(--gm-text-tertiary)"
+   665→                    strokeOpacity="0.55"
+   666→                    strokeWidth="1"
+   667→                    strokeDasharray="2,3"
+   668→                  />
+   669→                  <circle cx={scrubPt.x} cy={scrubPt.y} r={7} fill="rgba(255,255,255,0.14)" />
+   670→                  <circle
+   671→                    cx={scrubPt.x} cy={scrubPt.y} r={4}
+   672→                    fill={isMoisture ? getRiskColor(scrubPt.state, settings.accentColor) : accentHex}
+   673→                    stroke="#ffffff" strokeWidth="1.4"
+   674→                  />
+   675→                </g>
+   676→              )}
+   677→
+   678→              {/* Time axis labels */}
+   679→              {geo.timeLabels.map((tl, i) => (
+   680→                <text
+   681→                  key={i}
+   682→                  x={tl.x}
+   683→                  y={H - 6}
+   684→                  textAnchor={tl.anchor}
+   685→                  fill="var(--gm-text-tertiary)"
+   686→                  fillOpacity="0.9"
+   687→                  fontSize="8"
+   688→                  fontWeight="600"
+   689→                  fontFamily="system-ui, sans-serif"
+   690→                >
+   691→                  {tl.label}
+   692→                </text>
+   693→              ))}
+   694→            </svg>
+   695→
+   696→            {/* Glass tooltip */}
+   697→            {scrubPt && scrubSel && (
+   698→              <div
+   699→                className="grain-scrub-tooltip"
+   700→                style={{ left: scrubSel.leftPx, top: scrubSel.topPx }}
+   701→                role="status"
+   702→              >
+   703→                <span className="v">{scrubPt.v.toFixed(1)}{unitSuffix}</span>
+   704→                {settings.trendsMovingAvg && geo && scrubIdx >= 0 && geo.maValues[scrubIdx] != null && (
+   705→                  <span className="ma">MA{MA_WINDOW} {geo.maValues[scrubIdx].toFixed(1)}{unitSuffix}</span>
+   706→                )}
+   707→                <span className="t">{format(scrubPt.t, 'MMM d · HH:mm')}</span>
+   708→              </div>
+   709→            )}
+   710→          </div>
+   711→
+   712→          {/* Per-range mini stats */}
+   713→          <div className="grid grid-cols-4 gap-2 mt-3 pt-3 grain-trends-stats grain-tabular">
+   714→            <MiniStat
+   715→              label={isMoisture ? t('history.stat_avg', lang) : t('history.stat_temp', lang)}
+   716→              value={`${geo.avg.toFixed(1)}${unitSuffix}`}
+   717→              color={accentHex}
+   718→            />
+   719→            <MiniStat label={t('history.stat_min', lang)} value={`${geo.min.toFixed(1)}${unitSuffix}`} />
+   720→            <MiniStat label={t('history.stat_max', lang)} value={`${geo.max.toFixed(1)}${unitSuffix}`} />
+   721→            <MiniStat label={t('history.trends_count', lang)} value={String(geo.pts.length)} />
+   722→          </div>
+   723→        </>
+   724→      )}
+   725→    </div>
+   726→  );
+   727→}
+   728→
+   729→function MiniStat({ label, value, color }: { label: string; value: string; color?: string }) {
+   730→  return (
+   731→    <div className="text-center">
+   732→      <div className="text-[7.5px] font-bold tracking-[0.12em] uppercase mb-0.5 truncate" style={{ color: 'var(--gm-text-tertiary)' }}>{label}</div>
+   733→      <div className="text-[12px] font-bold leading-tight" style={{ color: color ?? 'var(--gm-text-secondary)' }}>{value}</div>
+   734→    </div>
+   735→  );
+   736→}
+   737→
