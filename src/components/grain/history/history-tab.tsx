@@ -1,11 +1,13 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useGrainStore } from '@/lib/grain-store';
 import type { HistoryEntry } from '@/lib/grain-types';
-import { X, TrendUp, TrendDown, Minus, ArrowClockwise, Trash, Gauge } from '@phosphor-icons/react/dist/ssr';
+import { X, TrendUp, TrendDown, Minus, ArrowClockwise, Trash, Gauge, ShareFat, Check } from '@phosphor-icons/react/dist/ssr';
 import { t, tGrain, tTrend, type AppLanguage } from '@/lib/i18n';
 import { getRiskColor, getRiskBg } from '@/lib/accent-hex';
+import { computeStorageScore, scoreBandColor, type ScoreBand } from '@/lib/storage-score';
+import { haptic } from '@/lib/haptics';
 import { HistoryTrends } from './trends-chart';
 import { format } from 'date-fns';
 
@@ -26,6 +28,42 @@ function formatSpan(ms: number): string {
   if (hours < 48) return `${hours}h ${minutes % 60}m`;
   const days = Math.floor(hours / 24);
   return `${days}d ${hours % 24}h`;
+}
+
+/* ═══ Delta vs previous reading ═══
+   Storage semantics: rising moisture is the risk direction
+   (amber), falling is recovering (green), ±<0.05 is flat. */
+
+interface Delta {
+  dir: 'up' | 'down' | 'flat';
+  value: number;
+  color: string;
+}
+
+function deltaColor(dir: Delta['dir']): string {
+  if (dir === 'up') return '#F59E0B';
+  if (dir === 'down') return '#22C55E';
+  return 'var(--gm-text-tertiary)';
+}
+
+function computeDelta(entry: HistoryEntry, prev: HistoryEntry | undefined): Delta | null {
+  if (!prev) return null;
+  const d = entry.reading.moisture - prev.reading.moisture;
+  if (Math.abs(d) < 0.05) return { dir: 'flat', value: d, color: deltaColor('flat') };
+  return { dir: d > 0 ? 'up' : 'down', value: d, color: deltaColor(d > 0 ? 'up' : 'down') };
+}
+
+function DeltaChip({ delta, ariaLabel }: { delta: Delta; ariaLabel: string }) {
+  return (
+    <span className="grain-delta-chip" style={{ color: delta.color }} role="status" aria-label={ariaLabel}>
+      {delta.dir === 'up'
+        ? <TrendUp size={10} weight="bold" />
+        : delta.dir === 'down'
+          ? <TrendDown size={10} weight="bold" />
+          : <Minus size={10} weight="bold" />}
+      {(delta.value > 0 ? '+' : '') + delta.value.toFixed(1)}%
+    </span>
+  );
 }
 
 interface Stats {
@@ -155,6 +193,99 @@ function StatCell({ label, value }: { label: string; value: string }) {
   );
 }
 
+/* ═══ Storage Score – 0–100 composite over the stored history ═══ */
+
+const SCORE_BAND_KEY: Record<ScoreBand, string> = {
+  excellent: 'history.score_excellent',
+  good: 'history.score_good',
+  fair: 'history.score_fair',
+  risky: 'history.score_risky',
+};
+
+function StorageScoreCard({ entries }: { entries: HistoryEntry[] }) {
+  const { settings } = useGrainStore();
+  const lang = settings.language as AppLanguage;
+
+  const score = useMemo(
+    () => computeStorageScore(entries, settings.thresholds),
+    [entries, settings.thresholds],
+  );
+  if (!score) return null;
+
+  const bandColor = scoreBandColor(score.band);
+
+  // 270° arc gauge geometry
+  const R = 30;
+  const CIRC = 2 * Math.PI * R;
+  const SWEEP = 0.75; // 270°
+  const arcLen = CIRC * SWEEP;
+
+  const subs: { key: string; label: string; v: number }[] = [
+    { key: 'zones', label: t('history.score_zones', lang), v: score.parts.zones },
+    { key: 'stability', label: t('history.score_stability', lang), v: score.parts.stability },
+    { key: 'trend', label: t('history.score_trend', lang), v: score.parts.trend },
+  ];
+
+  return (
+    <div className="grain-stats-card mb-4" role="group" aria-label={t('history.score_title', lang)}>
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-[9px] font-bold tracking-[0.18em] uppercase" style={{ color: 'var(--gm-text-tertiary)' }}>
+          {t('history.score_title', lang)}
+        </span>
+        <span
+          className="ml-auto text-[9px] font-bold tracking-[0.14em] uppercase grain-delta-chip"
+          style={{ color: bandColor, borderColor: 'transparent', background: 'transparent', padding: 0, animation: 'none' }}
+        >
+          {t(SCORE_BAND_KEY[score.band], lang)}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-4">
+        {/* Arc gauge */}
+        <svg width="76" height="76" viewBox="0 0 76 76" className="shrink-0" role="img"
+          aria-label={`${t('history.score_title', lang)} ${score.score}/100`}>
+          <circle
+            cx="38" cy="38" r={R} fill="none"
+            stroke="var(--gm-toggle-bg)" strokeWidth="7" strokeLinecap="round"
+            strokeDasharray={`${arcLen} ${CIRC}`} transform="rotate(135 38 38)"
+          />
+          <circle
+            className="grain-score-arc"
+            cx="38" cy="38" r={R} fill="none"
+            stroke={bandColor} strokeWidth="7" strokeLinecap="round"
+            strokeDasharray={`${arcLen * (score.score / 100)} ${CIRC}`} transform="rotate(135 38 38)"
+          />
+          <text x="38" y="41" textAnchor="middle" fill="var(--gm-text-primary)"
+            fontSize="19" fontWeight="800" fontFamily="system-ui, sans-serif">
+            {score.score}
+          </text>
+          <text x="38" y="52" textAnchor="middle" fill="var(--gm-text-tertiary)"
+            fontSize="7.5" fontWeight="700" fontFamily="system-ui, sans-serif">
+            /100
+          </text>
+        </svg>
+
+        {/* Component breakdown */}
+        <div className="flex-1 flex flex-col gap-2.5 min-w-0">
+          {subs.map((s) => (
+            <div key={s.key} className="flex items-center gap-2.5">
+              <span className="text-[8px] font-bold tracking-[0.1em] uppercase w-[62px] shrink-0 truncate" style={{ color: 'var(--gm-text-tertiary)' }}>
+                {s.label}
+              </span>
+              <div className="grain-score-bar-track flex-1">
+                <div className="grain-score-bar-fill" style={{ width: `${s.v}%`, background: bandColor, opacity: 0.85 }} />
+              </div>
+              <span className="text-[10px] font-bold grain-tabular w-[22px] text-right shrink-0" style={{ color: 'var(--gm-text-secondary)' }}>
+                {s.v}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ReadingList() {
   const { historyEntries, setSelectedHistoryId, settings } = useGrainStore();
   const lang = settings.language as AppLanguage;
@@ -175,9 +306,12 @@ function ReadingList() {
   return (
     <div className="flex flex-col gap-2 grain-fade-in">
       <HistoryStats entries={historyEntries} />
+      {historyEntries.length >= 3 && <StorageScoreCard entries={historyEntries} />}
       {historyEntries.length >= 2 && <HistoryTrends entries={historyEntries} />}
-      {historyEntries.map((entry) => {
+      {historyEntries.map((entry, i) => {
         const dotHex = getRiskColor(entry.decision.state, accent);
+        // Entries are newest-first → the previous chronological reading sits one slot down
+        const delta = computeDelta(entry, historyEntries[i + 1]);
         return (
           <div key={entry.reading.id} className="grain-reading-item grain-card p-4 flex items-center gap-4 transition-transform duration-150 active:scale-[0.98]" onClick={() => setSelectedHistoryId(entry.reading.id)}>
             <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold grain-tabular" style={{ background: getRiskBg(entry.decision.state, accent, 0.13), color: dotHex }}>
@@ -192,6 +326,7 @@ function ReadingList() {
               <div className="text-sm font-bold grain-tabular" style={{ color: 'var(--gm-text-primary)' }}>{entry.reading.moisture.toFixed(1)}%{' '}<span className="font-normal text-xs" style={{ color: 'var(--gm-text-secondary)' }}>/ {Math.round(entry.reading.temperature)}°C / {tGrain(entry.reading.grainType, lang)}</span></div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              {delta && <DeltaChip delta={delta} ariaLabel={`${t('history.delta_prev', lang)} ${(delta.value > 0 ? '+' : '') + delta.value.toFixed(1)}%`} />}
               <div style={{ color: dotHex }}>{getTrendIcon(entry.decision.trend)}</div>
               <div className="w-2 h-2 rounded-full" style={{ background: dotHex }} />
             </div>
@@ -204,15 +339,21 @@ function ReadingList() {
 
 function ReadingDetail({ entry, onClose }: { entry: HistoryEntry; onClose: () => void }) {
   const { reading, decision } = entry;
-  const { settings } = useGrainStore();
+  const { settings, historyEntries, showToast } = useGrainStore();
   const lang = settings.language as AppLanguage;
   const accent = settings.accentColor;
   const dotHex = getRiskColor(decision.state, accent);
+  const [shared, setShared] = useState(false);
 
   // Use i18n keys if available, fallback to stored English
   const messageText = decision.messageKey ? t(decision.messageKey, lang) : decision.message;
   const actionText = decision.actionKey ? t(decision.actionKey, lang) : decision.action;
   const trendLabel = tTrend(decision.trend, lang);
+
+  // Delta vs the previous chronological reading (list is newest-first)
+  const idx = historyEntries.findIndex((e) => e.reading.id === reading.id);
+  const prev = idx >= 0 ? historyEntries[idx + 1] : undefined;
+  const delta = computeDelta(entry, prev);
 
   const stateLabel =
     decision.state === 'safe' ? t('history.safe', lang)
@@ -224,6 +365,40 @@ function ReadingDetail({ entry, onClose }: { entry: HistoryEntry; onClose: () =>
     : decision.state === 'invalid' ? t('status.invalid', lang)
     : decision.state;
 
+  /* Share via the Web Share API when available (PWA-friendly),
+     falling back to clipboard copy. User-cancel is silent. */
+  const shareReading = async () => {
+    haptic(settings.hapticsEnabled, 8);
+    const text =
+      `Grain Monitor — ${tGrain(reading.grainType, lang)}\n` +
+      `${t('history.moisture', lang)}: ${reading.moisture.toFixed(1)}% · ${t('history.temperature', lang)}: ${Math.round(reading.temperature)}°C\n` +
+      `${format(reading.timestamp, 'MMM d, yyyy · h:mm a')}\n` +
+      `${stateLabel} · ${messageText}`;
+    // Cast mirrors bluetooth.ts: web-bluetooth Navigator typing breaks
+    // `in`-narrowing for share(), so we model the optional members directly.
+    const navExt = (typeof navigator !== 'undefined' ? navigator : undefined) as
+      | (Navigator & { share?: (data?: ShareData) => Promise<void> })
+      | undefined;
+    try {
+      if (navExt?.share) {
+        await navExt.share({ title: 'Grain Monitor', text });
+        return;
+      }
+      if (navExt?.clipboard?.writeText) {
+        await navExt.clipboard.writeText(text);
+        showToast(t('toast.copied', lang));
+        setShared(true);
+        setTimeout(() => setShared(false), 1600);
+        return;
+      }
+      showToast(t('toast.share_fail', lang));
+    } catch (err) {
+      // AbortError = the user dismissed the share sheet — not a failure
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      showToast(t('toast.share_fail', lang));
+    }
+  };
+
   return (
     <div className="grain-fade-in">
       <div className="flex items-center justify-between mb-5">
@@ -231,12 +406,22 @@ function ReadingDetail({ entry, onClose }: { entry: HistoryEntry; onClose: () =>
           <h3 className="text-lg font-bold tracking-tight" style={{ color: 'var(--gm-text-primary)' }}>{t('history.detail', lang)}</h3>
           <p className="text-xs grain-tabular" style={{ color: 'var(--gm-text-secondary)' }}>{format(reading.timestamp, 'EEEE, MMMM d, yyyy · h:mm a')}</p>
         </div>
-        <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center grain-card" style={{ color: 'var(--gm-text-secondary)' }}><X size={16} weight="bold" /></button>
+        <div className="flex items-center gap-2">
+          <button onClick={shareReading} className="grain-share-btn" aria-label={t('history.share', lang)}>
+            {shared
+              ? <Check size={15} weight="bold" />
+              : <ShareFat size={15} weight="bold" />}
+          </button>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center grain-card" style={{ color: 'var(--gm-text-secondary)' }} aria-label={t('history.detail', lang)}><X size={16} weight="bold" /></button>
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="grain-card p-4">
           <div className="text-[9px] font-bold tracking-[0.15em] uppercase mb-2" style={{ color: 'var(--gm-text-secondary)' }}>{t('history.moisture', lang)}</div>
-          <div className="flex items-baseline gap-1 grain-tabular"><span className="text-3xl font-bold" style={{ color: dotHex }}>{reading.moisture.toFixed(1)}</span><span className="text-xs" style={{ color: 'var(--gm-text-secondary)' }}>%</span></div>
+          <div className="flex items-baseline gap-1.5 grain-tabular">
+            <span className="text-3xl font-bold" style={{ color: dotHex }}>{reading.moisture.toFixed(1)}</span><span className="text-xs" style={{ color: 'var(--gm-text-secondary)' }}>%</span>
+            {delta && <DeltaChip delta={delta} ariaLabel={`${t('history.delta_prev', lang)} ${(delta.value > 0 ? '+' : '') + delta.value.toFixed(1)}%`} />}
+          </div>
         </div>
         <div className="grain-card p-4">
           <div className="text-[9px] font-bold tracking-[0.15em] uppercase mb-2" style={{ color: 'var(--gm-text-secondary)' }}>{t('history.temperature', lang)}</div>

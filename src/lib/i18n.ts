@@ -133,6 +133,16 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'history.trend_falling': 'Falling',
     'history.trend_spike': 'Spike',
     'history.trend_drop': 'Drop',
+    'history.score_title': 'Storage Score',
+    'history.score_excellent': 'Excellent',
+    'history.score_good': 'Good',
+    'history.score_fair': 'Fair',
+    'history.score_risky': 'Risky',
+    'history.score_zones': 'Zones',
+    'history.score_stability': 'Stability',
+    'history.score_trend': 'Trend',
+    'history.delta_prev': 'vs previous reading',
+    'history.share': 'Share reading',
 
     // ── Settings ──
     'settings.title': 'Settings',
@@ -231,6 +241,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.sync_failed': 'Sync command failed',
     'toast.demo_on': 'Demo mode ON – simulating live data',
     'toast.demo_off': 'Demo mode OFF',
+    'toast.copied': 'Copied to clipboard',
+    'toast.share_fail': 'Could not share',
 
     // ── Demo Mode ──
     'demo.title': 'Demo Mode',
@@ -463,6 +475,16 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'history.trend_falling': 'घट रहा है',
     'history.trend_spike': 'अचानक वृद्धि',
     'history.trend_drop': 'अचानक गिरावट',
+    'history.score_title': 'स्टोरेज स्कोर',
+    'history.score_excellent': 'उत्कृष्ट',
+    'history.score_good': 'अच्छा',
+    'history.score_fair': 'ठीक',
+    'history.score_risky': 'जोखिम',
+    'history.score_zones': 'क्षेत्र',
+    'history.score_stability': 'स्थिरता',
+    'history.score_trend': 'रुझान',
+    'history.delta_prev': 'पिछली रीडिंग से',
+    'history.share': 'रीडिंग साझा करें',
 
     // ── Settings ──
     'settings.title': 'सेटिंग्स',
@@ -561,6 +583,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.sync_failed': 'सिंक कमांड विफल',
     'toast.demo_on': 'डेमो मोड चालू – लाइव डेटा सिमुलेट हो रहा है',
     'toast.demo_off': 'डेमो मोड बंद',
+    'toast.copied': 'क्लिपबोर्ड पर कॉपी हुआ',
+    'toast.share_fail': 'साझा नहीं हो सका',
 
     // ── Demo Mode ──
     'demo.title': 'डेमो मोड',
@@ -793,6 +817,16 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'history.trend_falling': 'कमी होत आहे',
     'history.trend_spike': 'अचानक वाढ',
     'history.trend_drop': 'अचानक घट',
+    'history.score_title': 'साठवण स्कोअर',
+    'history.score_excellent': 'उत्कृष्ट',
+    'history.score_good': 'चांगले',
+    'history.score_fair': 'ठीक',
+    'history.score_risky': 'धोक्याचे',
+    'history.score_zones': 'क्षेत्रे',
+    'history.score_stability': 'स्थिरता',
+    'history.score_trend': 'कल',
+    'history.delta_prev': 'मागील वाचनापासून',
+    'history.share': 'वाचन सामायिक करा',
 
     // ── Settings ──
     'settings.title': 'सेटिंग्ज',
@@ -891,6 +925,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.sync_failed': 'सिंक कमांड अयशस्वी',
     'toast.demo_on': 'डेमो मोड चालू – लाइव डेटा सिम्युलेट होत आहे',
     'toast.demo_off': 'डेमो मोड बंद',
+    'toast.copied': 'क्लिपबोर्डवर कॉपी झाले',
+    'toast.share_fail': 'सामायिक करता आले नाही',
 
     // ── Demo Mode ──
     'demo.title': 'डेमो मोड',
@@ -1123,6 +1159,16 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'history.trend_falling': 'Gir raha hai',
     'history.trend_spike': 'Spike',
     'history.trend_drop': 'Drop',
+    'history.score_title': 'Storage Score',
+    'history.score_excellent': 'Excellent',
+    'history.score_good': 'Good',
+    'history.score_fair': 'Fair',
+    'history.score_risky': 'Risky',
+    'history.score_zones': 'Zones',
+    'history.score_stability': 'Stability',
+    'history.score_trend': 'Trend',
+    'history.delta_prev': 'pichli reading se',
+    'history.share': 'Reading share karo',
 
     // ── Settings ──
     'settings.title': 'Settings',
@@ -1221,6 +1267,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.sync_failed': 'Sync command fail hua',
     'toast.demo_on': 'Demo mode ON – live data simulate ho raha hai',
     'toast.demo_off': 'Demo mode OFF',
+    'toast.copied': 'Clipboard pe copy ho gaya',
+    'toast.share_fail': 'Share nahi ho paya',
 
     // ── Demo Mode ──
     'demo.title': 'Demo Mode',

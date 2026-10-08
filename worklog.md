@@ -238,3 +238,43 @@ Unresolved / Next-round recommendations:
 3. Discover tab video cards use gray placeholder thumbnails — real thumbnails (image-search or YouTube thumb URLs) would lift visual quality noticeably.
 4. History per-entry detail could show delta vs previous reading (small trend arrow per row).
 5. Dev-tools "N" bubble still overlaps bottom-left nav in dev only (cosmetic, not shipped).
+
+---
+Task ID: 6 (cron review round 5)
+Agent: Main Agent (Z.ai Code)
+Task: QA status assessment via agent-browser, then — app stable — fix the Discover thumbnail issue (last round's top recommendation) + three feature expansions (Trends metric/range persistence, per-entry delta chips + share, Storage Score gauge) + styling detail polish.
+
+Work Log:
+- QA BASELINE (agent-browser, 390px): page 200, ZERO console errors, all tabs + demo + history/stats/trends/score + discover + settings functional. Confirmed prior round's #3 recommendation as the main QA issue: EVERY Discover thumbnail showed YouTube's gray "video unavailable" placeholder — the curated video IDs were fabricated and img.youtube.com returned 404s.
+- FIX — Discover real videos (discover-content.ts):
+  - Curated 24 REAL YouTube videos via web-search (site:youtube.com queries) + YouTube oEmbed API verification (every ID returns 200 title+channel; every thumbnail returns HTTP 200). Mapped to categories: critical (Ag PhD spoilage, Millennial Farmer dryer, UK Extension bin safety, RealAgriculture drying), warn (SDSU Extension crop hour, GRDC temperature monitoring, Farming Smarter aeration, GSI GrainVue), safe (UK storage tips, Northern Farmer moisture testing, Tom Lamb meter explainer, pest-damage storage), wheat (Abid Ali Agrarian + SAWBO salt-testing), rice (IRRI moisture measurement + Digital Green/CSISA paddy drying), corn (Ag PhD drying + Beck's END ZONE), soybean (Grains and Grit + CGTN smart storage), barley (Barndoor Ag tester + AGI BinManager), oats (roosty6). Sources are now REAL channel names (old file had invented ones).
+  - discover-tab.tsx: extracted DiscoverCard component with per-image onError fallback → branded accent-gradient tile + glass play circle (never shows broken image / gray placeholder again); play affordance redesigned as blurred glass circle over a bottom scrim (was flat overlay).
+- FIX — next.config.ts `devIndicators: false`: the floating dev-tools "N" bubble overlapped the Home nav label at 390px (long-standing cosmetic item). Verified gone; nav labels fully visible.
+- FEATURE — Trends metric + range persistence (grain-types.ts + trends-chart.tsx):
+  - New AppSettings keys `trendsMetric: 'moisture'|'temp'` (default moisture) + `trendsRange: 'auto'|'24h'|'7d'|'30d'|'all'` (default auto = previous behavior). selectMetric/selectRange persist via updateSettings. Backup import merge already generic — new keys flow through safely.
+  - Browser-verified: TEMP+7D selected → keys appear in IndexedDB settings record → full page reload + demo restart → trends reopens TEMP+7D.
+- FEATURE — Per-entry delta vs previous reading (history-tab.tsx):
+  - computeDelta(entry, prev): signed moisture delta with storage semantics — rising=amber #F59E0B, falling=green #22C55E, |Δ|<0.05=neutral. Glass pill chips (.grain-delta-chip, tabular-nums, aria-label 'vs previous reading +0.2%') in list rows AND in the detail moisture card.
+- FEATURE — Share reading (ReadingDetail):
+  - Accent glass button (.grain-share-btn) next to close; Web Share API when available → clipboard copy fallback → toast 'Copied to clipboard' + button flips to Check icon for 1.6s; AbortError (user dismissed share sheet) stays silent; other failures toast 'Could not share'. Share text includes grain, moisture, temp, timestamp, state + Mochi message (localized). NOTE: web-bluetooth Navigator typing breaks `in`-narrowing for share() → cast pattern like bluetooth.ts.
+- FEATURE — Storage Score (new src/lib/storage-score.ts + StorageScoreCard in history-tab.tsx):
+  - 0–100 composite: ZONES 55% (reading distribution below safe/warn/critical), STABILITY 25% (moisture stddev, 0.4→2.5% mapped), TREND 20% (last-8 direction; rising costs marks). Bands: ≥85 Excellent (green), ≥70 Good (lime), ≥50 Fair (amber), <50 Risky (red) — semantic colors independent of accent, by design.
+  - Renders between Summary and Trends (≥3 entries): 270° SVG arc gauge (dasharray animated, .grain-score-arc) + score/100 + three labeled subscore mini-bars (.grain-score-bar-track/fill). Band label chip in header.
+- i18n: 12 new keys × 4 languages (score_title/excellent/good/fair/risky/zones/stability/trend, delta_prev, share, toast.copied, toast.share_fail) via positional python insertion.
+  - PROCESS BUG (caught in browser QA): my insertion script REPLACED the anchor lines instead of inserting after them — 'toast.demo_off' + 'history.trend_drop' were deleted in all 4 languages; Hindi UI showed raw key "toast.demo_off" in the toast. Restored both keys with a corrected insert-before-anchor script; per-language ordering verified programmatically (trend_spike < trend_drop < score_title < share < settings.title; demo_on < demo_off < copied < share_fail < demo.title); toast re-verified in Hindi ("डेमो मोड बंद").
+- STYLING DETAILS: score gauge arc/bar transitions (600ms cubic-bezier, disabled under prefers-reduced-motion); delta chips reuse the toggle-bg glass pill family; share button = accent-tinted glass square matching close button; discover fallback gradient uses --gm-accent-soft so it recolors with accents; bottom scrim + glass play circle on thumbnails.
+- VALIDATION: `bun run lint` clean; `bunx tsc --noEmit` clean for app code; ZERO browser console errors across the entire pass; dev server restarted (setsid) to pick up next.config.ts. Screenshots (download/): r6-qa-home-initial, r6-qa-discover (gray placeholder baseline), r6-discover-real (real thumbs), r6-discover-fallback (CDN-blocked fallback test via network route), r6-devbubble-check, r6-history-top (score card), r6-history-rows2 (delta chips dark), r6-detail + r6-share (detail + clipboard toast), r6-temp-trends (temp+7d), r6-light-history, r6-light-rows, r6-hindi-history, r6-hindi-toast-fixed (bug), r6-hindi-toast2 (fixed), r6-teal-score, r6-final-home-dark.
+
+Stage Summary (browser-verified):
+- Discover now recommends 24 real, verified videos with working thumbnails and honest channel names; broken thumbnails degrade to a branded tile.
+- Trends chart remembers metric + range across sessions.
+- History list + detail show per-reading deltas with storage-risk color semantics; any reading can be shared/copied in one tap.
+- History gains a Storage Score instrument (0–100 arc gauge + component breakdown) that quantifies storage safety at a glance.
+- All prior behavior intact: grain source-of-truth, demo isolation, BLE flow untouched, 4 languages, themes, accents flow through all new surfaces.
+
+Unresolved / Next-round recommendations:
+1. BLE auto-reconnect (Task 2) + PWA install card (Task 3) still need real-device QA.
+2. Storage Score could get a per-grain explanation sheet (what moves the score) — a natural onboarding improvement.
+3. Discover video grid is a single column; a "saved videos" (bookmarks) store would add return value.
+4. History detail could graph the surrounding 16 readings as a mini sparkline around the selected point.
+5. Marathi translations for the 12 new keys were added but only spot-verified in code (Hindi was browser-verified).

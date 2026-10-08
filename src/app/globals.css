@@ -1139,6 +1139,64 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   STORAGE SCORE – composite gauge + per-entry delta chips
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Animated value arc (SVG circle, dasharray-driven) */
+.grain-score-arc {
+  transition: stroke-dasharray 0.6s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.3s ease;
+}
+/* Subscore mini bars (zones / stability / trend) */
+.grain-score-bar-track {
+  height: 3.5px;
+  border-radius: 999px;
+  background: var(--gm-toggle-bg);
+  overflow: hidden;
+}
+.grain-score-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Delta vs previous reading (list rows + detail header) */
+.grain-delta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--gm-toggle-bg);
+  border: 1px solid var(--gm-toggle-border, var(--gm-glass-border));
+  animation: grain-fade-in 0.24s ease-out;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Detail share button – matches the close-button glass square */
+.grain-share-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gm-accent);
+  background: rgba(var(--gm-accent-rgb), 0.10);
+  border: 1px solid rgba(var(--gm-accent-rgb), 0.22);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+.grain-share-btn:active {
+  transform: scale(0.92);
+}
+.grain-share-btn:hover {
+  background: rgba(var(--gm-accent-rgb), 0.18);
+}
+
+/* ═══════════════════════════════════════════════════════════════
    GLASS MODAL – destructive-action confirmation
    ═══════════════════════════════════════════════════════════════ */
 
@@ -1407,6 +1465,16 @@
   }
   .grain-sparkline,
   .grain-sparkline-fill {
+    transition: none !important;
+  }
+  .grain-score-arc,
+  .grain-score-bar-fill {
+    transition: none !important;
+  }
+  .grain-delta-chip {
+    animation: none !important;
+  }
+  .grain-share-btn {
     transition: none !important;
   }
   .grain-scroll {

@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState, useEffect, useCallback } from 'react';
 import { useGrainStore } from '@/lib/grain-store';
-import type { HistoryEntry } from '@/lib/grain-types';
+import type { HistoryEntry, TrendsMetric, TrendsRange } from '@/lib/grain-types';
 import { getAccentHex, getRiskColor } from '@/lib/accent-hex';
 import { t, type AppLanguage } from '@/lib/i18n';
 import { haptic } from '@/lib/haptics';
@@ -20,8 +20,8 @@ import { format } from 'date-fns';
    • Scrub inspection (drag / hover / arrow keys) with glass tooltip
    ═══════════════════════════════════════════════════════════════ */
 
-type RangeId = '24h' | '7d' | '30d' | 'all';
-type MetricId = 'moisture' | 'temp';
+type RangeId = Exclude<TrendsRange, 'auto'>;
+type MetricId = TrendsMetric;
 
 const RANGES: { id: RangeId; label: string; ms: number | null }[] = [
   { id: '24h', label: '24H', ms: 24 * 3600e3 },
@@ -120,13 +120,16 @@ function monotoneCubic(pts: { x: number; y: number }[]) {
 }
 
 export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
-  const { settings } = useGrainStore();
+  const { settings, updateSettings } = useGrainStore();
   const lang = settings.language as AppLanguage;
   const accentHex = getAccentHex(settings.accentColor);
   const { safe, warn, critical } = settings.thresholds;
 
-  const [rangeSel, setRangeSel] = useState<RangeId>(() => detectRange(entries));
-  const [metric, setMetric] = useState<MetricId>('moisture');
+  // Metric + range persist across sessions via AppSettings ('auto' re-detects)
+  const [rangeSel, setRangeSel] = useState<RangeId>(() =>
+    settings.trendsRange === 'auto' ? detectRange(entries) : settings.trendsRange,
+  );
+  const [metric, setMetric] = useState<MetricId>(settings.trendsMetric);
 
   const filtered = useMemo(() => filterEntries(entries, rangeSel), [entries, rangeSel]);
 
@@ -255,15 +258,17 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
 
   useEffect(() => () => clearAutoTimer(), [clearAutoTimer]);
 
-  /** Switch range or metric: clears any active scrub (selection is scope-scoped) */
+  /** Switch range or metric: clears any active scrub (selection is scope-scoped)
+   *  and persists the choice so the chart reopens in the same configuration. */
   const selectRange = useCallback(
     (id: RangeId) => {
       clearAutoTimer();
       draggingRef.current = false;
       setScrubSel(null);
       setRangeSel(id);
+      updateSettings({ trendsRange: id });
     },
-    [clearAutoTimer],
+    [clearAutoTimer, updateSettings],
   );
 
   const selectMetric = useCallback(
@@ -272,8 +277,9 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
       draggingRef.current = false;
       setScrubSel(null);
       setMetric(m);
+      updateSettings({ trendsMetric: m });
     },
-    [clearAutoTimer],
+    [clearAutoTimer, updateSettings],
   );
 
   const anchorFor = useCallback(

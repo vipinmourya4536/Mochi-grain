@@ -198,6 +198,10 @@ export type AccentColor = 'orange' | 'green' | 'purple' | 'blue' | 'teal';
 
 export type AppTheme = 'dark' | 'light';
 
+/* ─── Trends chart preferences (persisted across sessions) ─── */
+export type TrendsMetric = 'moisture' | 'temp';
+export type TrendsRange = 'auto' | '24h' | '7d' | '30d' | 'all';
+
 export interface AppSettings {
   autoReconnect: boolean;
   pushAlerts: boolean;
@@ -211,6 +215,8 @@ export interface AppSettings {
   language: string; // AppLanguage code
   glassOpacity: number; // 0.3–1.0, controls glassmorphism blur intensity
   hapticsEnabled: boolean; // subtle vibration taps on interaction (mobile)
+  trendsMetric: TrendsMetric; // which series the History trends chart shows
+  trendsRange: TrendsRange;   // 'auto' picks the smallest range with ≥2 points
 }
 
 export const DEFAULT_THRESHOLDS: GrainThresholds = {
@@ -247,6 +253,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   language: 'en',
   glassOpacity: 0.75,
   hapticsEnabled: true,
+  trendsMetric: 'moisture',
+  trendsRange: 'auto',
 };
 
 /* Grain label map */
