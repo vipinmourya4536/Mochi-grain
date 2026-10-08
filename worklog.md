@@ -69,3 +69,43 @@ Work Log:
 Stage Summary:
 - Frosted glass now actually renders everywhere (major visual fidelity fix on top of the spec work).
 - All spec items from Task 1 remain verified after the fix (re-tested demo + frost scroll).
+
+---
+Task ID: 2 (cron review round 1)
+Agent: Main Agent (Z.ai Code)
+Task: Scheduled webDevReview — QA regression pass, then feature expansion (history statistics, haptics, BLE auto-reconnect) + styling details.
+
+Work Log:
+- QA BASELINE: fresh browser session (390px). Page 200, zero console errors/warnings, demo + tabs + history all functional. No regressions from Task 1.
+- NEW FEATURE — History Statistics Summary Card (history-tab.tsx + globals.css):
+  - Glass card above the reading list: AVG MOISTURE (large number), MIN, MAX, AVG TEMP, reading count, time span (compact "2h 30m" / "3d 4h" formatter).
+  - "Storage range" threshold zone bar: green/amber/red zones computed from the ACTIVE grain profile thresholds (safe/warn/critical over domain 0 → critical+4), with min/max markers and a prominent accent avg marker (animated left position).
+  - Verified: Wheat zones 61.9/19/19% → Soybean zones 60/20/20% with labels <13%·<17% → <12%·<16%; bar recomputes live with the selected grain; avg marker sits inside the correct zone.
+  - i18n: 7 new keys × 4 languages (stats_title/stat_avg/stat_min/stat_max/stat_temp/stat_range + span is unit-agnostic). Hindi/Marathi verified in browser.
+- NEW FEATURE — Haptic feedback (src/lib/haptics.ts + settings):
+  - New `haptic(enabled, pattern)` util guarded by navigator.vibrate support; restrained patterns (6-16ms; escalation patterns for warning/critical).
+  - Wired: bottom-nav tab switch (HAPTIC_TAP, no-op if same tab), settings grain selection (HAPTIC_SELECT), warning/critical Mochi escalation in insight-card (HAPTIC_ALERT/HAPTIC_CRITICAL, only on state transitions, first render skipped), haptics toggle self-feedback.
+  - New user preference `hapticsEnabled` (default true) in AppSettings + Preferences toggle in Settings; loadSettings now merges stored settings with DEFAULT_SETTINGS so the new key is defined for previously-persisted settings (forward migration).
+- NEW FEATURE — BLE unexpected-disconnect handling + auto-reconnect (bluetooth.ts + grain-store.ts):
+  - bluetooth.ts: `onDisconnected(cb)` (single bound 'gattserverdisconnected' listener, de-duplicated per registration), `reconnect()` (re-connects the already-selected device WITHOUT the browser chooser), disconnect() now removes the listener so intentional disconnects never trigger reconnection.
+  - grain-store.ts: `handleUnexpectedDisconnect` — guards (demo isolated, ignores intentional/connecting), cleans BLE state, toasts, then if settings.autoReconnect: 3 silent reconnect attempts 4s apart with re-subscribed reading notifications + wake-on-connect. Bail-outs protect against demo start / manual connect mid-loop.
+  - i18n: toast.probe_disconnected / toast.reconnecting / toast.reconnected × 4 languages.
+  - Not hardware-testable in sandbox — logic reviewed; BLE UUIDs/notification flow untouched; demo mode fully isolated from the new listener.
+- STYLING DETAILS:
+  - `.grain-tabular` (font-variant-numeric: tabular-nums) applied to hero-adjacent telemetry, metric values, history timestamps/values/stats — digits no longer jitter width while ticking.
+  - Toast upgraded: accent left edge (var(--gm-accent)), repositioned below the frosted header (header height + safe-area + 6px), max-width + ellipsis for long messages.
+  - History empty state polished (larger rotated icon tile, accent color, relaxed copy width); trash button got aria-label.
+  - Stats card: accent radial sheen, inset highlight, zone bar with glass border + glow on avg marker.
+- PROCESS FIX: python heredoc i18n editing initially produced duplicate keys in en (en/hinglish share identical strings) and missed Marathi stats + Hinglish haptics (Devanagari anchor typo). All 10 new keys now verified exactly 4× via count check.
+- VALIDATION: `bun run lint` clean; `bunx tsc --noEmit` clean (app code); zero browser console errors; verified screenshots at 390px dark + light (r2-stats-card.png, r2-stats-hindi.png, r2-light-stats.png).
+
+Stage Summary:
+- History tab upgraded from flat list to analytics surface (summary + zone bar) that follows the grain source-of-truth.
+- App now has tactile feedback with user control, and survives probe range-loss gracefully with auto-reconnect.
+- No regressions: grain source-of-truth, demo, BLE flow, themes, accents, i18n all re-verified.
+
+Unresolved / Next-round recommendations:
+1. BLE auto-reconnect untestable without hardware — first real-device QA should watch the reconnect loop (3 attempts, 4s interval).
+2. Chart scrub interaction on the hero sparkline (tap to inspect historical points) — high-value next feature.
+3. PWA install prompt (beforeinstallprompt) + share/export JSON in Settings → Data.
+4. Next.js dev-tools "N" bubble overlaps nav bottom-left in dev only (cosmetic, dev-only).

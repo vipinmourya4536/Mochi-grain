@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { useGrainStore } from '@/lib/grain-store';
 import { getInsightTitle, getTrendLabel } from '@/lib/mochi-engine';
 import { STATE } from '@/lib/grain-types';
@@ -15,6 +16,7 @@ import {
   ShieldCheck,
 } from '@phosphor-icons/react/dist/ssr';
 import { t, type AppLanguage } from '@/lib/i18n';
+import { haptic, HAPTIC_ALERT, HAPTIC_CRITICAL } from '@/lib/haptics';
 
 /* ── Expression → Icon mapping ── */
 const EXPRESSION_ICONS: Record<MochiExpression, React.ElementType> = {
@@ -41,6 +43,23 @@ function getExpressionColor(expression: MochiExpression): string {
 export function InsightCard() {
   const { decision, deviceState, currentReading, settings } = useGrainStore();
   const lang = settings.language as AppLanguage;
+
+  // Subtle haptic escalation when the decision worsens (skip first render)
+  const prevStateRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!decision) {
+      prevStateRef.current = null;
+      return;
+    }
+    const prev = prevStateRef.current;
+    prevStateRef.current = decision.state;
+    if (prev === null || prev === decision.state) return;
+    if (decision.state === STATE.CRITICAL) {
+      haptic(settings.hapticsEnabled, HAPTIC_CRITICAL);
+    } else if (decision.state === STATE.WARNING && prev !== STATE.WARNING) {
+      haptic(settings.hapticsEnabled, HAPTIC_ALERT);
+    }
+  }, [decision, settings.hapticsEnabled]);
 
   // Handle non-connected device states
   if (deviceState === 'sleeping') {

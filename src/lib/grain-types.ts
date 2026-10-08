@@ -210,6 +210,7 @@ export interface AppSettings {
   theme: AppTheme;
   language: string; // AppLanguage code
   glassOpacity: number; // 0.3–1.0, controls glassmorphism blur intensity
+  hapticsEnabled: boolean; // subtle vibration taps on interaction (mobile)
 }
 
 export const DEFAULT_THRESHOLDS: GrainThresholds = {
@@ -245,6 +246,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'dark',
   language: 'en',
   glassOpacity: 0.75,
+  hapticsEnabled: true,
 };
 
 /* Grain label map */

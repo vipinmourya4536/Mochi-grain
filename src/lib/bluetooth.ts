@@ -18,6 +18,24 @@ let dataCharacteristic: BluetoothRemoteGATTCharacteristic | null = null;
 let cmdCharacteristic: BluetoothRemoteGATTCharacteristic | null = null;
 let notifyHandler: ((event: Event) => void) | null = null;
 
+/* Unexpected GATT disconnect listener (single bound handler, re-registered per device) */
+let gattDisconnectCb: (() => void) | null = null;
+const onGattDisconnectedBound = () => {
+  gattDisconnectCb?.();
+};
+
+/**
+ * Register a callback fired when the GATT server drops unexpectedly
+ * (out of range, probe sleep, battery pull). Not fired for intentional
+ * disconnect() calls — the listener is removed there.
+ */
+export function onDisconnected(cb: () => void): void {
+  if (!device) return;
+  gattDisconnectCb = cb;
+  device.removeEventListener('gattserverdisconnected', onGattDisconnectedBound);
+  device.addEventListener('gattserverdisconnected', onGattDisconnectedBound);
+}
+
 // Check if Web Bluetooth is available
 export function isBluetoothAvailable(): boolean {
   return typeof navigator !== 'undefined' && 'bluetooth' in navigator;
@@ -113,6 +131,12 @@ export function onReading(callback: (reading: Reading) => void): void {
   dataCharacteristic.addEventListener('characteristicvaluechanged', notifyHandler);
 }
 
+// Re-connect to the already-selected device (used by auto-reconnect after
+// an unexpected GATT drop). Does NOT re-open the browser chooser.
+export async function reconnect(): Promise<boolean> {
+  return connect();
+}
+
 // Send command to probe (e.g., wake, calibrate, request sync)
 export async function sendCommand(command: 'wake' | 'calibrate' | 'sync' | 'sleep'): Promise<boolean> {
   if (!cmdCharacteristic) return false;
@@ -133,6 +157,12 @@ export function disconnect(): void {
     dataCharacteristic.removeEventListener('characteristicvaluechanged', notifyHandler);
     notifyHandler = null;
   }
+  // Remove the unexpected-disconnect listener so intentional disconnects
+  // do not trigger the auto-reconnect flow.
+  if (device) {
+    device.removeEventListener('gattserverdisconnected', onGattDisconnectedBound);
+  }
+  gattDisconnectCb = null;
   if (server?.connected) {
     server.disconnect();
   }

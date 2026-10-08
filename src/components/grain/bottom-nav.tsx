@@ -8,6 +8,7 @@ import {
   Gear,
 } from '@phosphor-icons/react/dist/ssr';
 import { t, type AppLanguage } from '@/lib/i18n';
+import { haptic, HAPTIC_TAP } from '@/lib/haptics';
 
 const TABS: { id: TabId; icon: typeof House; labelKey: string }[] = [
   { id: 'home', icon: House, labelKey: 'nav.home' },
@@ -33,7 +34,11 @@ export function BottomNav() {
           return (
             <button
               key={id}
-              onClick={() => setActiveTab(id)}
+              onClick={() => {
+                if (id === activeTab) return;
+                haptic(settings.hapticsEnabled, HAPTIC_TAP);
+                setActiveTab(id);
+              }}
               className={`grain-nav-btn ${isActive ? 'active' : ''}`}
               aria-label={t(labelKey, lang)}
               aria-current={isActive ? 'page' : undefined}

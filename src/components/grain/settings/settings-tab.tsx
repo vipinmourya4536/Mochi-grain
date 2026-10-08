@@ -8,6 +8,7 @@ import {
 } from '@phosphor-icons/react/dist/ssr';
 import { type GrainType, type AccentColor, GRAIN_OPTIONS } from '@/lib/grain-types';
 import { t, tGrain, type AppLanguage } from '@/lib/i18n';
+import { haptic, HAPTIC_SELECT } from '@/lib/haptics';
 
 const INTERVAL_OPTIONS: { sec: DemoIntervalPreset; key: string }[] = [
   { sec: 60, key: 'demo.1m' },
@@ -148,7 +149,11 @@ export function SettingsTab() {
             return (
               <button
                 key={g}
-                onClick={() => selectGrainType(g)}
+                onClick={() => {
+                  if (g === settings.grainType) return;
+                  haptic(settings.hapticsEnabled, HAPTIC_SELECT);
+                  selectGrainType(g);
+                }}
                 className={`grain-grain-card ${isActive ? 'active' : ''}`}
                 aria-pressed={isActive}
               >
@@ -226,6 +231,11 @@ export function SettingsTab() {
         <label className="flex justify-between items-center px-5 py-4 cursor-pointer">
           <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.auto_reconnect', lang)}</span>
           <input type="checkbox" checked={settings.autoReconnect} onChange={(e) => { updateSettings({ autoReconnect: e.target.checked }); }} className="grain-toggle" />
+        </label>
+        <div className="grain-separator" />
+        <label className="flex justify-between items-center px-5 py-4 cursor-pointer">
+          <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.haptics', lang)}</span>
+          <input type="checkbox" checked={settings.hapticsEnabled} onChange={(e) => { updateSettings({ hapticsEnabled: e.target.checked }); haptic(e.target.checked, 14); }} className="grain-toggle" />
         </label>
         <div className="grain-separator" />
         <label className="flex justify-between items-center px-5 py-4 cursor-pointer">
