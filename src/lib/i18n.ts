@@ -101,6 +101,7 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'discover.filter_all': 'All',
     'discover.filter_saved': 'Saved',
     'discover.saved_empty': 'No saved videos yet. Tap the bookmark on any video to keep it here.',
+    'discover.saved_meta': '{n} saved · newest first',
     'discover.bookmark_add': 'Save video',
     'discover.bookmark_remove': 'Remove from saved',
 
@@ -154,6 +155,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'history.sheet_bands': 'Score bands',
 
     'history.delta_prev': 'vs previous reading',
+    'history.trends_ma': '7-reading average',
+    'history.detail_context': 'Surrounding readings',
     'history.share': 'Share reading',
 
     // ── Settings ──
@@ -256,6 +259,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.demo_on': 'Demo mode ON – simulating live data',
     'toast.demo_off': 'Demo mode OFF',
     'toast.copied': 'Copied to clipboard',
+    'toast.saved': 'Saved to your list',
+    'toast.unsaved': 'Removed from saved',
     'toast.share_fail': 'Could not share',
 
     // ── Demo Mode ──
@@ -457,6 +462,7 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'discover.filter_all': 'सभी',
     'discover.filter_saved': 'सेव किए गए',
     'discover.saved_empty': 'अभी कोई सेव किया वीडियो नहीं। किसी भी वीडियो पर बुकमार्क दबाएं और उसे यहां रखें।',
+    'discover.saved_meta': '{n} सेव · नए पहले',
     'discover.bookmark_add': 'वीडियो सेव करें',
     'discover.bookmark_remove': 'सेव से हटाएं',
 
@@ -510,6 +516,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'history.sheet_bands': 'स्कोर श्रेणियां',
 
     'history.delta_prev': 'पिछली रीडिंग से',
+    'history.trends_ma': '7 रीडिंग का औसत',
+    'history.detail_context': 'आसपास की रीडिंग',
     'history.share': 'रीडिंग साझा करें',
 
     // ── Settings ──
@@ -612,6 +620,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.demo_on': 'डेमो मोड चालू – लाइव डेटा सिमुलेट हो रहा है',
     'toast.demo_off': 'डेमो मोड बंद',
     'toast.copied': 'क्लिपबोर्ड पर कॉपी हुआ',
+    'toast.saved': 'आपकी सूची में सेव हुआ',
+    'toast.unsaved': 'सेव से हटा दिया गया',
     'toast.share_fail': 'साझा नहीं हो सका',
 
     // ── Demo Mode ──
@@ -813,6 +823,7 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'discover.filter_all': 'सर्व',
     'discover.filter_saved': 'सेव्ह केलेले',
     'discover.saved_empty': 'अजून कोणताही सेव्ह केलेला व्हिडिओ नाही. कोणत्याही व्हिडिओवर बुकमार्क दाबा आणि तो येथे ठेवा.',
+    'discover.saved_meta': '{n} सेव्ह · नवीन आधी',
     'discover.bookmark_add': 'व्हिडिओ सेव्ह करा',
     'discover.bookmark_remove': 'सेव्हमधून काढा',
 
@@ -866,6 +877,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'history.sheet_bands': 'स्कोर श्रेणी',
 
     'history.delta_prev': 'मागील वाचनापासून',
+    'history.trends_ma': '7 वाचनांचा सरासरी',
+    'history.detail_context': 'आजूबाजूची वाचने',
     'history.share': 'वाचन सामायिक करा',
 
     // ── Settings ──
@@ -968,6 +981,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.demo_on': 'डेमो मोड चालू – लाइव डेटा सिम्युलेट होत आहे',
     'toast.demo_off': 'डेमो मोड बंद',
     'toast.copied': 'क्लिपबोर्डवर कॉपी झाले',
+    'toast.saved': 'तुमच्या यादीत सेव्ह झाले',
+    'toast.unsaved': 'सेव्हमधून काढले',
     'toast.share_fail': 'सामायिक करता आले नाही',
 
     // ── Demo Mode ──
@@ -1169,6 +1184,7 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'discover.filter_all': 'Sabhi',
     'discover.filter_saved': 'Saved',
     'discover.saved_empty': 'Abhi tak koi saved video nahi. Kisi bhi video par bookmark dabao aur use yahan rakho.',
+    'discover.saved_meta': '{n} saved · naye pehle',
     'discover.bookmark_add': 'Video save karo',
     'discover.bookmark_remove': 'Saved se hatao',
 
@@ -1222,6 +1238,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'history.sheet_bands': 'Score bands',
 
     'history.delta_prev': 'pichli reading se',
+    'history.trends_ma': '7 reading ka average',
+    'history.detail_context': 'Aas-paas ki readings',
     'history.share': 'Reading share karo',
 
     // ── Settings ──
@@ -1324,6 +1342,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.demo_on': 'Demo mode ON – live data simulate ho raha hai',
     'toast.demo_off': 'Demo mode OFF',
     'toast.copied': 'Clipboard pe copy ho gaya',
+    'toast.saved': 'List me save ho gaya',
+    'toast.unsaved': 'Saved se hata diya',
     'toast.share_fail': 'Share nahi ho paya',
 
     // ── Demo Mode ──

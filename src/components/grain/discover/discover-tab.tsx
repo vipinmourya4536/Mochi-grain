@@ -4,10 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useGrainStore } from '@/lib/grain-store';
 import { getDiscoverContent } from '@/lib/discover-content';
 import { stateToRiskTheme } from '@/lib/grain-types';
-import { getBookmarkedIds, toggleVideoBookmark } from '@/lib/offline-storage';
+import { getBookmarkedEntries, toggleVideoBookmark, type BookmarkRecord } from '@/lib/offline-storage';
 import { haptic } from '@/lib/haptics';
 import { YoutubeLogo, ArrowSquareOut, PlayCircle, BookmarkSimple } from '@phosphor-icons/react/dist/ssr';
-import { t, tGrain, type AppLanguage } from '@/lib/i18n';
+import { t, tp, tGrain, type AppLanguage } from '@/lib/i18n';
 import type { DiscoverVideo } from '@/lib/grain-types';
 
 /**
@@ -115,7 +115,7 @@ function DiscoverCard({
 }
 
 export function DiscoverTab() {
-  const { decision, settings, deviceState } = useGrainStore();
+  const { decision, settings, deviceState, showToast } = useGrainStore();
   const lang = settings.language as AppLanguage;
 
   const grainType = settings.grainType;
@@ -123,14 +123,16 @@ export function DiscoverTab() {
   const videos = getDiscoverContent(grainType, riskTheme);
 
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [savedMeta, setSavedMeta] = useState<Record<string, number>>({}); // id → savedAt
   const [filter, setFilter] = useState<'all' | 'saved'>('all');
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    getBookmarkedIds().then((ids) => {
+    getBookmarkedEntries().then((rows: BookmarkRecord[]) => {
       if (!cancelled) {
-        setSavedIds(new Set(ids));
+        setSavedIds(new Set(rows.map((r) => r.id)));
+        setSavedMeta(Object.fromEntries(rows.map((r) => [r.id, r.savedAt])));
         setLoaded(true);
       }
     });
@@ -148,7 +150,17 @@ export function DiscoverTab() {
       else next.delete(video.id);
       return next;
     });
+    if (willSave) {
+      setSavedMeta((prev) => ({ ...prev, [video.id]: Date.now() }));
+    } else {
+      setSavedMeta((prev) => {
+        const next = { ...prev };
+        delete next[video.id];
+        return next;
+      });
+    }
     haptic(settings.hapticsEnabled, willSave ? 12 : 8);
+    showToast(t(willSave ? 'toast.saved' : 'toast.unsaved', lang));
     toggleVideoBookmark(video.id).catch(() => {
       // Roll back on storage failure
       setSavedIds((prev) => {
@@ -162,8 +174,10 @@ export function DiscoverTab() {
 
   const visibleVideos = useMemo(() => {
     if (filter === 'all') return videos;
-    return videos.filter((v) => savedIds.has(v.id));
-  }, [videos, filter, savedIds]);
+    const saved = videos.filter((v) => savedIds.has(v.id));
+    // Most recently saved first (recency tracked in the bookmarks store)
+    return saved.sort((a, b) => (savedMeta[b.id] ?? 0) - (savedMeta[a.id] ?? 0));
+  }, [videos, filter, savedIds, savedMeta]);
 
   const isConnected = deviceState !== 'disconnected' && deviceState !== 'connecting';
 
@@ -225,6 +239,11 @@ export function DiscoverTab() {
       </div>
 
       <div className="flex flex-col gap-3">
+        {filter === 'saved' && savedCount > 0 && (
+          <p className="text-[10px] font-semibold tracking-wide uppercase px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
+            {tp('discover.saved_meta', lang, { n: savedCount })}
+          </p>
+        )}
         {visibleVideos.map((video) => (
           <DiscoverCard
             key={video.id}

@@ -1130,6 +1130,50 @@
   border: 1px solid var(--gm-toggle-border, var(--gm-glass-border));
   animation: grain-fade-in 0.24s ease-out;
 }
+/* Moving-average toggle chip — same pill family, pressed = accent tint */
+.grain-ma-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: var(--gm-text-tertiary);
+  background: var(--gm-toggle-bg);
+  border: 1px solid var(--gm-toggle-border, var(--gm-glass-border));
+  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  cursor: pointer;
+}
+.grain-ma-chip.on {
+  color: var(--gm-accent);
+  border-color: color-mix(in srgb, var(--gm-accent) 38%, transparent);
+  background: var(--gm-accent-dim);
+}
+.grain-ma-chip:active {
+  transform: scale(0.94);
+}
+/* Trailing moving-average overlay line — dotted neutral, sits under the dots */
+.grain-trends-ma {
+  stroke: var(--gm-text-secondary);
+  stroke-dasharray: 0.1 3.6;
+  transition: opacity 0.25s ease;
+}
+/* Secondary moving-average row inside the scrub tooltip */
+.grain-scrub-tooltip .ma {
+  font-size: 8.5px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1;
+  letter-spacing: 0.05em;
+  font-variant-numeric: tabular-nums;
+}
+/* Detail-view context sparkline */
+.grain-detail-spark {
+  animation: grain-fade-in 0.3s ease-out;
+}
 /* Metric toggle (Moisture | Temp) — same pill family, slightly wider hit area */
 .grain-seg-metric button {
   text-transform: uppercase;
@@ -1647,6 +1691,15 @@
   }
   .grain-delta-chip {
     animation: none !important;
+  }
+  .grain-detail-spark {
+    animation: none !important;
+  }
+  .grain-ma-chip {
+    transition: none !important;
+  }
+  .grain-trends-ma {
+    transition: none !important;
   }
   .grain-share-btn {
     transition: none !important;

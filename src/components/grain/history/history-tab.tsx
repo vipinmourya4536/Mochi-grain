@@ -10,6 +10,7 @@ import { getRiskColor, getRiskBg } from '@/lib/accent-hex';
 import { computeStorageScore, scoreBandColor, type ScoreBand } from '@/lib/storage-score';
 import { haptic } from '@/lib/haptics';
 import { HistoryTrends } from './trends-chart';
+import { DetailSparkline } from './detail-sparkline';
 import { format } from 'date-fns';
 
 function getTrendIcon(trend: string) {
@@ -588,11 +589,32 @@ function ReadingDetail({ entry, onClose }: { entry: HistoryEntry; onClose: () =>
           <div className="flex items-baseline gap-1 grain-tabular"><span className="text-3xl font-bold" style={{ color: 'var(--gm-text-primary)' }}>{Math.round(reading.temperature)}</span><span className="text-xs" style={{ color: 'var(--gm-text-secondary)' }}>°C</span></div>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-3 mb-5">
+      <div className="grid grid-cols-3 gap-3 mb-4">
         <div className="grain-card p-3"><div className="text-[9px] font-bold tracking-[0.15em] uppercase mb-1" style={{ color: 'var(--gm-text-secondary)' }}>{t('history.battery', lang)}</div><span className="text-sm font-bold grain-tabular" style={{ color: 'var(--gm-text-primary)' }}>{reading.battery}%</span></div>
         <div className="grain-card p-3"><div className="text-[9px] font-bold tracking-[0.15em] uppercase mb-1" style={{ color: 'var(--gm-text-secondary)' }}>{t('history.signal', lang)}</div><span className="text-sm font-bold grain-tabular" style={{ color: 'var(--gm-text-primary)' }}>{reading.signal}%</span></div>
         <div className="grain-card p-3"><div className="text-[9px] font-bold tracking-[0.15em] uppercase mb-1" style={{ color: 'var(--gm-text-secondary)' }}>{t('history.grain', lang)}</div><span className="text-sm font-bold" style={{ color: 'var(--gm-text-primary)' }}>{tGrain(reading.grainType, lang)}</span></div>
       </div>
+
+      {/* Local trajectory: the ~16 readings surrounding this one */}
+      <div className="grain-card p-4 mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[9px] font-bold tracking-[0.15em] uppercase" style={{ color: 'var(--gm-text-secondary)' }}>
+            {t('history.detail_context', lang)}
+          </span>
+          <span className="text-[9px] font-semibold grain-tabular" style={{ color: 'var(--gm-text-tertiary)' }}>
+            {reading.moisture.toFixed(1)}% · {format(reading.timestamp, 'HH:mm')}
+          </span>
+        </div>
+        <DetailSparkline
+          entries={historyEntries}
+          selected={entry}
+          accentColor={accent}
+          safe={settings.thresholds.safe}
+          critical={settings.thresholds.critical}
+          positionLabel={t('history.detail_context', lang)}
+        />
+      </div>
+
       <div className="grain-insight-card mb-5">
         <h4 className="text-xs font-bold tracking-wide uppercase mb-2" style={{ color: dotHex }}>{stateLabel} · {trendLabel}</h4>
         <p className="text-sm leading-relaxed" style={{ color: 'var(--gm-text-secondary)' }}>{messageText}</p>

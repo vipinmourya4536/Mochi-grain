@@ -17,7 +17,7 @@ import {
 } from '@phosphor-icons/react/dist/ssr';
 import { t, type AppLanguage } from '@/lib/i18n';
 import { haptic, HAPTIC_ALERT, HAPTIC_CRITICAL } from '@/lib/haptics';
-import { playWarnAlert, playCriticalAlert } from '@/lib/alert-sound';
+import { playWarnAlert, playCriticalAlert, playSafeAlert } from '@/lib/alert-sound';
 
 /* ── Expression → Icon mapping ── */
 const EXPRESSION_ICONS: Record<MochiExpression, React.ElementType> = {
@@ -45,7 +45,9 @@ export function InsightCard() {
   const { decision, deviceState, currentReading, settings } = useGrainStore();
   const lang = settings.language as AppLanguage;
 
-  // Subtle haptic + audio escalation when the decision worsens (skip first render)
+  // Subtle haptic + audio escalation when the decision worsens (skip first render).
+  // When the situation RESOLVES (warn/critical → safe/recovery/monitor) a soft
+  // 'all-clear' settle cue plays instead — same transition discipline.
   const prevStateRef = useRef<string | null>(null);
   useEffect(() => {
     if (!decision) {
@@ -55,12 +57,17 @@ export function InsightCard() {
     const prev = prevStateRef.current;
     prevStateRef.current = decision.state;
     if (prev === null || prev === decision.state) return;
+    const wasRisky = prev === STATE.WARNING || prev === STATE.CRITICAL;
+    const nowCalm = decision.state === STATE.SAFE || decision.state === STATE.RECOVERY || decision.state === STATE.MONITOR;
     if (decision.state === STATE.CRITICAL) {
       haptic(settings.hapticsEnabled, HAPTIC_CRITICAL);
       playCriticalAlert(settings.soundAlerts);
     } else if (decision.state === STATE.WARNING && prev !== STATE.WARNING) {
       haptic(settings.hapticsEnabled, HAPTIC_ALERT);
       playWarnAlert(settings.soundAlerts);
+    } else if (wasRisky && nowCalm) {
+      haptic(settings.hapticsEnabled, [8, 60, 10]);
+      playSafeAlert(settings.soundAlerts);
     }
   }, [decision, settings.hapticsEnabled, settings.soundAlerts]);
 

@@ -130,11 +130,27 @@ export async function deleteDemoData(): Promise<void> {
 }
 
 /* ── Discover video bookmarks ── */
+export interface BookmarkRecord {
+  id: string;
+  savedAt: number;
+}
+
 export async function getBookmarkedIds(): Promise<string[]> {
   try {
     const db = await getDB();
     const rows: { id: string; savedAt: number }[] = await db.getAll('bookmarks');
     return rows.map((r) => r.id);
+  } catch {
+    return [];
+  }
+}
+
+/** Full bookmark records (id + savedAt) so the Saved view can sort by recency */
+export async function getBookmarkedEntries(): Promise<BookmarkRecord[]> {
+  try {
+    const db = await getDB();
+    const rows: { id: string; savedAt: number }[] = await db.getAll('bookmarks');
+    return rows.map((r) => ({ id: r.id, savedAt: r.savedAt }));
   } catch {
     return [];
   }

@@ -331,3 +331,49 @@ Unresolved / Next-round recommendations:
 4. Alert sounds could add a safe-state "all-clear" cue (playSafeAlert exists but is only used as the settings preview).
 5. Trends chart could overlay a 7-point moving average line (data already in memory; natural analytics extension).
 6. Marathi/Hinglish full-page walkthrough (all tabs) recommended once — new keys were verified in browser for hi/mr but not every tab.
+
+---
+Task ID: 8 (cron review round 7)
+Agent: Main Agent (Z.ai Code)
+Task: QA status assessment via agent-browser, then — app stable — resolve the round-7 history-loss anomaly question + three feature expansions (Trends MA7 moving-average overlay, safe-state all-clear cue, ReadingDetail context sparkline) + Saved-videos recency management + styling detail polish.
+
+Work Log:
+- QA BASELINE (agent-browser, 390px): page 200, ZERO console errors, all tabs + demo + history/stats/score/trends + discover + settings functional. Full demo persistence lifecycle re-verified: start → 60 rows in IndexedDB → reload mid-demo → rows survive AND stay hidden from real History → restart → stale leftovers cleaned → stop → DB back to exactly 0/0.
+- ANOMALY RESOLVED (round-7 #2): the "history vanished" mystery is NOT app code. Every persistence rail works (verified above); offline-storage has no destructive boot path; deleteDemoData only targets deviceId 'DEMO-GRAIN-01' via index. Root cause: agent-browser daemon profile resets between rounds. Also deleted a stale 'grain-monitor' v1 DB found in the QA profile (leftover from an early-round manual test; the app has only ever used 'grain-monitor-db', so real users are unaffected). Conclusion: watch item closed.
+- FEATURE — Trends moving-average overlay (trends-chart.tsx + grain-types.ts):
+  - New AppSettings key `trendsMovingAvg` (default true) — persists like trendsMetric/trendsRange.
+  - Trailing 7-reading SMA (`movingAverage()`) with a shrinking head window so the line spans the full chart; monotone-cubic smoothed over the same x coordinates.
+  - Rendered as a dotted neutral line (.grain-trends-ma, stroke-dasharray 0.1/3.6, theme-aware --gm-text-secondary) under the risk dots; dims while scrubbing.
+  - New MA7 glass toggle chip (.grain-ma-chip, accent-tinted when on, aria-pressed) in the trends header next to the direction chip; haptic on toggle.
+  - Scrub tooltip gains a second row: "MA7 13.1%" under the raw value (index-aligned lookup).
+  - Works in BOTH metrics (moisture + temperature). Persisted across reload (IndexedDB-verified).
+- FEATURE — Safe-state 'all-clear' cue (insight-card.tsx): transition warn/critical → safe/recovery/monitor now fires the soft E5 settle chime (playSafeAlert, existed but unused) + [8,60,10] haptic, same transition discipline as escalations (first render skipped).
+- FEATURE — ReadingDetail context sparkline (new history/detail-sparkline.tsx + history-tab.tsx):
+  - Window = up to 8 older + selected + up to 7 newer readings from the newest-first list, rebuilt chronologically.
+  - Accent monotone curve + gradient fill, selected point enlarged with ring, neighbors as faint dots; safe/critical dashed hairlines (drawn only when inside the window domain, band-token label classes); first/last window time labels (HH:mm, or MMM d for >36h spans).
+  - Card header "SURROUNDING READINGS" + selected reading echo (moisture · time); a11y role=img with localized label.
+- FEATURE — Saved-videos recency management (discover-tab.tsx + offline-storage.ts):
+  - New `getBookmarkedEntries()` API returning {id, savedAt}; SAVED view now sorts by savedAt desc (most recently saved first).
+  - Meta row "N SAVED · NEWEST FIRST" (tp interpolation) above the saved list.
+  - Save/unsave now toasts feedback ('Saved to your list' / 'Removed from saved') with the existing optimistic-toggle + rollback rails.
+- i18n: 5 new keys × 4 languages (history.trends_ma, history.detail_context, discover.saved_meta, toast.saved, toast.unsaved). PROCESS NOTE: first insertion script used block-order language tracking that mis-targeted 3 of 4 saved_meta payloads (discover.saved_empty precedes the language-detecting anchor inside each block); caught by post-insert count verification, repaired with per-anchor language detection (each saved_empty string is unique per language). Final verification: all 5 new keys = 4 each; prior keys toast.demo_off / history.trend_drop / history.score_title / settings.sound intact = 4 each. Hindi verified IN BROWSER (MA chip aria "7 रीडिंग का औसत", "आसपास की रीडिंग", toasts).
+- STYLING DETAILS: .grain-ma-chip pill family (muted → accent tint + color-mix border when on, :active scale 0.94); .grain-trends-ma dotted instrument line; .grain-scrub-tooltip .ma secondary row (tabular-nums); .grain-detail-spark fade-in; prefers-reduced-motion extended to all four.
+- VALIDATION: `bun run lint` clean; `bunx tsc --noEmit` clean for app code (2 transient errors fixed: AccentColor not exported from accent-hex → import type from grain-types); zero browser console errors/warnings across the whole pass; app left in clean default state (EN, dark, no demo data, bookmarks cleared).
+- Theme boot-persistence re-verified (light survives reload); one mid-round theme confusion was operator error (toggle label shows CURRENT theme), not a bug.
+- Screenshots (download/): r8-qa-history-empty, r8-qa-discover, r8-qa-settings, r8-history-ma, r8-trends-ma-full, r8-ma-off, r8-ma-toggle-compare (side-by-side), r8-scrub-tooltip-ma (MA row in tooltip), r8-detail-spark, r8-save-toast, r8-saved-meta (recency order), r8-unsave-toast, r8-hindi-trends-ma, r8-hindi-detail, r8-light-trends-ma, r8-light-detail, r8-light-temp-ma, r8-final-home.
+
+Stage Summary (browser-verified):
+- Trends is now a smoothing-aware instrument: dotted 7-reading MA overlay with a persisted glass toggle and MA value in the scrub tooltip, for both metrics and both themes.
+- Resolving a risk event now acknowledges audibly + haptically (all-clear settle cue), completing the escalation vocabulary.
+- Every reading's detail view answers "where does this sit in its local trajectory?" via a polished context sparkline with threshold hairlines.
+- Saved videos are ordered by recency with count metadata and toast feedback for every save/unsave.
+- Round-7 history-loss watch item CLOSED (QA profile resets, not app code); persistence rails proven end-to-end.
+- All prior behavior intact: grain source-of-truth, demo isolation, BLE flow/UUIDs untouched, 4 languages, accent system flows through all new surfaces.
+
+Unresolved / Next-round recommendations:
+1. BLE auto-reconnect (Task 2) + PWA install card (Task 3) still need real-device QA.
+2. MA window could become user-configurable (5/7/14) — one settings key + a small chip group.
+3. MA-crossover insight: raw curve crossing the MA line could mark momentum-shift points (small circles) — natural Mochi-engine tie-in.
+4. Detail context sparkline is display-only; adding SparklineChart-style scrub would let users inspect neighbors.
+5. All-clear cue shares the single soundAlerts toggle with escalations; a separate "safe sounds" toggle is trivial if users find the settle chime chatty.
+6. Marathi + Hinglish walkthrough of the new surfaces (Hindi was browser-verified this round; mr/hinglish code-verified only).

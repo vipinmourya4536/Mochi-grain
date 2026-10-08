@@ -6,7 +6,7 @@ import type { HistoryEntry, TrendsMetric, TrendsRange } from '@/lib/grain-types'
 import { getAccentHex, getRiskColor } from '@/lib/accent-hex';
 import { t, type AppLanguage } from '@/lib/i18n';
 import { haptic } from '@/lib/haptics';
-import { ChartLine, TrendUp, TrendDown, Minus } from '@phosphor-icons/react/dist/ssr';
+import { ChartLine, TrendUp, TrendDown, Minus, WaveSine } from '@phosphor-icons/react/dist/ssr';
 import { format } from 'date-fns';
 
 /* ═══════════════════════════════════════════════════════════════
@@ -32,6 +32,7 @@ const RANGES: { id: RangeId; label: string; ms: number | null }[] = [
 
 const SCRUB_AUTO_CLEAR_MS = 3200;
 const TOOLTIP_CLAMP = 50;
+const MA_WINDOW = 7; // trailing moving-average window (readings)
 
 const W = 358;
 const H = 216;
@@ -66,6 +67,19 @@ function filterEntries(entries: HistoryEntry[], range: RangeId): HistoryEntry[] 
   if (!r || r.ms == null) return entries;
   const cutoff = Date.now() - r.ms;
   return entries.filter((e) => e.reading.timestamp >= cutoff);
+}
+
+/** Trailing moving average with a shrinking window at the series head, so the
+ *  overlay spans the full chart even for the first MA_WINDOW-1 readings. */
+function movingAverage(values: number[]): number[] {
+  const out: number[] = [];
+  let sum = 0;
+  for (let i = 0; i < values.length; i++) {
+    sum += values[i];
+    if (i >= MA_WINDOW) sum -= values[i - MA_WINDOW];
+    out.push(sum / Math.min(i + 1, MA_WINDOW));
+  }
+  return out;
 }
 
 /** Smallest range with ≥2 points, falling back to ALL */
@@ -184,6 +198,17 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
       state: e.decision.state,
     }));
 
+    // Trailing moving average overlay (same x coordinates as the raw curve)
+    const maValues = movingAverage(values);
+    const maPts = pts.map((p, i) => ({ x: p.x, y: yOf(maValues[i]) }));
+    let maPathD = '';
+    if (maPts.length >= 2) {
+      maPathD = `M${maPts[0].x.toFixed(2)},${maPts[0].y.toFixed(2)}`;
+      for (const seg of monotoneCubic(maPts)) {
+        maPathD += ` C${seg.cp1x.toFixed(2)},${seg.cp1y.toFixed(2)} ${seg.cp2x.toFixed(2)},${seg.cp2y.toFixed(2)} ${seg.x.toFixed(2)},${seg.y.toFixed(2)}`;
+      }
+    }
+
     // Curve path
     let pathD = `M${pts[0].x.toFixed(2)},${pts[0].y.toFixed(2)}`;
     for (const seg of monotoneCubic(pts)) {
@@ -224,6 +249,7 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
       avgY: yOf(avg), dotStep, timeLabels,
       safeY: yOf(safe), criticalY: yOf(critical),
       trend: trendDirection(values[values.length - 1] - values[0], metric),
+      maPathD, maValues,
     };
   }, [filtered, safe, critical, rangeSel, metric]);
 
@@ -422,32 +448,50 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
 
   return (
     <div className="grain-trends-card mb-4" role="group" aria-label={t('history.trends_title', lang)}>
-      {/* Header row 1: title + trend direction chip */}
+      {/* Header row 1: title + moving-average toggle + trend direction chip */}
       <div className="flex items-center gap-2 mb-2">
         <ChartLine size={13} weight="bold" style={{ color: 'var(--gm-accent)' }} />
         <span className="text-[9px] font-bold tracking-[0.18em] uppercase" style={{ color: 'var(--gm-text-tertiary)' }}>
           {t('history.trends_title', lang)}
         </span>
-        {trend && geo && (
-          <span
-            className="grain-trend-chip grain-tabular ml-auto"
-            style={{
-              color: trend.dir === 'flat'
-                ? 'var(--gm-text-secondary)'
-                : isMoisture
-                  ? (trend.dir === 'up' ? 'var(--gm-up)' : 'var(--gm-down)')
-                  : 'var(--gm-accent)',
-            }}
-            role="status"
-            aria-label={`${t(trend.labelKey, lang)} ${Math.abs(trend.delta).toFixed(1)}${unitSuffix}`}
-          >
-            {trend.dir === 'up'
-              ? <TrendUp size={11} weight="bold" />
-              : trend.dir === 'down'
-                ? <TrendDown size={11} weight="bold" />
-                : <Minus size={11} weight="bold" />}
-            {(trend.delta > 0 ? '+' : '') + trend.delta.toFixed(1)}{unitSuffix}
-          </span>
+        {geo && (
+          <div className="ml-auto flex items-center gap-1.5">
+            <button
+              type="button"
+              className={`grain-ma-chip grain-tabular ${settings.trendsMovingAvg ? 'on' : ''}`}
+              aria-pressed={settings.trendsMovingAvg}
+              aria-label={t('history.trends_ma', lang)}
+              title={t('history.trends_ma', lang)}
+              onClick={() => {
+                updateSettings({ trendsMovingAvg: !settings.trendsMovingAvg });
+                haptic(settings.hapticsEnabled, 6);
+              }}
+            >
+              <WaveSine size={10} weight="bold" />
+              MA{MA_WINDOW}
+            </button>
+            {trend && (
+              <span
+                className="grain-trend-chip grain-tabular"
+                style={{
+                  color: trend.dir === 'flat'
+                    ? 'var(--gm-text-secondary)'
+                    : isMoisture
+                      ? (trend.dir === 'up' ? 'var(--gm-up)' : 'var(--gm-down)')
+                      : 'var(--gm-accent)',
+                }}
+                role="status"
+                aria-label={`${t(trend.labelKey, lang)} ${Math.abs(trend.delta).toFixed(1)}${unitSuffix}`}
+              >
+                {trend.dir === 'up'
+                  ? <TrendUp size={11} weight="bold" />
+                  : trend.dir === 'down'
+                    ? <TrendDown size={11} weight="bold" />
+                    : <Minus size={11} weight="bold" />}
+                {(trend.delta > 0 ? '+' : '') + trend.delta.toFixed(1)}{unitSuffix}
+              </span>
+            )}
+          </div>
         )}
       </div>
 
@@ -577,6 +621,18 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
                 strokeLinejoin="round"
               />
 
+              {/* Trailing moving-average overlay (dotted neutral line) */}
+              {settings.trendsMovingAvg && geo.maPathD && (
+                <path
+                  d={geo.maPathD}
+                  fill="none"
+                  className="grain-trends-ma"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  opacity={scrubPt ? 0.45 : 0.95}
+                />
+              )}
+
               {/* Avg reference line */}
               <line
                 x1={PAD_X} y1={geo.avgY} x2={W - PAD_X} y2={geo.avgY}
@@ -645,6 +701,9 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
                 role="status"
               >
                 <span className="v">{scrubPt.v.toFixed(1)}{unitSuffix}</span>
+                {settings.trendsMovingAvg && geo && scrubIdx >= 0 && geo.maValues[scrubIdx] != null && (
+                  <span className="ma">MA{MA_WINDOW} {geo.maValues[scrubIdx].toFixed(1)}{unitSuffix}</span>
+                )}
                 <span className="t">{format(scrubPt.t, 'MMM d · HH:mm')}</span>
               </div>
             )}
