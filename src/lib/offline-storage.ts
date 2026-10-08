@@ -125,3 +125,117 @@ export async function exportReadingsAsCSV(deviceId?: string): Promise<string> {
   );
   return [header, ...rows].join('\n');
 }
+
+/* ── Full backup (JSON): settings + readings + history ── */
+
+export interface BackupFile {
+  app: 'grain-monitor';
+  version: 1;
+  exportedAt: string;
+  settings: AppSettings | null;
+  readings: Reading[];
+  history: HistoryEntry[];
+}
+
+/** Serialize the complete local database (settings + all stores) as a JSON string */
+export async function exportBackupJSON(): Promise<string> {
+  const db = await getDB();
+  const [settings, readings, history] = await Promise.all([
+    getSettings(),
+    db.getAll('readings'),
+    db.getAll('history'),
+  ]);
+  const backup: BackupFile = {
+    app: 'grain-monitor',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    settings,
+    readings,
+    history,
+  };
+  return JSON.stringify(backup, null, 2);
+}
+
+function isValidReading(r: any): r is Reading {
+  return (
+    r != null &&
+    typeof r === 'object' &&
+    typeof r.id === 'string' &&
+    typeof r.deviceId === 'string' &&
+    typeof r.moisture === 'number' && Number.isFinite(r.moisture) &&
+    typeof r.timestamp === 'number' && Number.isFinite(r.timestamp)
+  );
+}
+
+function isValidEntry(e: any): e is HistoryEntry {
+  return (
+    e != null &&
+    typeof e === 'object' &&
+    isValidReading(e.reading) &&
+    e.decision != null &&
+    typeof e.decision === 'object' &&
+    typeof e.decision.state === 'string'
+  );
+}
+
+
+/**
+ * Restore a backup produced by exportBackupJSON.
+ * mode 'merge' (default): keep local data, add/overwrite backup records.
+ * mode 'replace': wipe readings + history first, then restore.
+ * Settings are always merged over current settings.
+ * Throws Error('invalid') when the file is not a Grain Monitor backup.
+ */
+export async function importBackupJSON(
+  json: string,
+  mode: 'merge' | 'replace' = 'merge',
+): Promise<{ readings: number; history: number }> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    throw new Error('invalid');
+  }
+
+  const b = parsed as Partial<BackupFile> | null;
+  if (
+    !b ||
+    typeof b !== 'object' ||
+    b.app !== 'grain-monitor' ||
+    !Array.isArray(b.readings) ||
+    !Array.isArray(b.history)
+  ) {
+    throw new Error('invalid');
+  }
+
+  const readings = (b.readings as unknown[]).filter(isValidReading);
+  const history = (b.history as unknown[])
+    .filter(isValidEntry)
+    // Guarantee the top-level keyPath id the history store requires
+    .map((e) => ({ ...e, id: e.reading.id }));
+
+  const db = await getDB();
+
+  if (mode === 'replace') {
+    await db.clear('readings');
+    await db.clear('history');
+  }
+
+  // Bulk-insert readings + history in single transactions
+  const rx = db.transaction('readings', 'readwrite');
+  await Promise.all(readings.map((r) => rx.store.put(r)));
+  await rx.done;
+
+  const hx = db.transaction('history', 'readwrite');
+  await Promise.all(history.map((e) => hx.store.put(e)));
+  await hx.done;
+
+  // Merge settings (backup values win over current, defaults fill gaps)
+  if (b.settings && typeof b.settings === 'object') {
+    const current = await getSettings();
+    const merged = { ...DEFAULT_SETTINGS, ...current, ...(b.settings as Partial<AppSettings>) } as AppSettings;
+    await saveSettings(merged);
+  }
+
+  return { readings: readings.length, history: history.length };
+}

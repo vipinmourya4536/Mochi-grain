@@ -1,14 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useGrainStore, DEMO_INTERVAL_PRESETS, type DemoIntervalPreset } from '@/lib/grain-store';
 import {
   Cpu, DownloadSimple, ArrowClockwise, Trash, Power, Wrench,
   Sun, Moon, CaretDown, SlidersHorizontal, Palette, Play, StopCircle, Check,
+  DeviceMobile, Archive, UploadSimple,
 } from '@phosphor-icons/react/dist/ssr';
 import { type GrainType, type AccentColor, GRAIN_OPTIONS } from '@/lib/grain-types';
 import { t, tGrain, type AppLanguage } from '@/lib/i18n';
 import { haptic, HAPTIC_SELECT } from '@/lib/haptics';
+import { usePwaInstall } from '@/lib/pwa';
+import { exportBackupJSON, importBackupJSON } from '@/lib/offline-storage';
 
 const INTERVAL_OPTIONS: { sec: DemoIntervalPreset; key: string }[] = [
   { sec: 60, key: 'demo.1m' },
@@ -32,6 +35,7 @@ export function SettingsTab() {
     disconnectProbe, sendProbeCommand, hasDevice, showToast,
     demoMode,
   } = useGrainStore();
+  const { canInstall, isStandalone, promptInstall } = usePwaInstall();
 
   const lang = settings.language as AppLanguage;
   const isDark = settings.theme === 'dark';
@@ -117,8 +121,13 @@ export function SettingsTab() {
               await sendProbeCommand('calibrate');
             }}
             disabled={!hasConnection}
-            className="flex-1 font-bold text-xs py-3.5 rounded-xl active:scale-95 transition-all tracking-wide disabled:opacity-40"
-            style={{ background: 'var(--gm-btn-primary-bg)', color: 'var(--gm-btn-primary-text)' }}
+            className="flex-1 font-bold text-xs py-3.5 rounded-xl active:scale-95 transition-all tracking-wide"
+            style={{
+              background: hasConnection ? 'var(--gm-btn-primary-bg)' : 'var(--gm-toggle-bg)',
+              color: hasConnection ? 'var(--gm-btn-primary-text)' : 'var(--gm-text-tertiary)',
+              border: hasConnection ? 'none' : '1px solid var(--gm-toggle-border)',
+              cursor: hasConnection ? 'pointer' : 'not-allowed',
+            }}
           >
             {t('settings.calibrate', lang)}
           </button>
@@ -244,6 +253,29 @@ export function SettingsTab() {
         </label>
       </div>
 
+      {/* ─── Install App (PWA) ─── */}
+      {canInstall && !isStandalone && (
+        <div className="grain-card overflow-hidden mb-6">
+          <button
+            onClick={async () => {
+              const outcome = await promptInstall();
+              if (outcome === 'accepted') showToast(t('toast.install_ok', lang));
+              else if (outcome === 'dismissed') showToast(t('toast.install_dismissed', lang));
+            }}
+            className="w-full flex justify-between items-center px-5 py-4 text-left"
+            style={{ color: 'var(--gm-text-primary)' }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'var(--gm-accent-dim)' }}>
+                <DeviceMobile size={18} weight="bold" style={{ color: 'var(--gm-accent)' }} />
+              </div>
+              <span className="text-sm font-medium">{t('settings.install_app', lang)}</span>
+            </div>
+            <span className="text-[11px]" style={{ color: 'var(--gm-text-tertiary)' }}>{t('settings.install_desc', lang)}</span>
+          </button>
+        </div>
+      )}
+
       {/* ═══ ABOUT ═══ */}
       <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
         {t('settings.about', lang)}
@@ -305,10 +337,30 @@ function AdvancedSettingsContent() {
     hasDevice, showToast,
     demoMode, enableDemoMode, disableDemoMode,
     demoIntervalSec, setDemoIntervalSec,
+    loadHistory, loadSettings,
   } = useGrainStore();
 
   const lang = settings.language as AppLanguage;
   const hasConnection = hasDevice && !demoMode;
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const result = await importBackupJSON(text, 'merge');
+      // Refresh the live store from the restored database
+      await loadHistory();
+      await loadSettings();
+      showToast(`${t('toast.backup_imported', lang)} · ${result.history}`);
+    } catch (err) {
+      showToast(err instanceof Error && err.message === 'invalid'
+        ? t('toast.import_invalid', lang)
+        : t('toast.import_failed', lang));
+    }
+  };
 
   return (
     <>
@@ -475,6 +527,49 @@ function AdvancedSettingsContent() {
           </div>
           <span className="text-[11px]" style={{ color: 'var(--gm-text-tertiary)' }}>{t('settings.download', lang)}</span>
         </button>
+        <div className="grain-separator" />
+        <button
+          onClick={async () => {
+            try {
+              const json = await exportBackupJSON();
+              const blob = new Blob([json], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a'); a.href = url;
+              a.download = `grain-backup-${new Date().toISOString().split('T')[0]}.json`;
+              a.click(); URL.revokeObjectURL(url);
+              showToast(t('toast.backup_exported', lang));
+            } catch { showToast(t('toast.export_failed', lang)); }
+          }}
+          className="w-full flex justify-between items-center px-5 py-4 text-left"
+          style={{ color: 'var(--gm-text-primary)' }}
+        >
+          <div className="flex items-center gap-3">
+            <Archive size={18} weight="bold" style={{ color: 'var(--gm-text-secondary)' }} />
+            <span className="text-sm font-medium">{t('settings.export_backup', lang)}</span>
+          </div>
+          <span className="text-[11px]" style={{ color: 'var(--gm-text-tertiary)' }}>{t('settings.full_data', lang)}</span>
+        </button>
+        <div className="grain-separator" />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="w-full flex justify-between items-center px-5 py-4 text-left"
+          style={{ color: 'var(--gm-text-primary)' }}
+        >
+          <div className="flex items-center gap-3">
+            <UploadSimple size={18} weight="bold" style={{ color: 'var(--gm-text-secondary)' }} />
+            <span className="text-sm font-medium">{t('settings.import_backup', lang)}</span>
+          </div>
+          <span className="text-[11px]" style={{ color: 'var(--gm-text-tertiary)' }}>{t('settings.full_data', lang)}</span>
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={handleImportFile}
+          aria-hidden="true"
+          tabIndex={-1}
+        />
         <div className="grain-separator" />
         <button
           onClick={() => { clearHistory(); showToast(t('toast.history_cleared', lang)); }}

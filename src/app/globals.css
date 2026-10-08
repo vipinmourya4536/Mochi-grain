@@ -506,6 +506,25 @@
   50% { opacity: 0.35; transform: scale(0.75); }
 }
 
+/* ─── Offline state chip [ ⌿ OFFLINE ] ─── */
+.grain-offline-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  color: #F59E0B;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    LIQUID GLASS EFFECTS
    ═══════════════════════════════════════════════════════════════ */
@@ -711,6 +730,71 @@
 .grain-sparkline-pulse { animation: spark-pulse 2.5s ease-in-out infinite; }
 /* Sparkline light mode – white still works on colored hero gradient, but increase contrast */
 .grain-app[data-theme="light"] .grain-sparkline { stroke: rgba(255,255,255,0.9); }
+
+/* ─── Scrub interaction ─── */
+.grain-spark-wrap {
+  outline: none;
+  touch-action: pan-y; /* vertical page scroll preserved; horizontal drags scrub */
+  border-radius: 8px;
+}
+.grain-spark-wrap:focus-visible {
+  box-shadow: 0 0 0 2px rgba(var(--gm-accent-rgb), 0.45);
+}
+.grain-spark-svg {
+  cursor: crosshair;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.grain-scrub-group { pointer-events: none; }
+.grain-scrub-tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 10px));
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 11px 6px;
+  border-radius: 10px;
+  background: rgba(9, 9, 11, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(14px) saturate(1.4);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  z-index: 5;
+  white-space: nowrap;
+  animation: grain-scrub-in 0.14s cubic-bezier(0.16, 1, 0.3, 1);
+}
+/* Accent edge follows the active accent color */
+.grain-scrub-tooltip::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 2px;
+  background: rgb(var(--gm-accent-rgb));
+  opacity: 0.9;
+}
+.grain-scrub-tooltip .v {
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.grain-scrub-tooltip .t {
+  font-size: 8.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.58);
+  line-height: 1;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+@keyframes grain-scrub-in {
+  from { opacity: 0; transform: translate(-50%, calc(-100% - 6px)) scale(0.92); }
+  to   { opacity: 1; transform: translate(-50%, calc(-100% - 10px)) scale(1); }
+}
 
 /* ═══════════════════════════════════════════════════════════════
    INSIGHT CARD – liquid glass
@@ -1126,6 +1210,13 @@
   .grain-pulse,
   .grain-status-dot-live {
     animation: none !important;
+  }
+  .grain-scrub-tooltip {
+    animation: none !important;
+  }
+  .grain-sparkline,
+  .grain-sparkline-fill {
+    transition: none !important;
   }
   .grain-scroll {
     scroll-behavior: auto;

@@ -177,7 +177,7 @@ function ReadingList() {
       {historyEntries.map((entry) => {
         const dotHex = getRiskColor(entry.decision.state, accent);
         return (
-          <div key={entry.reading.id} className="grain-reading-item grain-card p-4 flex items-center gap-4" onClick={() => setSelectedHistoryId(entry.reading.id)}>
+          <div key={entry.reading.id} className="grain-reading-item grain-card p-4 flex items-center gap-4 transition-transform duration-150 active:scale-[0.98]" onClick={() => setSelectedHistoryId(entry.reading.id)}>
             <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold grain-tabular" style={{ background: getRiskBg(entry.decision.state, accent, 0.13), color: dotHex }}>
               {new Date(entry.reading.timestamp).getDate()}
             </div>

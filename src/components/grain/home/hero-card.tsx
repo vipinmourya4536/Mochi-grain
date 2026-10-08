@@ -106,13 +106,15 @@ export function HeroCard() {
 
         <p className="text-xs text-white/40 mb-4">{grainLabel} {t('hero.moisture_content', lang)}</p>
 
-        {/* Professional sparkline chart with time axis and countdown */}
-        <div className="h-[120px] relative -mx-1">
+        {/* Professional sparkline chart with time axis, countdown and scrub inspection */}
+        <div className="h-[120px] -mx-1">
           <SparklineChart
             data={sparklineData}
             height={120}
             nextReadingCountdown={countdown}
             intervalLabel={intervalLabel}
+            hapticsEnabled={settings.hapticsEnabled}
+            scrubHint={t('chart.scrub_hint', lang)}
           />
         </div>
 

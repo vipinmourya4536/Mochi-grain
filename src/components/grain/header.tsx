@@ -3,7 +3,8 @@
 import { useGrainStore } from '@/lib/grain-store';
 import { t, type AppLanguage } from '@/lib/i18n';
 import { LanguageSelector } from '@/components/grain/language-selector';
-import { BatteryHigh, BatteryLow } from '@phosphor-icons/react/dist/ssr';
+import { useOnlineStatus } from '@/lib/pwa';
+import { BatteryHigh, BatteryLow, WifiSlash } from '@phosphor-icons/react/dist/ssr';
 
 /**
  * Premium instrument header.
@@ -17,6 +18,7 @@ import { BatteryHigh, BatteryLow } from '@phosphor-icons/react/dist/ssr';
 export function Header() {
   const { deviceState, deviceInfo, statusBadge, settings, activeTab, demoMode } = useGrainStore();
   const lang = settings.language as AppLanguage;
+  const online = useOnlineStatus();
 
   const isConnected = deviceState !== 'disconnected' && deviceState !== 'connecting';
   const isLive = isConnected || demoMode;
@@ -58,6 +60,12 @@ export function Header() {
             <div className="grain-demo-chip" role="status" aria-label={t('demo.badge', lang)}>
               <span className="grain-demo-chip-dot" />
               <span>{t('demo.badge', lang)}</span>
+            </div>
+          )}
+          {!online && (
+            <div className="grain-offline-chip" role="status" aria-label={t('header.offline', lang)}>
+              <WifiSlash size={11} weight="bold" />
+              <span>{t('header.offline', lang)}</span>
             </div>
           )}
           {isSettings && <LanguageSelector />}

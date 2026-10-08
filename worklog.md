@@ -109,3 +109,45 @@ Unresolved / Next-round recommendations:
 2. Chart scrub interaction on the hero sparkline (tap to inspect historical points) — high-value next feature.
 3. PWA install prompt (beforeinstallprompt) + share/export JSON in Settings → Data.
 4. Next.js dev-tools "N" bubble overlaps nav bottom-left in dev only (cosmetic, dev-only).
+
+---
+Task ID: 3 (cron review round 2)
+Agent: Main Agent (Z.ai Code)
+Task: QA baseline via agent-browser, then Round-3 feature expansion — sparkline scrub inspection, PWA install + offline chip, JSON backup export/import, styling detail polish.
+
+Work Log:
+- QA BASELINE (agent-browser, 390px): page 200, zero console errors, demo/history+stats/discover/settings/themes all functional. No regressions from Tasks 1–2. One cosmetic issue found: disabled CALIBRATE button rendered washed-out accent at 40% opacity in light mode → fixed (see styling).
+- NEW FEATURE — Sparkline scrub inspection (sparkline-chart.tsx + hero-card.tsx + globals.css):
+  - Pointer/touch drag anywhere on the hero chart snaps to the nearest data point (binary search on time-proportional x), shows a dashed vertical guide line + enlarged marker dot + HTML glass tooltip (value % big, HH:MM small) with accent left edge, clamped to card bounds.
+  - Desktop mouse hover scrubs without pressing; touch requires press (page scroll preserved via `touch-action: pan-y`), auto-clears 2.8s after release; Escape/blur clears; ArrowLeft/ArrowRight/Home/End keyboard scrubbing on a focusable wrapper (focus ring in accent color).
+  - Selection stored as TIMESTAMP not index → new incoming readings never invalidate an active scrub; if the point ages out of the 16-sample window the tooltip self-dismisses (no reset effect, React lint-clean).
+  - Haptic 4ms tick on point change (respects settings.hapticsEnabled); latest-point pulse ring and min/max annotations dim while scrubbing; first-run "SWIPE TO INSPECT HISTORY" microcopy inside the chart fades after first use (hidden when demo countdown occupies the top-right slot).
+  - ViewBox↔client mapping via getScreenCTM (DOMPoint) → pixel-accurate tooltip anchor regardless of letterboxing.
+- NEW FEATURE — PWA install + offline indicator (src/lib/pwa.ts + header.tsx + settings-tab.tsx):
+  - `usePwaInstall()` hook: captures `beforeinstallprompt` (module-level, survives tab switches), tracks standalone display-mode, `promptInstall()` returns accepted/dismissed/unavailable; Settings shows an "Install App" card (DeviceMobile icon, accent tile) only when canInstall && !standalone.
+  - `useOnlineStatus()` hook + amber OFFLINE chip (WifiSlash icon) in the header next to the DEMO chip; verified live by patching navigator.onLine + dispatching events (chip appears and clears).
+- NEW FEATURE — JSON backup export/import (offline-storage.ts + settings-tab.tsx):
+  - `exportBackupJSON()` serializes {app, version, exportedAt, settings, readings, history} → downloads `grain-backup-YYYY-MM-DD.json`.
+  - `importBackupJSON(json, 'merge'|'replace')`: strict shape validation (app tag, per-item field/type checks), bulk-puts via single transactions, guarantees history keyPath id, merges settings over defaults+current. Invalid file → Error('invalid').
+  - Settings → Data now: Export CSV / Export Backup / Import Backup (hidden file input, re-selectable same file) / Clear History. Import refreshes live store via loadHistory()+loadSettings().
+  - Browser-verified round-trip: export OK ("Backup exported"), malformed flat entry rejected (0 imported — validator working as designed), properly nested {reading, decision} entry imported ("Backup restored · 1") and confirmed present in IndexedDB, then cleaned up. Invalid JSON object → "Invalid backup file" toast.
+- i18n: 13 new keys × 4 languages (export_backup, import_backup, full_data, install_app, install_desc, header.offline, backup_exported, backup_imported, import_failed, import_invalid, install_ok, install_dismissed, chart.scrub_hint). Positional python insert (bottom-up, per-language anchors) — each key verified exactly 4×. Hindi verified in browser.
+- STYLING DETAILS:
+  - Scrub tooltip: dark glass, blur(14px) saturate(1.4), accent edge via --gm-accent-rgb, tabular-nums, 140ms pop-in. NOTE: deliberately NO `-webkit-backdrop-filter` twin (LightningCSS strips standard property when prefixed twin present — Task 1-followup bug avoided).
+  - Disabled CALIBRATE: neutral toggle-bg + tertiary text + hairline border instead of washed accent (verified in light mode).
+  - History rows: 150ms active:scale-[0.98] press feedback.
+  - prefers-reduced-motion: scrub tooltip animation + sparkline `d` transitions disabled; focus ring preserved.
+- VALIDATION: `bun run lint` 100% clean (fixed 2 react-hooks/set-state-in-effect errors: sparkline data-reset effect eliminated via timestamp-selection design; pwa.ts initial sync deferred via setTimeout — the codebase's established pattern); `tsc --noEmit` clean for src/ (remaining errors are pre-existing in examples/ + skills/, untouched); zero browser console errors after full feature pass; screenshots: r3-scrub-tooltip.png, r3-offline-chip.png, r3-light-scrub.png, r3-light-settings-final.png, r3-light-data2.png, r3-hindi-data.png.
+
+Stage Summary (browser-verified):
+- Hero chart is now an inspectable instrument: drag/hover/keys reveal any historical reading with glass tooltip + haptics.
+- App installs as a PWA when the browser allows, and connectivity loss is surfaced in the header.
+- Full local data is portable: one-tap JSON backup out, validated merge restore in.
+- All prior spec behavior intact: grain source-of-truth (Wheat→Soybean mid-demo re-verified in light mode), demo isolation, BLE flow untouched, 4 languages, accents flow through all new surfaces.
+
+Unresolved / Next-round recommendations:
+1. PWA install card is render-tested only (beforeinstallprompt never fires in headless Chrome) — real-device QA should confirm the native sheet + `appinstalled` transition.
+2. Backup import UI is merge-only; consider a destructive "replace" option with confirmation dialog if users need exact restore.
+3. Mochi "LEARNING" trend label appears right after a mid-session grain switch (engine re-baselines on threshold change; self-heals on next reading) — could be softened with a transient copy variant.
+4. Next.js dev-tools "N" bubble still overlaps bottom-left nav in dev only (cosmetic).
+5. Chart scrub on the History tab's per-entry timeline or a dedicated trend page could extend the new inspection pattern.
