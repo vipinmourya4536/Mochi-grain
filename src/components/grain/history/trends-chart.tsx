@@ -501,6 +501,42 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
 
   const onBlur = useCallback(() => clearScrub(), [clearScrub]);
 
+  /* ── New-crossover pulse (live attention cue) ──
+   * When a NEW reading extends the series AND it crosses the MA line,
+   * pulse that marker once so the momentum shift is noticed even when
+   * the user is not scrubbing. Signature-guarded so range/metric/window
+   * switches never trigger a spurious pulse. */
+  const lastCrossTopRef = useRef(-1);
+  const lastSigRef = useRef('');
+  const pulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [pulseIdx, setPulseIdx] = useState<number | null>(null);
+  const geoSig = `${rangeSel}|${metric}|${maWin}|${settings.trendsMovingAvg}`;
+
+  useEffect(() => {
+    if (!geo) {
+      // Dataset gone (history cleared / tab empty) — reset tracking so the
+      // next dataset never pulses off a stale comparison.
+      lastCrossTopRef.current = -1;
+      lastSigRef.current = '';
+      return;
+    }
+    // Crossings are index-ascending → the last one is the most recent
+    const top = geo.crossings.length > 0 ? geo.crossings[geo.crossings.length - 1].i : -1;
+    const prevTop = lastCrossTopRef.current;
+    const sigChanged = lastSigRef.current !== geoSig;
+    lastCrossTopRef.current = top;
+    lastSigRef.current = geoSig;
+    if (!sigChanged && prevTop >= 0 && top > prevTop) {
+      // Defer out of the effect body (no synchronous setState in effects)
+      if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+      pulseTimerRef.current = setTimeout(() => setPulseIdx(top), 0);
+    }
+  }, [geo, geoSig]);
+
+  useEffect(() => () => {
+    if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+  }, []);
+
   /* ── Render ── */
   const trend = geo?.trend ?? null;
   const unitSuffix = metric === 'moisture' ? '%' : '°C';
@@ -518,6 +554,7 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
           <div className="ml-auto flex items-center gap-1.5">
             {settings.trendsMovingAvg ? (
               <div className="grain-ma-seg grain-tabular" role="group" aria-label={t('history.trends_ma_win', lang)}>
+                <span className="ma-cap" aria-hidden="true">MA</span>
                 <button
                   type="button"
                   className="ma-off"
@@ -720,12 +757,15 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
                 <g className="grain-scrub-group">
                   {geo.crossings.map((c) => (
                     <circle
-                      key={`cx-${c.i}`}
+                      /* Key includes the pulse flag → the pulsing marker REMOUNTS,
+                       * which (re)starts the one-shot animation reliably even when the
+                       * element already existed before the new crossing appeared. */
+                      key={`cx-${c.i}${c.i === pulseIdx ? '·pulse' : ''}`}
                       cx={c.x}
                       cy={c.y}
                       r={2.9}
                       fill="var(--gm-card)"
-                      className="grain-cross-marker"
+                      className={`grain-cross-marker${c.i === pulseIdx ? ' grain-cross-pulse' : ''}`}
                       stroke={isMoisture
                         ? (c.dir === 'up' ? 'var(--gm-up)' : 'var(--gm-down)')
                         : accentHex}
@@ -842,7 +882,7 @@ function MiniStat({ label, value, color }: { label: string; value: string; color
   return (
     <div className="text-center">
       <div className="text-[7.5px] font-bold tracking-[0.12em] uppercase mb-0.5 truncate" style={{ color: 'var(--gm-text-tertiary)' }}>{label}</div>
-      <div className="text-[12px] font-bold leading-tight" style={{ color: color ?? 'var(--gm-text-secondary)' }}>{value}</div>
+      <div className="text-[12px] font-bold leading-tight grain-tabular" style={{ color: color ?? 'var(--gm-text-secondary)' }}>{value}</div>
     </div>
   );
 }

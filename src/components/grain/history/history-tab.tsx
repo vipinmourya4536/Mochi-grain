@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useGrainStore } from '@/lib/grain-store';
 import type { HistoryEntry } from '@/lib/grain-types';
-import { X, TrendUp, TrendDown, Minus, ArrowClockwise, Trash, Gauge, ShareFat, Check, Question, Stack, Waves, ChartLine } from '@phosphor-icons/react/dist/ssr';
-import { t, tGrain, tTrend, type AppLanguage } from '@/lib/i18n';
+import { X, TrendUp, TrendDown, Minus, ArrowClockwise, Trash, Gauge, ShareFat, Check, Question, Stack, Waves, ChartLine, DownloadSimple, Drop, Thermometer } from '@phosphor-icons/react/dist/ssr';
+import { t, tGrain, tTrend, tp, type AppLanguage } from '@/lib/i18n';
 import { getRiskColor, getRiskBg } from '@/lib/accent-hex';
 import { computeStorageScore, scoreBandColor, type ScoreBand } from '@/lib/storage-score';
 import { haptic } from '@/lib/haptics';
@@ -505,6 +505,8 @@ function ReadingDetail({ entry, onClose }: { entry: HistoryEntry; onClose: () =>
   const accent = settings.accentColor;
   const dotHex = getRiskColor(decision.state, accent);
   const [shared, setShared] = useState(false);
+  // Context-sparkline metric — moisture is the primary series, temp is one tap away
+  const [sparkMetric, setSparkMetric] = useState<'moisture' | 'temp'>('moisture');
 
   // Use i18n keys if available, fallback to stored English
   const messageText = decision.messageKey ? t(decision.messageKey, lang) : decision.message;
@@ -601,16 +603,45 @@ function ReadingDetail({ entry, onClose }: { entry: HistoryEntry; onClose: () =>
           <span className="text-[9px] font-bold tracking-[0.15em] uppercase" style={{ color: 'var(--gm-text-secondary)' }}>
             {t('history.detail_context', lang)}
           </span>
-          <span className="text-[9px] font-semibold grain-tabular" style={{ color: 'var(--gm-text-tertiary)' }}>
-            {reading.moisture.toFixed(1)}% · {format(reading.timestamp, 'HH:mm')}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[9px] font-semibold grain-tabular" style={{ color: 'var(--gm-text-tertiary)' }}>
+              {sparkMetric === 'moisture'
+                ? `${reading.moisture.toFixed(1)}% · ${format(reading.timestamp, 'HH:mm')}`
+                : `${Math.round(reading.temperature)}°C · ${format(reading.timestamp, 'HH:mm')}`}
+            </span>
+            <div className="grain-spark-seg" role="group" aria-label={t('history.detail_metric', lang)}>
+              <button
+                type="button"
+                className={sparkMetric === 'moisture' ? 'active' : ''}
+                aria-pressed={sparkMetric === 'moisture'}
+                aria-label={t('history.moisture', lang)}
+                title={t('history.moisture', lang)}
+                onClick={() => { haptic(settings.hapticsEnabled, 6); setSparkMetric('moisture'); }}
+              >
+                <Drop size={10} weight="bold" />
+              </button>
+              <button
+                type="button"
+                className={sparkMetric === 'temp' ? 'active' : ''}
+                aria-pressed={sparkMetric === 'temp'}
+                aria-label={t('history.temperature', lang)}
+                title={t('history.temperature', lang)}
+                onClick={() => { haptic(settings.hapticsEnabled, 6); setSparkMetric('temp'); }}
+              >
+                <Thermometer size={10} weight="bold" />
+              </button>
+            </div>
+          </div>
         </div>
         <DetailSparkline
           entries={historyEntries}
           selected={entry}
           accentColor={accent}
+          metric={sparkMetric}
           safe={settings.thresholds.safe}
           critical={settings.thresholds.critical}
+          tempSafe={settings.thresholds.tempSafe}
+          tempCritical={settings.thresholds.tempCritical}
           positionLabel={t('history.detail_context', lang)}
           scrubAria={t('history.detail_scrub_aria', lang)}
         />
@@ -630,9 +661,78 @@ function ReadingDetail({ entry, onClose }: { entry: HistoryEntry; onClose: () =>
   );
 }
 
+/** Trigger a classic blob download (desktop / share-fallback path) */
+function downloadCsv(csv: string, filename: string) {
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1200);
+}
+
 export function HistoryTab() {
-  const { selectedHistoryEntry, setSelectedHistoryId, historyEntries, clearHistory, settings } = useGrainStore();
+  const { selectedHistoryEntry, setSelectedHistoryId, historyEntries, clearHistory, settings, showToast } = useGrainStore();
   const lang = settings.language as AppLanguage;
+
+  /* Build a CSV of every stored reading and hand it to the user.
+   * Web Share with a file when the platform supports it (mobile PWA
+   * share sheet), otherwise a classic blob download. */
+  const exportCsv = () => {
+    if (historyEntries.length === 0) return;
+    haptic(settings.hapticsEnabled, 8);
+    const header = 'timestamp,datetime,grain,moisture_pct,temperature_c,battery_pct,signal_pct,state,trend';
+    const rows = [...historyEntries]
+      .sort((a, b) => a.reading.timestamp - b.reading.timestamp)
+      .map((e) => [
+        new Date(e.reading.timestamp).toISOString(),
+        format(e.reading.timestamp, 'yyyy-MM-dd HH:mm:ss'),
+        e.reading.grainType,
+        e.reading.moisture.toFixed(2),
+        e.reading.temperature.toFixed(1),
+        Math.round(e.reading.battery),
+        Math.round(e.reading.signal),
+        e.decision.state,
+        e.decision.trend,
+      ].join(','));
+    const csv = `${header}\n${rows.join('\n')}\n`;
+    const filename = `mochi-grain-readings-${format(Date.now(), 'yyyy-MM-dd')}.csv`;
+    const toastOk = () => showToast(tp('toast.exported', lang, { n: historyEntries.length }));
+
+    // Cast mirrors shareReading(): Web Share file members are absent from the TS DOM lib
+    const navExt = (typeof navigator !== 'undefined' ? navigator : undefined) as
+      | (Navigator & {
+          canShare?: (data: { files?: File[] }) => boolean;
+          share?: (data?: { files?: File[]; title?: string; text?: string }) => Promise<void>;
+        })
+      | undefined;
+    let sharePayload: { files: File[]; title: string; text: string } | null = null;
+    try {
+      if (navExt?.share && navExt?.canShare) {
+        const file = new File([csv], filename, { type: 'text/csv' });
+        if (navExt.canShare({ files: [file] })) {
+          sharePayload = { files: [file], title: 'Grain Monitor', text: filename };
+        }
+      }
+    } catch { /* canShare can throw on odd inputs — fall through to download */ }
+
+    if (sharePayload) {
+      navExt!.share(sharePayload)
+        .then(toastOk)
+        .catch((err) => {
+          // AbortError = user dismissed the share sheet — not a failure
+          if (err instanceof DOMException && err.name === 'AbortError') return;
+          downloadCsv(csv, filename);
+          toastOk();
+        });
+      return;
+    }
+    downloadCsv(csv, filename);
+    toastOk();
+  };
 
   return (
     <div className="pt-2 pb-6 grain-fade-in">
@@ -644,7 +744,12 @@ export function HistoryTab() {
               <p className="text-sm" style={{ color: 'var(--gm-text-secondary)' }}>{historyEntries.length > 0 ? `${historyEntries.length} ${historyEntries.length !== 1 ? t('history.readings', lang) : t('history.reading', lang)}` : t('history.past', lang)}</p>
             </div>
             {historyEntries.length > 0 && (
-              <button onClick={clearHistory} className="w-8 h-8 rounded-lg flex items-center justify-center grain-card" style={{ color: 'var(--gm-text-tertiary)' }} aria-label={t('settings.clear_history', lang)}><Trash size={16} weight="bold" /></button>
+              <div className="flex items-center gap-2">
+                <button onClick={exportCsv} className="grain-export-btn" aria-label={t('history.export', lang)} title={t('history.export', lang)}>
+                  <DownloadSimple size={16} weight="bold" />
+                </button>
+                <button onClick={clearHistory} className="w-8 h-8 rounded-lg flex items-center justify-center grain-card" style={{ color: 'var(--gm-text-tertiary)' }} aria-label={t('settings.clear_history', lang)}><Trash size={16} weight="bold" /></button>
+              </div>
             )}
           </div>
           <ReadingList />

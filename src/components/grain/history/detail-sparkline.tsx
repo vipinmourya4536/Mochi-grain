@@ -15,6 +15,7 @@ import { format } from 'date-fns';
    older + up to 7 newer) so the detail view answers "where does
    this reading sit in its local trajectory?" at a glance.
    • Accent curve + soft fill, theme-aware
+   • Metric toggle: moisture % (primary) or temperature °C
    • Selected point: enlarged dot in the reading's risk color
    • Safe / critical dashed hairlines when inside the value window
    • First/last time labels of the window
@@ -87,16 +88,22 @@ export function DetailSparkline({
   entries,
   selected,
   accentColor,
+  metric = 'moisture',
   safe,
   critical,
+  tempSafe,
+  tempCritical,
   positionLabel,
   scrubAria,
 }: {
   entries: HistoryEntry[]; // newest-first store list
   selected: HistoryEntry;
   accentColor: AccentColor;
+  metric?: 'moisture' | 'temp';
   safe: number;
   critical: number;
+  tempSafe: number;
+  tempCritical: number;
   positionLabel: string; // localized aria description, e.g. "5 of 16 shown"
   scrubAria: string;     // localized chart interaction hint for the focusable wrapper
 }) {
@@ -109,15 +116,28 @@ export function DetailSparkline({
     // Slice the window out of the newest-first list, then rebuild chronologically
     const older = entries.slice(idx + 1, idx + 1 + OLDER); // indices BELOW are newer
     const newer = entries.slice(Math.max(0, idx - NEWER), idx);
-    const windowEntries = [...older.slice().reverse(), selected, ...newer.slice().reverse()];
+    const windowAll = [...older.slice().reverse(), selected, ...newer.slice().reverse()];
+    // Temperature is required for temp mode — tolerate legacy entries without it
+    const windowEntries = metric === 'temp'
+      ? windowAll.filter((e) => typeof e.reading.temperature === 'number')
+      : windowAll;
     if (windowEntries.length < 2) return null;
 
-    const selIdx = older.length; // selected sits after the older block
-    const values = windowEntries.map((e) => e.reading.moisture);
+    const selIdx = windowEntries.findIndex((e) => e.reading.id === selected.reading.id);
+    if (selIdx < 0) return null; // selected dropped out (e.g. no temp value)
+
+    const isTemp = metric === 'temp';
+    const getV = (e: HistoryEntry) => (isTemp ? e.reading.temperature : e.reading.moisture);
+    const values = windowEntries.map(getV);
+
+    // Threshold hairlines follow the metric (moisture % vs temperature °C)
+    const loThr = isTemp ? tempSafe : safe;
+    const hiThr = isTemp ? tempCritical : critical;
+    const unit = isTemp ? '°C' : '%';
 
     let lo = Math.min(...values);
     let hi = Math.max(...values);
-    const vPad = Math.max((hi - lo) * 0.3, 0.8);
+    const vPad = Math.max((hi - lo) * 0.3, isTemp ? 1.2 : 0.8);
     lo -= vPad;
     hi += vPad;
 
@@ -132,8 +152,8 @@ export function DetailSparkline({
 
     const pts: SparkPt[] = windowEntries.map((e) => ({
       x: xOf(e.reading.timestamp),
-      y: yOf(e.reading.moisture),
-      v: e.reading.moisture,
+      y: yOf(getV(e)),
+      v: getV(e),
       t: e.reading.timestamp,
     }));
 
@@ -145,11 +165,11 @@ export function DetailSparkline({
 
     // Threshold hairlines — drawn only when inside the window's value range
     const hairlines = [
-      { v: safe, cls: 'grain-trend-thresh grain-trend-thresh-safe' },
-      { v: critical, cls: 'grain-trend-thresh grain-trend-thresh-crit' },
+      { v: loThr, cls: 'grain-trend-thresh grain-trend-thresh-safe', stroke: 'rgba(34,197,94,0.35)' },
+      { v: hiThr, cls: 'grain-trend-thresh grain-trend-thresh-crit', stroke: 'rgba(239,68,68,0.35)' },
     ]
       .filter((h) => h.v > lo && h.v < hi)
-      .map((h) => ({ y: yOf(h.v), cls: h.cls, v: h.v }));
+      .map((h) => ({ y: yOf(h.v), cls: h.cls, v: h.v, unit, stroke: h.stroke }));
 
     const sel = pts[selIdx];
     const spanMs = tMax - tMin;
@@ -157,12 +177,12 @@ export function DetailSparkline({
     const fmtTooltip = (ts: number) => (spanMs > 36 * 3600e3 ? format(ts, 'MMM d · HH:mm') : format(ts, 'HH:mm'));
 
     return {
-      pts, pathD, fillD, hairlines, sel, selIdx, spanMs,
+      pts, pathD, fillD, hairlines, sel, selIdx, spanMs, unit,
       first: { x: pts[0].x, label: fmtTs(tMin) },
       last: { x: pts[pts.length - 1].x, label: fmtTs(tMax) },
       fmtTooltip,
     };
-  }, [entries, selected, safe, critical]);
+  }, [entries, selected, safe, critical, tempSafe, tempCritical, metric]);
 
   /* ── Scrub state (timestamp-anchored, same pattern as hero + trends) ── */
   const [scrubSel, setScrubSel] = useState<{ t: number; leftPx: number; topPx: number } | null>(null);
@@ -371,7 +391,7 @@ export function DetailSparkline({
           <g key={h.v}>
             <line
               x1={PAD_X} y1={h.y} x2={W - PAD_X} y2={h.y}
-              stroke={h.v >= critical ? 'rgba(239,68,68,0.35)' : 'rgba(34,197,94,0.35)'}
+              stroke={h.stroke}
               strokeWidth="0.7" strokeDasharray="3,4"
             />
             <text
@@ -379,7 +399,7 @@ export function DetailSparkline({
               className={h.cls}
               fontSize="6.5" fontWeight="700" fontFamily="system-ui, sans-serif"
             >
-              {h.v}%
+              {h.v}{h.unit}
             </text>
           </g>
         ))}
@@ -456,7 +476,7 @@ export function DetailSparkline({
           style={{ left: scrubSel.leftPx, top: scrubSel.topPx }}
           role="status"
         >
-          <span className="v">{scrubPt.v.toFixed(1)}%</span>
+          <span className="v">{scrubPt.v.toFixed(1)}{geo.unit}</span>
           <span className="t">{geo.fmtTooltip(scrubPt.t)}</span>
         </div>
       )}

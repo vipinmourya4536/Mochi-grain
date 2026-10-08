@@ -418,3 +418,46 @@ Unresolved / Next-round recommendations:
 3. Detail context sparkline could also offer a TEMP metric variant (moisture-only today).
 4. The MA seg could show a small "window" caption for discoverability (current label relies on the aria-label + title).
 5. Marathi + Hinglish walkthrough of the newest surfaces (hi verified in browser again this round; mr/hinglish code-verified only).
+
+---
+Task ID: 10 (cron review round 10)
+Agent: Main Agent (Z.ai Code)
+Task: QA status assessment via agent-browser, then — app stable — feature round: CSV export/share (new functionality), detail-sparkline temp variant (round-9 rec #3), MA caption (rec #4), new-crossing pulse cue (rec #2), styling detail polish.
+
+Work Log:
+- QA BASELINE (agent-browser, 390px): all 4 tabs functional in dark, zero NEW console errors (fresh-navigation check; 24 buffered entries were from a mid-round broken build, see below). App STABLE → proceeded to feature work per round-9 recommendations.
+- DEV-SERVER NOTE: server was down at round start (port 3000 refused; stale dev.log); restarted via nohup bun run dev — subsequent rounds should check `curl localhost:3000` first.
+- FEATURE — CSV export + share (history-tab.tsx + i18n):
+  - New export icon button (.grain-export-btn) in the History header next to Trash (visible when history > 0).
+  - Builds `mochi-grain-readings-YYYY-MM-DD.csv` with columns timestamp(ISO),datetime,grain,moisture_pct,temperature_c,battery_pct,signal_pct,state,trend, chronological ascending.
+  - Delivery: Web Share with File when navigator.canShare({files}) supports it (mobile PWA share sheet), otherwise blob download; share-user-cancel is silent; share-failure falls back to download; both paths toast `toast.exported` ("Exported {n} readings", tp interpolation).
+  - Browser-verified: EN toast "Exported 60 readings" + real 61-line CSV on disk with correct columns; second export in Hindi downloaded again (63 rows).
+- FEATURE — Detail context sparkline TEMP variant (detail-sparkline.tsx + history-tab.tsx):
+  - New mini glass toggle (.grain-spark-seg, Droplet|Thermometer icons — note Phosphor name is `Drop`, not `Droplet`) in the SURROUNDING READINGS card header; selected-reading echo switches 12.7% ↔ 29°C with the metric.
+  - DetailSparkline gains metric/tempSafe/tempCritical props: values from temperature in temp mode, threshold hairlines + labels + tooltip suffix follow the metric (°C), legacy entries without numeric temperature are filtered from the window, window padding widens for temp (1.2 vs 0.8).
+  - Hairline stroke colors now carried per-item (was a moisture-only `critical` comparison — temp mode would have mis-colored).
+  - Browser-verified: moisture↔temp switch re-renders curve; temp hover-scrub tooltip "28.4°C 15:27"; light + dark, EN + Hindi (नमी/तापमान).
+- FEATURE — MA caption (trends-chart.tsx + globals.css): non-interactive accent-tinted "MA" caption (.ma-cap) with hairline separator inside the MA segmented control — the 5/7/14 numbers are now self-explanatory. Verified rendering dark + light.
+- FEATURE — New-crossover pulse cue (trends-chart.tsx + globals.css):
+  - When a NEW reading extends the series AND crosses the MA line, that marker pulses once (scale 1→1.9→1 + accent drop-shadow glow, 1.8s one-shot).
+  - Trigger is signature-guarded (`range|metric|maWin|maOn` + last-top-index ref) so range/metric/window switches and history clears never pulse spuriously; refs reset when dataset goes null.
+  - DEBUGGED LIVE: React's className-patch did NOT start the CSS animation in this environment (computed animationName correct but getAnimations()=[] and transform 'none' throughout the 2s class window; manual classList.add and fresh-mount elements animate fine). FIX: key-bump remount (`key={cx-${i}${pulse?'·pulse':''}}`) — the pulsing marker remounts with the class at creation, which reliably starts the animation. Verified via computed-style sampling across a live demo reading: transform matrix progressed 1.51→1.74→1.85→1.89 with a live CSSAnimation object present.
+  - LINT: react-hooks/set-state-in-effect rejected synchronous setPulseIdx in the effect; trigger now defers via setTimeout(0) (still instant to the eye).
+- i18n: 3 new keys × 4 languages (history.export, history.detail_metric, toast.exported) inserted after the unique per-language detail_scrub_aria / toast.share_fail anchors; counts verified =4 each; Hindi verified IN BROWSER (export aria "रीडिंग CSV के रूप में निर्यात करें", group "चार्ट मीट्रिक", buttons नमी/तापमान); Marathi/Hinglish code-verified.
+- STYLING DETAILS: .grain-export-btn neutral glass square (accent hover + accent border-tint); .grain-spark-seg compact accent-tinted pill toggle (active = accent bg 0.16, :active scale 0.9); .ma-cap accent caption with color-mix divider; @keyframes grain-cross-pulse + transform-box: fill-box; MiniStat values now grain-tabular; reduced-motion block extended (.grain-cross-pulse animation:none, .grain-export-btn + .grain-spark-seg transition:none).
+- VALIDATION: `bun run lint` clean; `bunx tsc --noEmit` clean for app code; fresh-navigation console clean; app left in default state (EN, dark, demo off, demo rows auto-cleaned by reload rails).
+- Screenshots (download/): r10-qa-home/history/discover/settings, r10-export-btn, r10-export-toast, r10-spark-moisture, r10-spark-temp, r10-spark-temp-scrub, r10-cross-pulse, r10-pulse-visual, r10-hindi-detail, r10-hindi-toast, r10-light-trends, r10-light-detail-temp, r10-final-home.
+
+Stage Summary (browser-verified):
+- History data is now portable: one tap exports the full reading log as CSV via the platform share sheet (mobile) or a download (desktop), with localized toast feedback.
+- The detail view's context sparkline now answers the same question for temperature, with metric-correct thresholds, hairlines, and tooltips.
+- The MA segmented control explains itself (MA caption), and live momentum shifts announce themselves with a one-shot pulse on the new crossover marker.
+- All prior behavior intact: grain source-of-truth, demo isolation/persistence rails, BLE flow/UUIDs untouched, 4 languages, light/dark themes, accent system flows through all new surfaces.
+
+Unresolved / Next-round recommendations:
+1. BLE auto-reconnect + PWA install card still need real-device QA (carried from rounds 8–9).
+2. Crossover pulse could pair with a soft haptic tick on new crossings (needs a store-level crossing signal, not chart-local).
+3. CSV export could gain a settings toggle for including decision messages/actions (currently core telemetry only).
+4. Detail sparkline temp variant is local state; persisting sparkMetric like trendsMetric is trivial if users expect stickiness.
+5. Marathi + Hinglish walkthrough of the newest surfaces (Hindi verified in-browser again; mr/hinglish code-verified only).
+6. Demo default interval is 10 min — consider surfacing the interval preset on the demo chip or a faster default for first-run demos.

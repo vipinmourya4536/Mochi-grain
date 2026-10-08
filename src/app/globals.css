@@ -1223,6 +1223,33 @@
   align-items: center;
   color: var(--gm-accent);
 }
+/* Non-interactive "MA" caption inside the segmented control — discoverability
+   for what the numbers 5/7/14 actually mean, without crowding the header */
+.grain-ma-seg .ma-cap {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  color: var(--gm-accent);
+  opacity: 0.72;
+  padding: 0 3px 0 5px;
+  margin-right: 1px;
+  border-right: 1px solid color-mix(in srgb, var(--gm-accent) 22%, transparent);
+  pointer-events: none;
+  user-select: none;
+}
+/* One-shot pulse when a NEW crossover appears in live mode — attention cue
+   that works even when the user is not scrubbing the chart */
+.grain-cross-pulse {
+  animation: grain-cross-pulse 1.8s cubic-bezier(0.16, 1, 0.3, 1) 1;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes grain-cross-pulse {
+  0%   { transform: scale(1);    filter: drop-shadow(0 0 0 rgba(var(--gm-accent-rgb), 0)); }
+  30%  { transform: scale(1.9);  filter: drop-shadow(0 0 3px rgba(var(--gm-accent-rgb), 0.85)); }
+  100% { transform: scale(1);    filter: drop-shadow(0 0 0 rgba(var(--gm-accent-rgb), 0)); }
+}
 /* Detail-view context sparkline */
 .grain-detail-spark {
   animation: grain-fade-in 0.3s ease-out;
@@ -1327,6 +1354,66 @@
 }
 .grain-share-btn:hover {
   background: rgba(var(--gm-accent-rgb), 0.18);
+}
+
+/* History header export button – neutral glass square, accent on hover,
+   visually quieter than the destructive trash action next to it */
+.grain-export-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gm-text-tertiary);
+  background: var(--gm-toggle-bg);
+  border: 1px solid var(--gm-toggle-border, var(--gm-glass-border));
+  cursor: pointer;
+  transition: color 0.18s ease, background 0.2s ease, transform 0.15s ease;
+}
+.grain-export-btn:hover {
+  color: var(--gm-accent);
+  background: rgba(var(--gm-accent-rgb), 0.12);
+  border-color: rgba(var(--gm-accent-rgb), 0.25);
+}
+.grain-export-btn:active {
+  transform: scale(0.92);
+}
+
+/* Detail context-card mini metric toggle (Droplet | Thermometer) —
+   compact glass pill that matches the MA seg family */
+.grain-spark-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--gm-toggle-bg);
+  border: 1px solid var(--gm-toggle-border, var(--gm-glass-border));
+}
+.grain-spark-seg button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--gm-text-tertiary);
+  width: 22px;
+  height: 18px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.12s ease;
+}
+.grain-spark-seg button:hover {
+  color: var(--gm-accent);
+}
+.grain-spark-seg button.active {
+  background: rgba(var(--gm-accent-rgb), 0.16);
+  color: var(--gm-accent);
+}
+.grain-spark-seg button:active {
+  transform: scale(0.9);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1753,6 +1840,13 @@
   }
   .grain-ma-seg button,
   .grain-cross-marker {
+    transition: none !important;
+  }
+  .grain-cross-pulse {
+    animation: none !important;
+  }
+  .grain-export-btn,
+  .grain-spark-seg button {
     transition: none !important;
   }
   .grain-trends-ma {

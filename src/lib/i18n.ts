@@ -161,6 +161,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'history.cross_up': 'Crossed above average',
     'history.cross_down': 'Crossed below average',
     'history.detail_scrub_aria': 'Surrounding readings chart. Use arrow keys to inspect readings.',
+    'history.detail_metric': 'Chart metric',
+    'history.export': 'Export readings as CSV',
 
     'history.share': 'Share reading',
 
@@ -267,6 +269,7 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.saved': 'Saved to your list',
     'toast.unsaved': 'Removed from saved',
     'toast.share_fail': 'Could not share',
+    'toast.exported': 'Exported {n} readings',
 
     // ── Demo Mode ──
     'demo.title': 'Demo Mode',
@@ -527,6 +530,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'history.cross_up': 'औसत से ऊपर गया',
     'history.cross_down': 'औसत से नीचे गया',
     'history.detail_scrub_aria': 'आसपास की रीडिंग का चार्ट। रीडिंग देखने के लिए तीर कुंजियाँ दबाएँ।',
+    'history.detail_metric': 'चार्ट मीट्रिक',
+    'history.export': 'रीडिंग CSV के रूप में निर्यात करें',
 
     'history.share': 'रीडिंग साझा करें',
 
@@ -633,6 +638,7 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.saved': 'आपकी सूची में सेव हुआ',
     'toast.unsaved': 'सेव से हटा दिया गया',
     'toast.share_fail': 'साझा नहीं हो सका',
+    'toast.exported': '{n} रीडिंग निर्यात हुईं',
 
     // ── Demo Mode ──
     'demo.title': 'डेमो मोड',
@@ -893,6 +899,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'history.cross_up': 'सरासरीच्या वर गेले',
     'history.cross_down': 'सरासरीच्या खाली गेले',
     'history.detail_scrub_aria': 'आजूबाजूची वाचने तक्ता. वाचने पाहण्यासाठी अॅरो कळा वापरा.',
+    'history.detail_metric': 'चार्ट मेट्रिक',
+    'history.export': 'वाचने CSV म्हणून निर्यात करा',
 
     'history.share': 'वाचन सामायिक करा',
 
@@ -999,6 +1007,7 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.saved': 'तुमच्या यादीत सेव्ह झाले',
     'toast.unsaved': 'सेव्हमधून काढले',
     'toast.share_fail': 'सामायिक करता आले नाही',
+    'toast.exported': '{n} वाचने निर्यात झाली',
 
     // ── Demo Mode ──
     'demo.title': 'डेमो मोड',
@@ -1259,6 +1268,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'history.cross_up': 'Average ke upar gaya',
     'history.cross_down': 'Average ke neeche gaya',
     'history.detail_scrub_aria': 'Aas-paas readings ka chart. Arrow keys se readings dekho.',
+    'history.detail_metric': 'Chart metric',
+    'history.export': 'Readings ko CSV me export karo',
 
     'history.share': 'Reading share karo',
 
@@ -1365,6 +1376,7 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.saved': 'List me save ho gaya',
     'toast.unsaved': 'Saved se hata diya',
     'toast.share_fail': 'Share nahi ho paya',
+    'toast.exported': '{n} readings export ho gayi',
 
     // ── Demo Mode ──
     'demo.title': 'Demo Mode',
