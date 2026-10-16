@@ -170,6 +170,11 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
   const accentHex = getAccentHex(settings.accentColor);
   const { safe, warn, critical } = settings.thresholds;
 
+  // Advanced chart layer (MA overlay + crossings + avg line + per-range
+  // stats) is opt-in so the primary chart stays clean. Session-local:
+  // the default experience is the simple curve.
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
   // Moving-average window (persisted; falls back to 7 for out-of-range values)
   const maWin = MA_WINDOW_OPTIONS.includes(settings.trendsMaWindow) ? settings.trendsMaWindow : MA_DEFAULT;
 
@@ -541,76 +546,49 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
   const trend = geo?.trend ?? null;
   const unitSuffix = metric === 'moisture' ? '%' : '°C';
   const isMoisture = metric === 'moisture';
+  const showMa = advancedOpen && settings.trendsMovingAvg;
 
   return (
     <div className="grain-trends-card mb-4" role="group" aria-label={t('history.trends_title', lang)}>
-      {/* Header row 1: title + moving-average toggle + trend direction chip */}
+      {/* Header row: title + range direction chip + advanced disclosure */}
       <div className="flex items-center gap-2 mb-2">
         <ChartLine size={13} weight="bold" style={{ color: 'var(--gm-accent)' }} />
         <span className="text-[9px] font-bold tracking-[0.18em] uppercase" style={{ color: 'var(--gm-text-tertiary)' }}>
           {t('history.trends_title', lang)}
         </span>
+        {trend && (
+          <span
+            className="ml-auto grain-trend-chip grain-tabular"
+            style={{
+              color: trend.dir === 'flat'
+                ? 'var(--gm-text-secondary)'
+                : isMoisture
+                  ? (trend.dir === 'up' ? 'var(--gm-up)' : 'var(--gm-down)')
+                  : 'var(--gm-accent)',
+            }}
+            role="status"
+            aria-label={`${t(trend.labelKey, lang)} ${Math.abs(trend.delta).toFixed(1)}${unitSuffix}`}
+          >
+            {trend.dir === 'up'
+              ? <TrendUp size={11} weight="bold" />
+              : trend.dir === 'down'
+                ? <TrendDown size={11} weight="bold" />
+                : <Minus size={11} weight="bold" />}
+            {(trend.delta > 0 ? '+' : '') + trend.delta.toFixed(1)}{unitSuffix}
+          </span>
+        )}
         {geo && (
-          <div className="ml-auto flex items-center gap-1.5">
-            {settings.trendsMovingAvg ? (
-              <div className="grain-ma-seg grain-tabular" role="group" aria-label={t('history.trends_ma_win', lang)}>
-                <span className="ma-cap" aria-hidden="true">MA</span>
-                <button
-                  type="button"
-                  className="ma-off"
-                  onClick={toggleMaOff}
-                  aria-label={t('history.trends_ma', lang)}
-                  title={t('history.trends_ma', lang)}
-                >
-                  <WaveSine size={10} weight="bold" />
-                </button>
-                {MA_WINDOW_OPTIONS.map((w) => (
-                  <button
-                    key={w}
-                    type="button"
-                    className={w === maWin ? 'active' : ''}
-                    aria-pressed={w === maWin}
-                    onClick={() => selectMaWindow(w)}
-                  >
-                    {w}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <button
-                type="button"
-                className={`grain-ma-chip grain-tabular ${settings.trendsMovingAvg ? 'on' : ''}`}
-                aria-pressed={settings.trendsMovingAvg}
-                aria-label={t('history.trends_ma', lang)}
-                title={t('history.trends_ma', lang)}
-                onClick={() => selectMaWindow(maWin)}
-              >
-                <WaveSine size={10} weight="bold" />
-                MA{maWin}
-              </button>
-            )}
-            {trend && (
-              <span
-                className="grain-trend-chip grain-tabular"
-                style={{
-                  color: trend.dir === 'flat'
-                    ? 'var(--gm-text-secondary)'
-                    : isMoisture
-                      ? (trend.dir === 'up' ? 'var(--gm-up)' : 'var(--gm-down)')
-                      : 'var(--gm-accent)',
-                }}
-                role="status"
-                aria-label={`${t(trend.labelKey, lang)} ${Math.abs(trend.delta).toFixed(1)}${unitSuffix}`}
-              >
-                {trend.dir === 'up'
-                  ? <TrendUp size={11} weight="bold" />
-                  : trend.dir === 'down'
-                    ? <TrendDown size={11} weight="bold" />
-                    : <Minus size={11} weight="bold" />}
-                {(trend.delta > 0 ? '+' : '') + trend.delta.toFixed(1)}{unitSuffix}
-              </span>
-            )}
-          </div>
+          <button
+            type="button"
+            className={`grain-ma-chip grain-tabular ${advancedOpen ? 'on' : ''}`}
+            aria-expanded={advancedOpen}
+            aria-label={t('history.chart_options', lang)}
+            title={t('history.chart_options', lang)}
+            onClick={() => { haptic(settings.hapticsEnabled, 6); setAdvancedOpen((v) => !v); }}
+          >
+            <WaveSine size={10} weight="bold" />
+            {t('history.chart_options_short', lang)}
+          </button>
         )}
       </div>
 
@@ -740,8 +718,8 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
                 strokeLinejoin="round"
               />
 
-              {/* Trailing moving-average overlay (dotted neutral line) */}
-              {settings.trendsMovingAvg && geo.maPathD && (
+              {/* Moving-average overlay + crossings + avg reference — advanced layer only */}
+              {showMa && geo.maPathD && (
                 <path
                   d={geo.maPathD}
                   fill="none"
@@ -752,8 +730,8 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
                 />
               )}
 
-              {/* MA-crossover momentum markers (raw × MA sign change) */}
-              {settings.trendsMovingAvg && geo.crossings.length > 0 && (
+              {/* MA-crossover momentum markers (raw × MA sign change) — advanced only */}
+              {showMa && geo.crossings.length > 0 && (
                 <g className="grain-scrub-group">
                   {geo.crossings.map((c) => (
                     <circle
@@ -778,12 +756,14 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
                 </g>
               )}
 
-              {/* Avg reference line */}
-              <line
-                x1={PAD_X} y1={geo.avgY} x2={W - PAD_X} y2={geo.avgY}
-                stroke={accentHex} strokeOpacity="0.4" strokeWidth="0.9" strokeDasharray="5,4"
-                opacity={scrubPt ? 0.35 : 1}
-              />
+              {/* Avg reference line — advanced layer only */}
+              {showMa && (
+                <line
+                  x1={PAD_X} y1={geo.avgY} x2={W - PAD_X} y2={geo.avgY}
+                  stroke={accentHex} strokeOpacity="0.4" strokeWidth="0.9" strokeDasharray="5,4"
+                  opacity={scrubPt ? 0.35 : 1}
+                />
+              )}
 
               {/* Risk-colored dots (moisture) / accent dots (temp) */}
               {geo.pts.map((p, i) =>
@@ -861,17 +841,65 @@ export function HistoryTrends({ entries }: { entries: HistoryEntry[] }) {
             )}
           </div>
 
-          {/* Per-range mini stats */}
-          <div className="grid grid-cols-4 gap-2 mt-3 pt-3 grain-trends-stats grain-tabular">
-            <MiniStat
-              label={isMoisture ? t('history.stat_avg', lang) : t('history.stat_temp', lang)}
-              value={`${geo.avg.toFixed(1)}${unitSuffix}`}
-              color={accentHex}
-            />
-            <MiniStat label={t('history.stat_min', lang)} value={`${geo.min.toFixed(1)}${unitSuffix}`} />
-            <MiniStat label={t('history.stat_max', lang)} value={`${geo.max.toFixed(1)}${unitSuffix}`} />
-            <MiniStat label={t('history.trends_count', lang)} value={String(geo.pts.length)} />
-          </div>
+          {/* Advanced layer: MA controls + per-range mini stats.
+              Collapsed by default — the primary chart stays readable. */}
+          {advancedOpen && (
+            <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--gm-separator)' }}>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                {settings.trendsMovingAvg ? (
+                  <div className="grain-ma-seg grain-tabular" role="group" aria-label={t('history.trends_ma_win', lang)}>
+                    <span className="ma-cap" aria-hidden="true">MA</span>
+                    <button
+                      type="button"
+                      className="ma-off"
+                      onClick={toggleMaOff}
+                      aria-label={t('history.trends_ma', lang)}
+                      title={t('history.trends_ma', lang)}
+                    >
+                      <WaveSine size={10} weight="bold" />
+                    </button>
+                    {MA_WINDOW_OPTIONS.map((w) => (
+                      <button
+                        key={w}
+                        type="button"
+                        className={w === maWin ? 'active' : ''}
+                        aria-pressed={w === maWin}
+                        onClick={() => selectMaWindow(w)}
+                      >
+                        {w}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="grain-ma-chip grain-tabular"
+                    aria-pressed={false}
+                    aria-label={t('history.trends_ma', lang)}
+                    onClick={() => selectMaWindow(maWin)}
+                  >
+                    <WaveSine size={10} weight="bold" />
+                    MA{maWin}
+                  </button>
+                )}
+                <span className="text-[9px] font-semibold" style={{ color: 'var(--gm-text-tertiary)' }}>
+                  {t('history.chart_options_hint', lang)}
+                </span>
+              </div>
+              {geo && (
+                <div className="grid grid-cols-4 gap-2 mt-3 grain-trends-stats grain-tabular">
+                  <MiniStat
+                    label={isMoisture ? t('history.stat_avg', lang) : t('history.stat_temp', lang)}
+                    value={`${geo.avg.toFixed(1)}${unitSuffix}`}
+                    color={accentHex}
+                  />
+                  <MiniStat label={t('history.stat_min', lang)} value={`${geo.min.toFixed(1)}${unitSuffix}`} />
+                  <MiniStat label={t('history.stat_max', lang)} value={`${geo.max.toFixed(1)}${unitSuffix}`} />
+                  <MiniStat label={t('history.trends_count', lang)} value={String(geo.pts.length)} />
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </div>

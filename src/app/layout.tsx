@@ -14,6 +14,15 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
+  /* System chrome is THEME-driven (neutral in both schemes), never
+   * accent-driven. These media-scoped defaults cover first paint;
+   * page.tsx replaces them with a single runtime meta that follows the
+   * in-app theme setting. When wrapping in Capacitor, mirror these two
+   * neutrals via @capacitor/status-bar on the native side. */
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
+    { media: "(prefers-color-scheme: light)", color: "#f5f5f7" },
+  ],
 };
 
 export const metadata: Metadata = {
@@ -54,7 +63,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={inter.variable}>
       <head>
-        <link rel="icon" href="/icon-32.png" sizes="32x32" />
+        <link rel="icon" href="/favicon-32.png" sizes="32x32" />
         <link rel="icon" href="/icon-192.png" sizes="192x192" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
       </head>

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useGrainStore } from '@/lib/grain-store';
 import type { HistoryEntry } from '@/lib/grain-types';
-import { X, TrendUp, TrendDown, Minus, ArrowClockwise, Trash, Gauge, ShareFat, Check, Question, Stack, Waves, ChartLine, DownloadSimple, Drop, Thermometer } from '@phosphor-icons/react/dist/ssr';
+import { X, TrendUp, TrendDown, Minus, ArrowClockwise, Trash, Gauge, ShareFat, Check, Question, Stack, Waves, ChartLine, DownloadSimple, Drop, Thermometer, CaretDown } from '@phosphor-icons/react/dist/ssr';
 import { t, tGrain, tTrend, tp, type AppLanguage } from '@/lib/i18n';
 import { getRiskColor, getRiskBg } from '@/lib/accent-hex';
 import { computeStorageScore, scoreBandColor, type ScoreBand } from '@/lib/storage-score';
@@ -193,6 +193,149 @@ function StatCell({ label, value }: { label: string; value: string }) {
     <div className="text-right">
       <div className="text-[8px] font-bold tracking-[0.12em] uppercase" style={{ color: 'var(--gm-text-tertiary)' }}>{label}</div>
       <div className="text-[13px] font-bold leading-tight" style={{ color: 'var(--gm-text-secondary)' }}>{value}</div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   SUMMARY CARD — the one glanceable layer at the top
+   • Latest RECORDED reading + its timestamp (saved data)
+   • Freshness badge: LIVE (real-time packet < 2 min old) vs
+     SAVED (stored reading — explicitly NOT presented as live)
+   • Simple moisture trend vs the previous reading
+   • One-line Mochi status with a severity dot
+   ═══════════════════════════════════════════════════════ */
+
+const FRESH_WINDOW_MS = 2 * 60e3;
+
+function HistorySummary({ entries }: { entries: HistoryEntry[] }) {
+  const { settings, deviceState } = useGrainStore();
+  const lang = settings.language as AppLanguage;
+  const accent = settings.accentColor;
+  const latest = entries[0]; // newest-first store order
+  const prev = entries[1];
+  const delta = latest ? computeDelta(latest, prev) : null;
+  const dotHex = latest ? getRiskColor(latest.decision.state, accent) : 'var(--gm-text-tertiary)';
+
+  // Freshness: LIVE requires a real connection AND a recent packet.
+  // Everything else is an honest SAVED label — never cached-as-live.
+  const age = latest ? Date.now() - latest.reading.timestamp : Infinity;
+  const isLive = deviceState !== 'disconnected' && deviceState !== 'connecting' && age < FRESH_WINDOW_MS;
+  const freshnessLabel = isLive ? t('history.freshness_live', lang) : t('history.freshness_saved', lang);
+
+  const messageText = latest?.decision.messageKey
+    ? t(latest.decision.messageKey, lang)
+    : latest?.decision.message ?? '';
+
+  return (
+    <div className="grain-stats-card mb-4" role="group" aria-label={t('history.summary_title', lang)}>
+      {/* Row 1: latest value + freshness */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[9px] font-bold tracking-[0.15em] uppercase mb-1" style={{ color: 'var(--gm-text-tertiary)' }}>
+            {t('history.latest_reading', lang)}
+          </div>
+          {latest ? (
+            <div className="flex items-baseline gap-1.5 grain-tabular">
+              <span className="text-4xl font-bold tracking-tight" style={{ color: dotHex }}>
+                {latest.reading.moisture.toFixed(1)}
+              </span>
+              <span className="text-sm font-semibold" style={{ color: 'var(--gm-text-tertiary)' }}>%</span>
+              <span className="text-xs font-semibold ml-1" style={{ color: 'var(--gm-text-secondary)' }}>
+                {Math.round(latest.reading.temperature)}°C
+              </span>
+              {delta && <DeltaChip delta={delta} ariaLabel={`${t('history.delta_prev', lang)} ${(delta.value > 0 ? '+' : '') + delta.value.toFixed(1)}%`} />}
+            </div>
+          ) : (
+            <div className="text-2xl font-bold" style={{ color: 'var(--gm-text-tertiary)' }}>—</div>
+          )}
+          {latest && (
+            <p className="text-[10px] grain-tabular mt-1 mb-0" style={{ color: 'var(--gm-text-tertiary)' }}>
+              {format(latest.reading.timestamp, 'MMM d · h:mm a')}
+            </p>
+          )}
+        </div>
+        <span
+          className={`shrink-0 grain-freshness-chip ${isLive ? 'live' : ''}`}
+          role="status"
+          aria-label={freshnessLabel}
+        >
+          <span className="grain-freshness-dot" aria-hidden="true" />
+          {freshnessLabel}
+        </span>
+      </div>
+
+      {/* Row 2: Mochi status (severity-colored, single line) */}
+      {latest && (
+        <div
+          className="flex items-start gap-2.5 mt-3 pt-3"
+          style={{ borderTop: '1px solid var(--gm-separator)' }}
+        >
+          <span className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ background: dotHex, boxShadow: `0 0 6px ${dotHex}` }} aria-hidden="true" />
+          <div className="min-w-0">
+            <p className="text-[11.5px] font-semibold leading-snug mb-0" style={{ color: 'var(--gm-text-primary)' }}>
+              <span style={{ color: dotHex }}>{t('brand.mochi', lang)}</span>{' '}
+              {messageText}
+            </p>
+            <p className="text-[10px] mt-0.5 mb-0" style={{ color: 'var(--gm-text-tertiary)' }}>
+              {tTrend(latest.decision.trend, lang)} · {latest.decision.confidence === 'high' ? t('history.conf_high', lang) : latest.decision.confidence === 'medium' ? t('history.conf_medium', lang) : t('history.conf_low', lang)}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   ANALYTICS — secondary area (collapsed by default)
+   Long-range statistics, storage score and destructive data
+   controls live here so the top of the tab stays scannable.
+   ═══════════════════════════════════════════════════════ */
+
+function AnalyticsSection({ entries }: { entries: HistoryEntry[] }) {
+  const { settings, clearHistory, showToast } = useGrainStore();
+  const lang = settings.language as AppLanguage;
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="mb-4">
+      <button
+        type="button"
+        className="grain-analytics-toggle"
+        onClick={() => { haptic(settings.hapticsEnabled, 6); setOpen((v) => !v); }}
+        aria-expanded={open}
+      >
+        <div className="flex items-center gap-2.5">
+          <Gauge size={15} weight="bold" style={{ color: 'var(--gm-accent)' }} />
+          <span className="text-xs font-semibold" style={{ color: 'var(--gm-text-primary)' }}>
+            {t('history.analytics', lang)}
+          </span>
+        </div>
+        <CaretDown
+          size={15}
+          weight="bold"
+          className={`grain-chevron ${open ? 'rotated' : ''}`}
+          style={{ color: 'var(--gm-text-tertiary)' }}
+        />
+      </button>
+      {open && (
+        <div className="grain-fade-in">
+          <HistoryStats entries={entries} />
+          {entries.length >= 3 && <StorageScoreCard entries={entries} />}
+          <button
+            onClick={() => { clearHistory(); showToast(t('toast.history_cleared', lang)); }}
+            className="w-full flex justify-between items-center px-5 py-3.5 text-left grain-card"
+            style={{ color: '#EF4444' }}
+          >
+            <div className="flex items-center gap-3">
+              <Trash size={16} weight="bold" />
+              <span className="text-xs font-semibold">{t('settings.clear_history', lang)}</span>
+            </div>
+            <span className="text-[10px]" style={{ color: 'var(--gm-text-tertiary)' }}>{t('settings.local_only', lang)}</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -470,21 +613,28 @@ function ReadingList() {
 
   if (historyEntries.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center grain-fade-in">
+      <div className="flex flex-col items-center justify-center py-14 text-center grain-fade-in">
         <div className="w-16 h-16 rounded-3xl flex items-center justify-center mb-5 grain-card" style={{ transform: 'rotate(-4deg)' }}>
           <ArrowClockwise size={28} weight="bold" style={{ color: 'var(--gm-accent)' }} />
         </div>
         <p className="text-sm font-bold mb-1.5" style={{ color: 'var(--gm-text-primary)' }}>{t('history.no_history', lang)}</p>
-        <p className="text-xs max-w-[220px] leading-relaxed" style={{ color: 'var(--gm-text-tertiary)' }}>{t('history.no_history_desc', lang)}</p>
+        <p className="text-xs max-w-[240px] leading-relaxed" style={{ color: 'var(--gm-text-tertiary)' }}>{t('history.no_history_desc', lang)}</p>
+        <p className="text-[10px] max-w-[240px] leading-relaxed mt-3 grain-freshness-chip" style={{ color: 'var(--gm-text-secondary)' }}>
+          {t('history.connect_hint', lang)}
+        </p>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-2 grain-fade-in">
-      <HistoryStats entries={historyEntries} />
-      {historyEntries.length >= 3 && <StorageScoreCard entries={historyEntries} />}
+      {/* 1 — glanceable summary: latest + freshness + trend + Mochi */}
+      <HistorySummary entries={historyEntries} />
+
+      {/* 2 — ONE primary chart (moisture by default, temp toggle) */}
       {historyEntries.length >= 2 && <HistoryTrends entries={historyEntries} />}
+
+      {/* 3 — compact chronological list (tap for detail) */}
       {historyEntries.map((entry, i) => {
         const dotHex = getRiskColor(entry.decision.state, accent);
         // Entries are newest-first → the previous chronological reading sits one slot down
@@ -505,11 +655,14 @@ function ReadingList() {
             <div className="flex items-center gap-2 shrink-0">
               {delta && <DeltaChip delta={delta} ariaLabel={`${t('history.delta_prev', lang)} ${(delta.value > 0 ? '+' : '') + delta.value.toFixed(1)}%`} />}
               <div style={{ color: dotHex }}>{getTrendIcon(entry.decision.trend)}</div>
-              <div className="w-2 h-2 rounded-full" style={{ background: dotHex }} />
+              <div className="w-2 h-2 rounded-full" style={{ background: dotHex }} aria-label={entry.decision.state} />
             </div>
           </div>
         );
       })}
+
+      {/* 4 — secondary area: stats, storage score, destructive controls */}
+      <AnalyticsSection entries={historyEntries} />
     </div>
   );
 }
@@ -680,7 +833,7 @@ function ReadingDetail({ entry, onClose }: { entry: HistoryEntry; onClose: () =>
 }
 
 export function HistoryTab() {
-  const { selectedHistoryEntry, setSelectedHistoryId, historyEntries, clearHistory, settings, showToast } = useGrainStore();
+  const { selectedHistoryEntry, setSelectedHistoryId, historyEntries, settings, showToast } = useGrainStore();
   const lang = settings.language as AppLanguage;
 
   /* Build a CSV of every stored reading (shared client-side builder —
@@ -712,12 +865,9 @@ export function HistoryTab() {
               <p className="text-sm" style={{ color: 'var(--gm-text-secondary)' }}>{historyEntries.length > 0 ? `${historyEntries.length} ${historyEntries.length !== 1 ? t('history.readings', lang) : t('history.reading', lang)}` : t('history.past', lang)}</p>
             </div>
             {historyEntries.length > 0 && (
-              <div className="flex items-center gap-2">
-                <button onClick={exportCsv} className="grain-export-btn" aria-label={t('history.export', lang)} title={t('history.export', lang)}>
-                  <DownloadSimple size={16} weight="bold" />
-                </button>
-                <button onClick={clearHistory} className="w-8 h-8 rounded-lg flex items-center justify-center grain-card" style={{ color: 'var(--gm-text-tertiary)' }} aria-label={t('settings.clear_history', lang)}><Trash size={16} weight="bold" /></button>
-              </div>
+              <button onClick={exportCsv} className="grain-export-btn" aria-label={t('history.export', lang)} title={t('history.export', lang)}>
+                <DownloadSimple size={16} weight="bold" />
+              </button>
             )}
           </div>
           <ReadingList />

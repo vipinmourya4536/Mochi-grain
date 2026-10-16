@@ -1,12 +1,33 @@
 /* ═══════════════════════════════════════════════════════════════
-   MOCHI DECISION ENGINE v2.0
-   Full rule-based expert system with:
-   - History analysis (dedup, gap detection, stability windows)
-   - Trend detection (stable/rising/falling/rapid)
-   - Risk evaluation (moisture + temperature + trend escalation)
-   - Rule selection with recovery detection
-   - Cooldown management (suppresses repeated alerts)
-   - Confidence scoring
+   MOCHI DECISION ENGINE v2.1  (ENGINE_VERSION = '2.1.0')
+   Deterministic, offline-first rule system.
+   ─────────────────────────────────────────────────────────────
+   v2.1 formalization contract:
+   1. DETERMINISTIC — evaluate() is a pure function of
+      (reading, history, thresholds, options). No hidden module
+      state: the notification cooldown / previous-state memory is
+      INJECTED via options.cooldown and returned via
+      decision.cooldown so any caller (web client, Android
+      background service, tests) can own and persist it.
+   2. INJECTABLE CLOCK — options.now replaces Date.now() so
+      staleness and stability windows are reproducible in tests.
+   3. INPUT VALIDATION — readings are classified as
+      missing / malformed / implausible / stale before any risk
+      logic runs. Invalid readings are NEVER classified safe.
+   4. TREND GUARDS — trend escalation requires a minimum time
+      interval between readings (rapid successive packets never
+      escalate risk) and is suppressed across data gaps.
+   5. THRESHOLD SAFETY — user thresholds are defensively
+      normalized (safe < warn < critical) without inventing
+      values; the settings UI enforces the same ordering.
+   6. SEPARATION OF CONCERNS — risk classification is never
+      influenced by cooldown state; cooldown only gates the
+      decision.alertSuppressed flag (notification dedup).
+
+   The engine classifies supplied measurements. It does not
+   improve the sensor's physical accuracy, and its thresholds
+   come from the documented grain profiles — not universal
+   scientific truth.
    ═══════════════════════════════════════════════════════════════ */
 
 import type {
@@ -15,38 +36,136 @@ import type {
   TrendDirection,
   MochiDecision,
   EngineState,
+  EngineCooldownState,
   MochiExpression,
-  RiskTheme,
   StatusBadge,
 } from './grain-types';
 import { STATE, EXPRESSION, PRIORITY, TREND, stateToRiskTheme } from './grain-types';
 
+/** Engine version — distinct from the overall "Mochi Grain 2.0" app version. */
+export const ENGINE_VERSION = '2.1.0';
+
 /* ═══════════════════════════════════════════════════════════════
-   ENGINE SETTINGS (defaults)
+   ENGINE SETTINGS (defaults — all injectable via options.settings)
    ═══════════════════════════════════════════════════════════════ */
 
 export interface EngineSettings {
+  /** Window (hours) verified to confirm a stable storage condition */
   stabilityWindowHours: number;
+  /** Moisture jitter (pp) treated as noise within the stability window */
   moistureTolerance: number;
+  /** Temperature jitter (°C) treated as noise within the stability window */
   temperatureTolerance: number;
+  /** Moisture change (pp) between consecutive readings that counts as rapid */
   rapidChangeThreshold: number;
+  /** Minimum interval (ms) between two readings for trend logic to run.
+   *  Prevents escalation when packets arrive in rapid succession. */
+  minTrendIntervalMs: number;
+  /** Notification cooldown (ms) for repeated alerts of the same rule */
   messageCooldownMs: number;
+  /** A reading older than this (ms, vs now) is stale */
   staleThresholdMs: number;
+  /** A history gap larger than this (ms) breaks trend continuity */
   historyGapThresholdMs: number;
 }
 
-const DEFAULT_ENGINE_SETTINGS: EngineSettings = {
+export const DEFAULT_ENGINE_SETTINGS: EngineSettings = {
   stabilityWindowHours: 72,
   moistureTolerance: 0.5,
   temperatureTolerance: 1.0,
   rapidChangeThreshold: 1.5,
+  minTrendIntervalMs: 10 * 60 * 1000,
   messageCooldownMs: 1800000,
   staleThresholdMs: 3600000,
   historyGapThresholdMs: 6 * 3600 * 1000,
 };
 
+/** Cooldown / transition memory injected by the caller and persisted by it.
+ *  Empty state ⇒ no suppression and no recovery detection (pure evaluation). */
+export type CooldownState = EngineCooldownState;
+
+export const EMPTY_COOLDOWN: CooldownState = { ruleId: '', state: '', timestamp: 0 };
+
+export interface EvaluateOptions {
+  /** Deterministic clock (epoch ms). Defaults to Date.now(). */
+  now?: number;
+  /** Overrides for engine tuning knobs. */
+  settings?: Partial<EngineSettings>;
+  /** Caller-owned cooldown / previous-decision memory. Defaults to empty. */
+  cooldown?: CooldownState | null;
+}
+
 /* ═══════════════════════════════════════════════════════════════
-   GRAIN PROFILES — risk thresholds mapped to engine
+   INPUT VALIDATION CLASSES
+   Sensor values are classified BEFORE any risk logic. An invalid
+   reading always resolves to STATE.INVALID (never SAFE).
+   ═══════════════════════════════════════════════════════════════ */
+
+/** Physical plausibility domain for the GRAIN-01 probe */
+export const MOISTURE_DOMAIN = { min: 0, max: 100 } as const;   // volumetric %
+export const TEMPERATURE_DOMAIN = { min: -20, max: 85 } as const; // probe electronics range
+
+export type InvalidReason =
+  | 'MISSING_MOISTURE'
+  | 'MALFORMED_MOISTURE'
+  | 'IMPLAUSIBLE_MOISTURE'
+  | 'MISSING_TEMPERATURE'
+  | 'MALFORMED_TEMPERATURE'
+  | 'IMPLAUSIBLE_TEMPERATURE'
+  | 'STALE_READING';
+
+export interface InputValidation {
+  ok: boolean;
+  reason?: InvalidReason;
+}
+
+export function validateReading(reading: Reading | null | undefined, now: number, settings: EngineSettings): InputValidation {
+  if (!reading) return { ok: false, reason: 'MISSING_MOISTURE' };
+
+  const m = reading.moisture as unknown;
+  if (m == null) return { ok: false, reason: 'MISSING_MOISTURE' };
+  if (typeof m !== 'number' || !Number.isFinite(m)) return { ok: false, reason: 'MALFORMED_MOISTURE' };
+  if (m < MOISTURE_DOMAIN.min || m > MOISTURE_DOMAIN.max) return { ok: false, reason: 'IMPLAUSIBLE_MOISTURE' };
+
+  const t = reading.temperature as unknown;
+  if (t == null) return { ok: false, reason: 'MISSING_TEMPERATURE' };
+  if (typeof t !== 'number' || !Number.isFinite(t)) return { ok: false, reason: 'MALFORMED_TEMPERATURE' };
+  if (t < TEMPERATURE_DOMAIN.min || t > TEMPERATURE_DOMAIN.max) return { ok: false, reason: 'IMPLAUSIBLE_TEMPERATURE' };
+
+  if (reading.timestamp && now - reading.timestamp > settings.staleThresholdMs) {
+    return { ok: false, reason: 'STALE_READING' };
+  }
+  return { ok: true };
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   THRESHOLD NORMALIZATION — defensive ordering (safe < warn < critical)
+   The Settings UI enforces ordering at edit time; this is the engine's
+   last line of defense against legacy/imports. Values are only pulled
+   DOWN/UP to restore ordering — calibrated profile defaults are never
+   rewritten here.
+   ═══════════════════════════════════════════════════════════════ */
+
+export const THRESHOLD_MIN_GAP = 0.5;
+
+export function normalizeThresholds(t: GrainThresholds): GrainThresholds {
+  const safe = Number.isFinite(t.safe) ? t.safe : 13;
+  let warn = Number.isFinite(t.warn) ? t.warn : safe + THRESHOLD_MIN_GAP;
+  let critical = Number.isFinite(t.critical) ? t.critical : warn + THRESHOLD_MIN_GAP;
+  if (warn <= safe) warn = safe + THRESHOLD_MIN_GAP;
+  if (critical <= warn) critical = warn + THRESHOLD_MIN_GAP;
+
+  const tempSafe = Number.isFinite(t.tempSafe) ? t.tempSafe : 30;
+  let tempWarn = Number.isFinite(t.tempWarn) ? t.tempWarn : tempSafe + THRESHOLD_MIN_GAP;
+  let tempCritical = Number.isFinite(t.tempCritical) ? t.tempCritical : tempWarn + THRESHOLD_MIN_GAP;
+  if (tempWarn <= tempSafe) tempWarn = tempSafe + THRESHOLD_MIN_GAP;
+  if (tempCritical <= tempWarn) tempCritical = tempWarn + THRESHOLD_MIN_GAP;
+
+  return { safe, warn, critical, tempSafe, tempWarn, tempCritical };
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GRAIN PROFILE MAPPING
    ═══════════════════════════════════════════════════════════════ */
 
 interface GrainProfileRisk {
@@ -70,12 +189,18 @@ function thresholdsToProfile(t: GrainThresholds): GrainProfileRisk {
 
 /* ═══════════════════════════════════════════════════════════════
    1. TREND ANALYZER
+   Time-aware: consecutive readings closer than minTrendIntervalMs
+   never produce an escalating trend (rapid packet bursts are noise,
+   not storage dynamics); intervals beyond historyGapThresholdMs are
+   treated as insufficient data (a trend across a gap is meaningless).
    ═══════════════════════════════════════════════════════════════ */
 
 interface TrendResult {
   trend: TrendDirection;
   moistureChange: number | null;
   tempChange: number | null;
+  /** Why trend evaluation was degraded, for reason codes / debug */
+  trendNote: 'ok' | 'interval_too_short' | 'gap_too_long' | 'no_previous';
 }
 
 function analyzeTrend(
@@ -83,8 +208,8 @@ function analyzeTrend(
   previous: Reading | null,
   settings: EngineSettings,
 ): TrendResult {
-  if (!current || !previous || current.moisture == null || previous.moisture == null) {
-    return { trend: TREND.INSUFFICIENT_DATA, moistureChange: null, tempChange: null };
+  if (!previous || current.moisture == null || previous.moisture == null) {
+    return { trend: TREND.INSUFFICIENT_DATA, moistureChange: null, tempChange: null, trendNote: 'no_previous' };
   }
 
   const moistureChange = current.moisture - previous.moisture;
@@ -92,6 +217,15 @@ function analyzeTrend(
     current.temperature != null && previous.temperature != null
       ? current.temperature - previous.temperature
       : null;
+
+  // Data-driven guard — deterministic (no clock involved)
+  const interval = current.timestamp - previous.timestamp;
+  if (interval < settings.minTrendIntervalMs) {
+    return { trend: TREND.STABLE, moistureChange, tempChange, trendNote: 'interval_too_short' };
+  }
+  if (interval > settings.historyGapThresholdMs) {
+    return { trend: TREND.INSUFFICIENT_DATA, moistureChange, tempChange, trendNote: 'gap_too_long' };
+  }
 
   const absDelta = Math.abs(moistureChange);
   const tolerance = settings.moistureTolerance;
@@ -106,18 +240,23 @@ function analyzeTrend(
     }
   }
 
-  return { trend, moistureChange, tempChange };
+  return { trend, moistureChange, tempChange, trendNote: 'ok' };
 }
 
 /* ═══════════════════════════════════════════════════════════════
    2. HISTORY ANALYZER
+   Handles duplicates (same timestamp), out-of-order input (chronological
+   sort), gapped series (gap list) and the stability window (relative to
+   the injected `now`, never a live clock).
    ═══════════════════════════════════════════════════════════════ */
 
 interface HistoryAnalysis {
   trend: TrendDirection;
+  trendNote: TrendResult['trendNote'];
   isStableWindow: boolean;
   gaps: { from: number; to: number }[];
   duplicatesRemoved: number;
+  outOfOrderCount: number;
   previousReading: Reading | null;
   recentReadingsCount: number;
   moistureChange: number | null;
@@ -128,21 +267,23 @@ function analyzeHistory(
   history: Reading[],
   currentReading: Reading | null,
   settings: EngineSettings,
+  now: number,
 ): HistoryAnalysis {
-  if (!history || history.length === 0) {
-    return {
-      trend: TREND.INSUFFICIENT_DATA,
-      isStableWindow: false,
-      gaps: [],
-      duplicatesRemoved: 0,
-      previousReading: null,
-      recentReadingsCount: 0,
-      moistureChange: null,
-      tempChange: null,
-    };
-  }
+  const empty: HistoryAnalysis = {
+    trend: TREND.INSUFFICIENT_DATA,
+    trendNote: 'no_previous',
+    isStableWindow: false,
+    gaps: [],
+    duplicatesRemoved: 0,
+    outOfOrderCount: 0,
+    previousReading: null,
+    recentReadingsCount: 0,
+    moistureChange: null,
+    tempChange: null,
+  };
+  if (!history || history.length === 0) return empty;
 
-  // Dedup by timestamp
+  // Dedup by timestamp (retransmitted packets must not inflate the series)
   const seen = new Set<number>();
   const deduped: Reading[] = [];
   let duplicates = 0;
@@ -163,7 +304,12 @@ function analyzeHistory(
     }
   }
 
-  // Sort chronologically
+  // Out-of-order tolerance: count inversions before sorting (diagnostic),
+  // then sort chronologically so trend math is always time-consistent.
+  let outOfOrder = 0;
+  for (let i = 1; i < deduped.length; i++) {
+    if (deduped[i].timestamp < deduped[i - 1].timestamp) outOfOrder++;
+  }
   deduped.sort((a, b) => a.timestamp - b.timestamp);
 
   // Gap detection
@@ -176,9 +322,9 @@ function analyzeHistory(
     }
   }
 
-  // Stability window check
+  // Stability window — anchored to the injected `now` (deterministic)
   const windowMs = settings.stabilityWindowHours * 3600 * 1000;
-  const windowStart = Date.now() - windowMs;
+  const windowStart = now - windowMs;
   const recentReadings = deduped.filter((r) => r.timestamp >= windowStart);
 
   let isStableWindow = false;
@@ -199,7 +345,7 @@ function analyzeHistory(
     }
   }
 
-  // Trend between last two readings
+  // Trend between the last two chronological readings
   const current = deduped[deduped.length - 1];
   const previous = deduped.length > 1 ? deduped[deduped.length - 2] : null;
   const trendData = analyzeTrend(current, previous, settings);
@@ -209,13 +355,14 @@ function analyzeHistory(
     isStableWindow,
     gaps,
     duplicatesRemoved: duplicates,
+    outOfOrderCount: outOfOrder,
     previousReading: previous,
     recentReadingsCount: recentReadings.length,
   };
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   3. RISK EVALUATOR
+   3. RISK EVALUATOR — classification ONLY (never cooldown-aware)
    ═══════════════════════════════════════════════════════════════ */
 
 interface RiskAssessment {
@@ -271,7 +418,7 @@ function evaluateRisk(
     reasonCodes.push('TEMPERATURE_WARM');
   }
 
-  // Trend escalation
+  // Trend escalation — only from qualified intervals (see analyzeTrend)
   if (historyAnalysis.trend === TREND.RISING_RAPIDLY) {
     reasonCodes.push('MOISTURE_RISING_RAPIDLY');
     if (state === STATE.MONITOR) {
@@ -280,8 +427,13 @@ function evaluateRisk(
     }
   } else if (historyAnalysis.trend === TREND.RISING) {
     reasonCodes.push('MOISTURE_RISING');
+  } else if (historyAnalysis.trendNote === 'interval_too_short') {
+    reasonCodes.push('TREND_INTERVAL_TOO_SHORT');
+  } else if (historyAnalysis.trendNote === 'gap_too_long') {
+    reasonCodes.push('TREND_GAP_TOO_LONG');
   } else if (
     historyAnalysis.trend === TREND.STABLE &&
+    historyAnalysis.trendNote === 'ok' &&
     historyAnalysis.isStableWindow
   ) {
     reasonCodes.push('STABLE_WINDOW_CONFIRMED');
@@ -291,7 +443,7 @@ function evaluateRisk(
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   4. RULE EVALUATOR
+   4. RULE EVALUATOR — stable rule IDs + reason codes
    ═══════════════════════════════════════════════════════════════ */
 
 interface SelectedRule {
@@ -307,7 +459,7 @@ interface SelectedRule {
 function selectGrainRule(
   risk: RiskAssessment,
   historyAnalysis: HistoryAnalysis,
-  prevEngineState: { state: string } | null,
+  prevEngineState: CooldownState,
 ): SelectedRule {
   const baseRule: SelectedRule = {
     state: risk.state,
@@ -319,11 +471,12 @@ function selectGrainRule(
     action: 'monitor',
   };
 
-  // Recovery: previous was warning/critical, now safe
-  const priorCriticalStates: EngineState[] = [STATE.WARNING, STATE.CRITICAL];
+  // Recovery: previous evaluated state was warning/critical, now safe.
+  // Driven by the INJECTED cooldown memory — never by module state.
+  const priorCriticalStates: string[] = [STATE.WARNING, STATE.CRITICAL];
   if (
     prevEngineState &&
-    priorCriticalStates.includes(prevEngineState.state as EngineState) &&
+    priorCriticalStates.includes(prevEngineState.state) &&
     risk.state === STATE.SAFE
   ) {
     return {
@@ -367,7 +520,11 @@ function selectGrainRule(
     baseRule.expression = EXPRESSION.THINKING;
     baseRule.ruleId = 'MONITOR_CONDITION';
     baseRule.messageId = 'MONITOR_CONDITION';
-  } else if (historyAnalysis.isStableWindow) {
+  } else if (
+    historyAnalysis.trend === TREND.STABLE &&
+    historyAnalysis.trendNote === 'ok' &&
+    historyAnalysis.isStableWindow
+  ) {
     baseRule.priority = PRIORITY.SAFE;
     baseRule.expression = EXPRESSION.SAFE;
     baseRule.ruleId = 'MOISTURE_STABLE';
@@ -401,43 +558,27 @@ function selectGrainRule(
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   5. COOLDOWN MANAGER
+   5. COOLDOWN / NOTIFICATION DEDUP (pure helpers)
+   Risk classification never depends on these — they only decide
+   whether a NEW alert of the same rule should reach the user.
+   The state itself is owned and persisted by the CALLER.
    ═══════════════════════════════════════════════════════════════ */
 
-interface CooldownState {
-  ruleId: string;
-  state: string;
-  timestamp: number;
-}
-
-function createCooldownManager(): {
-  shouldSuppress: (ruleId: string) => boolean;
-  updateCooldown: (ruleId: string, engineState: string) => void;
-  getState: () => CooldownState;
-} {
-  let state: CooldownState = { ruleId: '', state: '', timestamp: 0 };
-
-  return {
-    shouldSuppress(ruleId: string): boolean {
-      if (state.ruleId === ruleId) {
-        const cooldownMs = DEFAULT_ENGINE_SETTINGS.messageCooldownMs;
-        if (Date.now() - state.timestamp < cooldownMs) {
-          return true;
-        }
-      }
-      return false;
-    },
-    updateCooldown(ruleId: string, engineState: string) {
-      state = { ruleId, state: engineState, timestamp: Date.now() };
-    },
-    getState() {
-      return state;
-    },
-  };
+/** True when an alert for `ruleId` is still inside the cooldown window. */
+export function isSuppressed(
+  cooldown: CooldownState | null | undefined,
+  ruleId: string,
+  cooldownMs: number,
+  now: number,
+): boolean {
+  if (!cooldown || !cooldown.ruleId) return false;
+  if (cooldown.ruleId !== ruleId) return false;
+  return now - cooldown.timestamp < cooldownMs;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   6. MESSAGE RESOLVER
+   6. MESSAGE RESOLVER — stable i18n keys + English fallbacks
+   (Stored history keeps the English text; the UI renders via keys.)
    ═══════════════════════════════════════════════════════════════ */
 
 const MESSAGES: Record<string, { en: string; key: string; action: string; actionKey: string }> = {
@@ -539,77 +680,73 @@ function resolveMessage(messageId: string): {
 
 /* ═══════════════════════════════════════════════════════════════
    7. PUBLIC API — evaluate()
+   Deterministic: same (reading, history, thresholds, options) ⇒
+   same decision. No module-level mutable state.
    ═══════════════════════════════════════════════════════════════ */
-
-// Module-level cooldown state persists across calls within the same session
-const cooldownManager = createCooldownManager();
 
 export function evaluate(
   reading: Reading,
   recentHistory: Reading[],
   thresholds: GrainThresholds,
+  options: EvaluateOptions = {},
 ): MochiDecision {
-  const settings: EngineSettings = { ...DEFAULT_ENGINE_SETTINGS };
-  const prevEngineState = cooldownManager.getState();
+  const settings: EngineSettings = { ...DEFAULT_ENGINE_SETTINGS, ...options.settings };
+  const now = options.now ?? Date.now();
+  const prevCooldown: CooldownState = options.cooldown ?? EMPTY_COOLDOWN;
+  const safeThresholds = normalizeThresholds(thresholds);
 
-  // 1. Validate input
-  if (
-    !reading ||
-    reading.moisture == null ||
-    isNaN(reading.moisture) ||
-    reading.moisture < 0
-  ) {
-    return buildInvalidResponse(reading, thresholds, settings, prevEngineState, 'INVALID_MOISTURE');
-  }
-  if (
-    reading.temperature == null ||
-    isNaN(reading.temperature) ||
-    reading.temperature < -20
-  ) {
-    return buildInvalidResponse(reading, thresholds, settings, prevEngineState, 'INVALID_TEMPERATURE');
+  // 1. Validate input — invalid readings are NEVER classified safe
+  const validation = validateReading(reading, now, settings);
+  if (!validation.ok) {
+    return buildInvalidResponse(reading, safeThresholds, settings, prevCooldown, validation.reason!, now);
   }
 
-  // Check stale data
-  const isStale = reading.timestamp
-    ? Date.now() - reading.timestamp > settings.staleThresholdMs
-    : false;
-  if (isStale) {
-    return buildInvalidResponse(reading, thresholds, settings, prevEngineState, 'STALE_READING', true);
-  }
+  // 2. Analyze history (dedup / order / gaps / stability window vs `now`)
+  const historyAnalysis = analyzeHistory(recentHistory, reading, settings, now);
 
-  // 2. Analyze history
-  const historyAnalysis = analyzeHistory(recentHistory, reading, settings);
+  // 3. Evaluate risk — classification only, cooldown-blind
+  const risk = evaluateRisk(reading, historyAnalysis, safeThresholds, settings);
 
-  // 3. Evaluate risk
-  const risk = evaluateRisk(reading, historyAnalysis, thresholds, settings);
+  // 4. Select rule (recovery detection via injected cooldown memory)
+  const grainRule = selectGrainRule(risk, historyAnalysis, prevCooldown);
 
-  // 4. Select grain rule (includes recovery check)
-  const grainRule = selectGrainRule(risk, historyAnalysis, prevEngineState);
-
-  // 5. Build response
+  // 5. Build response (+ notification dedup, returned for caller persistence)
   return buildResponse(
     grainRule,
     reading,
     historyAnalysis,
     risk,
     settings,
-    prevEngineState,
-    isStale,
+    prevCooldown,
+    now,
   );
 }
 
 function buildInvalidResponse(
-  reading: Reading,
+  reading: Reading | null,
   thresholds: GrainThresholds,
   settings: EngineSettings,
-  prevEngineState: CooldownState,
-  reasonCode: string,
-  isStale = false,
+  prevCooldown: CooldownState,
+  reasonCode: InvalidReason,
+  now: number,
 ): MochiDecision {
+  const isStale = reasonCode === 'STALE_READING';
+  const ruleId = isStale ? 'STALE_READING' : 'INVALID_READING';
+
+  // Cooldown memory: invalid readings refresh the memory so a recovery
+  // message only fires once conditions genuinely return to safe.
+  const nextCooldown: CooldownState = {
+    ruleId,
+    state: STATE.INVALID,
+    timestamp: now,
+  };
+
+  const m = reading?.moisture;
+  const t = reading?.temperature;
   return {
     state: STATE.INVALID,
     severity: PRIORITY.INVALID,
-    ruleId: 'INVALID_READING',
+    ruleId,
     messageId: isStale ? 'STALE_READING' : 'INVALID_READING',
     message: isStale
       ? 'Data is stale. No recent readings received.'
@@ -624,15 +761,22 @@ function buildInvalidResponse(
     trend: TREND.INSUFFICIENT_DATA,
     expression: EXPRESSION.THINKING,
     confidence: 'low',
+    alertSuppressed: false,
+    cooldown: nextCooldown,
     variables: {
-      moisture: reading?.moisture ?? 0,
-      temperature: reading?.temperature ?? 0,
+      moisture: typeof m === 'number' && Number.isFinite(m) ? m : 0,
+      temperature: typeof t === 'number' && Number.isFinite(t) ? t : 0,
       battery: reading?.battery ?? 0,
       grainType: reading?.grainType ?? 'wheat',
     },
     debug: {
-      triggeredRules: [isStale ? 'STALE_READING' : 'INVALID_READING'],
-      selectedRule: isStale ? 'STALE_READING' : 'INVALID_READING',
+      triggeredRules: [ruleId],
+      selectedRule: ruleId,
+      riskAssessment: {
+        state: STATE.INVALID,
+        severity: PRIORITY.INVALID,
+        reasonCodes: [reasonCode],
+      },
     },
   };
 }
@@ -643,21 +787,24 @@ function buildResponse(
   historyAnalysis: HistoryAnalysis,
   risk: RiskAssessment,
   settings: EngineSettings,
-  prevEngineState: CooldownState,
-  isStale: boolean,
+  prevCooldown: CooldownState,
+  now: number,
 ): MochiDecision {
-  // Cooldown check
-  const suppressed = cooldownManager.shouldSuppress(selectedRule.ruleId);
+  // Notification dedup — separate from classification.
   const bypassCooldown =
     selectedRule.ruleId === 'RECOVERY' ||
     selectedRule.ruleId === 'CRITICAL_CONDITION' ||
     selectedRule.state === STATE.CRITICAL;
+  const suppressed =
+    !bypassCooldown && isSuppressed(prevCooldown, selectedRule.ruleId, settings.messageCooldownMs, now);
 
   const msg = resolveMessage(selectedRule.messageId);
 
-  if (!suppressed || bypassCooldown) {
-    cooldownManager.updateCooldown(selectedRule.ruleId, selectedRule.state);
-  }
+  // Cooldown memory advances whenever a (non-suppressed) alert would reach
+  // the user, so dedup windows anchor to the last DELIVERED alert.
+  const nextCooldown: CooldownState = suppressed
+    ? prevCooldown
+    : { ruleId: selectedRule.ruleId, state: selectedRule.state, timestamp: now };
 
   // Confidence
   const hasGaps = historyAnalysis.gaps.length > 0;
@@ -665,16 +812,20 @@ function buildResponse(
     | 'high'
     | 'medium'
     | 'low' =
-    historyAnalysis.recentReadingsCount >= 3 && !isStale && !hasGaps
+    historyAnalysis.recentReadingsCount >= 3 && !hasGaps
       ? 'high'
       : historyAnalysis.recentReadingsCount > 0
         ? 'medium'
         : 'low';
 
-  // Secondary observations
+  // Secondary observations — real telemetry only, null-safe
   const secondaryObservations: string[] = [];
-  if (reading.battery < 20) secondaryObservations.push('obs.low_battery');
-  if (reading.signal < 30) secondaryObservations.push('obs.weak_signal');
+  if (typeof reading.battery === 'number' && Number.isFinite(reading.battery) && reading.battery < 20) {
+    secondaryObservations.push('obs.low_battery');
+  }
+  if (typeof reading.signal === 'number' && Number.isFinite(reading.signal) && reading.signal < 30) {
+    secondaryObservations.push('obs.weak_signal');
+  }
 
   return {
     state: selectedRule.state,
@@ -690,6 +841,8 @@ function buildResponse(
     trend: historyAnalysis.trend,
     expression: selectedRule.expression,
     confidence,
+    alertSuppressed: suppressed,
+    cooldown: nextCooldown,
     variables: {
       moisture: reading.moisture,
       temperature: reading.temperature,
@@ -726,6 +879,9 @@ function buildResponse(
 
 /* ═══════════════════════════════════════════════════════════════
    STATUS BADGE (for header)
+   Device-level states (disconnected/sleeping/syncing) come from the
+   device state machine, not from the reading — the engine never
+   returns STATE.DISCONNECTED for a measured reading.
    ═══════════════════════════════════════════════════════════════ */
 
 export function getStatusBadge(
@@ -809,3 +965,9 @@ export function getTrendLabel(trend: TrendDirection): string {
       return 'trend.insufficient_data';
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   RISK THEME helper re-export (UI contract stability)
+   ═══════════════════════════════════════════════════════════════ */
+
+export { stateToRiskTheme };

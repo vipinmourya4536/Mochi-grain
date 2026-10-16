@@ -13,6 +13,7 @@ import type {
   GrainType,
   HistoryEntry,
   StatusBadge,
+  EngineCooldownState,
 } from './grain-types';
 import { DEFAULT_SETTINGS, GRAIN_PROFILES, GRAIN_OPTIONS, stateToRiskTheme } from './grain-types';
 import { evaluate, getStatusBadge } from './mochi-engine';
@@ -67,6 +68,9 @@ interface GrainStore {
   decision: MochiDecision | null;
   statusBadge: StatusBadge;
   riskTheme: RiskTheme;
+  /** Caller-owned engine cooldown/transition memory (v2.1 contract:
+   *  injected into evaluate(), updated from decision.cooldown). */
+  engineCooldown: EngineCooldownState | null;
 
   /* ── Sparkline data (timestamped) ── */
   sparklineData: SparklinePoint[];
@@ -163,6 +167,7 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
   decision: null,
   statusBadge: 'OFFLINE',
   riskTheme: 'safe',
+  engineCooldown: null,
 
   /* ── Sparkline ── */
   sparklineData: [],
@@ -201,10 +206,15 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
     // 4–6. Immediately reflect the new grain everywhere it is interpreted.
     // Do NOT wait for the next BLE packet, do NOT reset the connection,
     // do NOT clear the current reading, do NOT create a history entry.
-    const { currentReading, deviceInfo } = get();
+    const { currentReading, deviceInfo, engineCooldown } = get();
     if (currentReading) {
       const normalizedReading: Reading = { ...currentReading, grainType: grain };
-      const decision = evaluate(normalizedReading, get().historyEntries.map((e) => e.reading), profile);
+      const decision = evaluate(
+        normalizedReading,
+        get().historyEntries.map((e) => e.reading),
+        profile,
+        { cooldown: engineCooldown },
+      );
       const badge = getStatusBadge(decision, get().deviceState);
       const riskTheme = stateToRiskTheme(decision.state);
 
@@ -213,6 +223,7 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
         decision,
         statusBadge: badge,
         riskTheme,
+        engineCooldown: decision.cooldown ?? null,
         deviceInfo: deviceInfo ? { ...deviceInfo, grainType: grain } : null,
       });
     } else if (deviceInfo) {
@@ -272,6 +283,7 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
       statusBadge: 'OFFLINE',
       riskTheme: 'safe',
       sparklineData: [],
+      engineCooldown: null,
     });
     set({ activeTab: 'home' });
     get().showToast(t('toast.disconnected', lang));
@@ -340,7 +352,9 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
       getRecentReadings(reading.deviceId, 20)
     ).then((recent) => {
       const allRecent = [reading, ...recent];
-      const decision = evaluate(reading, allRecent, settings.thresholds);
+      const decision = evaluate(reading, allRecent, settings.thresholds, {
+        cooldown: get().engineCooldown,
+      });
       const badge = getStatusBadge(decision, get().deviceState);
       const riskTheme = stateToRiskTheme(decision.state);
 
@@ -378,6 +392,7 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
         sparklineData: sparkline,
         deviceInfo: updatedInfo,
         deviceState: newState,
+        engineCooldown: decision.cooldown ?? null,
       });
 
       return saveHistoryEntry({ reading, decision }).then(() =>
@@ -407,6 +422,7 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
       statusBadge: 'OFFLINE',
       riskTheme: 'safe',
       sparklineData: [],
+      engineCooldown: null,
     });
     get().showToast(t('toast.probe_disconnected', lang));
 

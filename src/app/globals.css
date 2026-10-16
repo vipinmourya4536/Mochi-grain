@@ -179,20 +179,20 @@
   --gm-band-fair: #F59E0B;
   --gm-band-risky: #EF4444;
 
-  /* Glass opacity – controlled by slider, JS computes derived values */
+  /* Glass opacity – controlled by slider, glass.ts computes derived values */
   --gm-glass-opacity: 0.75;
-  --gm-blur-header: 28px;
-  --gm-saturate-header: 1.4;
-  --gm-blur-card: 20px;
-  --gm-saturate-card: 1.28;
-  --gm-blur-nav: 28px;
-  --gm-saturate-nav: 1.6;
-  --gm-blur-insight: 17px;
-  --gm-insight-shadow-alpha: 0.09;
-  --gm-blur-toast: 21px;
-  --gm-blur-badge: 12px;
-  --gm-blur-lang: 28px;
-  --gm-saturate-lang: 1.6;
+  --gm-blur-header: 30px;
+  --gm-saturate-header: 1.49;
+  --gm-blur-card: 22px;
+  --gm-saturate-card: 1.37;
+  --gm-blur-nav: 33px;
+  --gm-saturate-nav: 1.62;
+  --gm-blur-insight: 16px;
+  --gm-insight-shadow-alpha: 0.1;
+  --gm-blur-toast: 20px;
+  --gm-blur-badge: 11px;
+  --gm-blur-lang: 30px;
+  --gm-saturate-lang: 1.71;
   --gm-card-shadow: 0 2px 8px rgba(0,0,0,0.11), inset 0 1px 0 var(--gm-glass-highlight);
   --gm-nav-shadow: 0 8px 32px rgba(0,0,0,0.26), 0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 var(--gm-glass-highlight);
 
@@ -388,7 +388,9 @@
   pointer-events: none; /* let content behind the frost stay reachable */
 }
 
-/* Pseudo layer 1 – vertical translucent background gradient (the frost body) */
+/* Pseudo layer 1 – vertical translucent background gradient (the frost body).
+   Monochrome by design: bg-neutral tokens only, never accent-tinted. The
+   faint inset top line is a glass-thickness cue under the system bar. */
 .grain-glass-header::before {
   content: '';
   position: absolute;
@@ -396,6 +398,7 @@
   left: 0;
   right: 0;
   height: calc(var(--gm-header-frost-height, 84px) + env(safe-area-inset-top, 0px));
+  box-shadow: inset 0 0.5px 0 var(--gm-glass-highlight, rgba(255, 255, 255, 0.05));
   background: linear-gradient(
     to bottom,
     rgba(var(--gm-bg-r), var(--gm-bg-g), var(--gm-bg-b), var(--gm-header-frost-strength, 0.92)) 0%,
@@ -631,13 +634,13 @@
   z-index: 2;
 }
 
-/* Diagonal sheen – subtle glass reflection */
+/* Diagonal sheen – subtle glass reflection, scaled by the glass pref */
 .grain-floating-nav-inner::after {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 40%, transparent 60%, rgba(255,255,255,0.02) 100%);
+  background: linear-gradient(135deg, var(--gm-glass-highlight-soft, rgba(255,255,255,0.12)) 0%, transparent 38%, transparent 62%, var(--gm-glass-highlight, rgba(255,255,255,0.05)) 100%);
   pointer-events: none;
 }
 
@@ -1973,3 +1976,104 @@
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.5; transform: scale(0.9); }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   NO-BACKDROP-FILTER FALLBACK – deliberate opaque surfaces
+   Browsers without backdrop-filter (old Android WebView, some
+   in-app browsers) get near-opaque theme surfaces so text and
+   sensor readings stay crisp. !important overrides the inline
+   glass tokens computed by glass.ts.
+   ═══════════════════════════════════════════════════════════════ */
+@supports not ((backdrop-filter: blur(4px)) or (-webkit-backdrop-filter: blur(4px))) {
+  .grain-app {
+    --gm-surface: var(--gm-surface-solid) !important;
+    --gm-glass-bg: var(--gm-surface-solid) !important;
+    --gm-toast-bg: var(--gm-surface-solid) !important;
+    --gm-blur-header: 0px !important;
+    --gm-blur-card: 0px !important;
+    --gm-blur-nav: 0px !important;
+    --gm-blur-insight: 0px !important;
+    --gm-blur-toast: 0px !important;
+    --gm-blur-badge: 0px !important;
+    --gm-blur-lang: 0px !important;
+    --gm-header-frost-strength: 1 !important;
+    --gm-nav-frost-top: 1 !important;
+    --gm-card-highlight: none !important;
+  }
+  .grain-glass-header::after,
+  .grain-card,
+  .grain-floating-nav-inner,
+  .grain-insight-card,
+  .grain-insight-card-v2,
+  .grain-stats-card,
+  .grain-trends-card {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* Reduced motion: glass surfaces switch state instantly (the tokens are
+   static values — only their crossfade transitions are removed). */
+@media (prefers-reduced-motion: reduce) {
+  .grain-card,
+  .grain-stats-card,
+  .grain-trends-card,
+  .grain-floating-nav-inner,
+  .grain-battery-capsule,
+  .grain-offline-chip {
+    transition: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HISTORY — summary freshness chip + analytics disclosure
+   ═══════════════════════════════════════════════════════════════ */
+.grain-freshness-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--gm-glass-bg);
+  border: 1px solid var(--gm-glass-border);
+  color: var(--gm-text-secondary);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.grain-freshness-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gm-text-tertiary);
+  flex-shrink: 0;
+}
+.grain-freshness-chip.live {
+  color: var(--gm-down);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+.grain-freshness-chip.live .grain-freshness-dot {
+  background: var(--gm-down);
+  box-shadow: 0 0 6px var(--gm-down);
+}
+
+.grain-analytics-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 18px;
+  border-radius: 1.125rem;
+  background: var(--gm-surface);
+  backdrop-filter: blur(var(--gm-blur-card, 22px)) saturate(var(--gm-saturate-card, 1.37));
+  border: 1px solid var(--gm-glass-border);
+  box-shadow: var(--gm-card-shadow, 0 2px 8px rgba(0,0,0,0.11), inset 0 1px 0 var(--gm-glass-highlight));
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s;
+}
+.grain-analytics-toggle:active { border-color: var(--gm-border-hover); }

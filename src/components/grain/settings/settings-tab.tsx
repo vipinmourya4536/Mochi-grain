@@ -16,7 +16,17 @@ import { playSafeAlert } from '@/lib/alert-sound';
 import { usePwaInstall } from '@/lib/pwa';
 import { registerBackConsumer } from '@/lib/back-nav';
 import { exportBackupJSON, importBackupJSON } from '@/lib/offline-storage';
+import {
+  sliderBounds, clampThresholdEdit,
+  MOISTURE_KEYS, TEMPERATURE_KEYS,
+  type ThresholdKey,
+} from '@/lib/thresholds';
+import { GLASS_MIN, GLASS_MAX, clampGlass } from '@/lib/glass';
+import { ENGINE_VERSION } from '@/lib/mochi-engine';
 import { format } from 'date-fns';
+
+/** Overall app version — distinct from the engine version (ENGINE_VERSION). */
+const APP_VERSION = '2.0.0';
 
 const ACCENT_COLORS: { value: AccentColor; color: string; labelKey: string }[] = [
   { value: 'orange', color: '#F97316', labelKey: 'accent.orange' },
@@ -170,53 +180,8 @@ export function SettingsTab() {
         </div>
       </div>
 
-      {/* ═══ THRESHOLDS ═══ */}
-      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
-        {t('settings.thresholds', lang)}
-      </p>
-      <p className="text-[10px] mb-2 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
-        {t('settings.thresholds_desc', lang)}
-      </p>
-      <div className="grain-card p-4 mb-6">
-        <div className="space-y-4">
-          <div>
-            <div className="flex justify-between mb-1">
-              <span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: 'var(--gm-accent)' }}>{t('settings.safe', lang)}</span>
-              <span className="text-sm font-bold" style={{ color: 'var(--gm-text-primary)' }}>&lt; {settings.thresholds.safe}%</span>
-            </div>
-            <input
-              type="range" min="8" max="25" step="0.5"
-              value={settings.thresholds.safe}
-              onChange={(e) => updateSettings({ thresholds: { ...settings.thresholds, safe: parseFloat(e.target.value) } })}
-              className="w-full grain-range h-1.5"
-            />
-          </div>
-          <div>
-            <div className="flex justify-between mb-1">
-              <span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: 'var(--gm-band-fair)' }}>{t('settings.warn', lang)}</span>
-              <span className="text-sm font-bold" style={{ color: 'var(--gm-text-primary)' }}>&gt; {settings.thresholds.warn}%</span>
-            </div>
-            <input
-              type="range" min="8" max="30" step="0.5"
-              value={settings.thresholds.warn}
-              onChange={(e) => updateSettings({ thresholds: { ...settings.thresholds, warn: parseFloat(e.target.value) } })}
-              className="w-full grain-range h-1.5"
-            />
-          </div>
-          <div>
-            <div className="flex justify-between mb-1">
-              <span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: 'var(--gm-band-risky)' }}>{t('settings.critical', lang)}</span>
-              <span className="text-sm font-bold" style={{ color: 'var(--gm-text-primary)' }}>&gt; {settings.thresholds.critical}%</span>
-            </div>
-            <input
-              type="range" min="10" max="35" step="0.5"
-              value={settings.thresholds.critical}
-              onChange={(e) => updateSettings({ thresholds: { ...settings.thresholds, critical: parseFloat(e.target.value) } })}
-              className="w-full grain-range h-1.5"
-            />
-          </div>
-        </div>
-      </div>
+      {/* ═══ Threshold sliders live in ADVANCED SETTINGS (see below) —
+             the main view stays focused on daily controls. ═══ */}
 
       {/* ═══ PREFERENCES ═══ */}
       <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
@@ -284,12 +249,12 @@ export function SettingsTab() {
       <div className="grain-card overflow-hidden mb-6">
         <div className="flex justify-between items-center px-5 py-4">
           <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.app_version', lang)}</span>
-          <span className="text-[11px]" style={{ color: 'var(--gm-text-secondary)' }}>v1.0.0</span>
+          <span className="text-[11px]" style={{ color: 'var(--gm-text-secondary)' }}>Mochi Grain {APP_VERSION}</span>
         </div>
         <div className="grain-separator" />
         <div className="flex justify-between items-center px-5 py-4">
           <span className="text-sm font-medium" style={{ color: 'var(--gm-text-primary)' }}>{t('settings.engine', lang)}</span>
-          <span className="text-[11px]" style={{ color: 'var(--gm-text-secondary)' }}>Mochi v1.0</span>
+          <span className="text-[11px]" style={{ color: 'var(--gm-text-secondary)' }}>Mochi Engine v{ENGINE_VERSION}</span>
         </div>
         <div className="grain-separator" />
         <div className="flex justify-between items-center px-5 py-4">
@@ -434,6 +399,24 @@ function AdvancedSettingsContent() {
 
   return (
     <>
+      {/* ─── Moisture Thresholds (advanced) ─── */}
+      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1 mt-4" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('settings.moisture_thresholds', lang)}
+      </p>
+      <ThresholdsCard lang={lang} keys={MOISTURE_KEYS} />
+
+      {/* ─── Temperature Thresholds (advanced, separate from moisture) ─── */}
+      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1 mt-6" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('settings.temp_thresholds', lang)}
+      </p>
+      <ThresholdsCard lang={lang} keys={TEMPERATURE_KEYS} />
+
+      {/* ─── Glass Intensity (advanced) ─── */}
+      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1 mt-6" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('settings.glass', lang)}
+      </p>
+      <GlassIntensityCard lang={lang} />
+
       {/* ─── Accent Color ─── */}
       <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1 mt-4" style={{ color: 'var(--gm-text-tertiary)' }}>
         {t('accent.title', lang)}
@@ -673,5 +656,139 @@ function AdvancedSettingsContent() {
         </button>
       </div>
     </>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   THRESHOLD EDITING (Advanced Settings)
+   Compact SAFE / WARNING / CRITICAL rows: colored label chip,
+   visible numeric value, horizontal slider. Ordering is enforced
+   by sliderBounds() — safe < warn < critical is unproducible.
+   Persisted via the standard updateSettings() flow.
+   ═══════════════════════════════════════════════════════════ */
+
+const THRESHOLD_ROW_META: Record<ThresholdKey, { labelKey: string; colorVar: string; unit: string; prefix: string }> = {
+  safe:         { labelKey: 'settings.safe',         colorVar: 'var(--gm-band-excellent)', unit: '%',  prefix: '<' },
+  warn:         { labelKey: 'settings.warn',         colorVar: 'var(--gm-band-fair)',      unit: '%',  prefix: '>' },
+  critical:     { labelKey: 'settings.critical',     colorVar: 'var(--gm-band-risky)',     unit: '%',  prefix: '>' },
+  tempSafe:     { labelKey: 'settings.safe',         colorVar: 'var(--gm-band-excellent)', unit: '°C', prefix: '<' },
+  tempWarn:     { labelKey: 'settings.warn',         colorVar: 'var(--gm-band-fair)',      unit: '°C', prefix: '>' },
+  tempCritical: { labelKey: 'settings.critical',     colorVar: 'var(--gm-band-risky)',     unit: '°C', prefix: '>' },
+};
+
+function ThresholdsCard({ lang, keys }: { lang: AppLanguage; keys: ThresholdKey[] }) {
+  const { settings, updateSettings, showToast } = useGrainStore();
+  const thresholds = settings.thresholds;
+
+  const update = (key: ThresholdKey, value: number) => {
+    const next = clampThresholdEdit(thresholds, key, value);
+    if (next === thresholds) return; // clamped to the same value — no write
+    updateSettings({ thresholds: next });
+  };
+
+  // Re-evaluating Mochi against the new thresholds happens automatically:
+  // grain-store.selectGrainType / handleReading read settings.thresholds on
+  // every evaluation, and selectGrainType re-evaluates the live reading.
+  const commitToast = (key: ThresholdKey) => {
+    showToast(tp('toast.threshold_updated', lang, {
+      v: `${thresholds[key]}${THRESHOLD_ROW_META[key].unit}`,
+    }));
+  };
+
+  return (
+    <div className="grain-card p-4 mb-2">
+      <div className="space-y-5">
+        {keys.map((key) => {
+          const meta = THRESHOLD_ROW_META[key];
+          const bounds = sliderBounds(thresholds, key);
+          const value = thresholds[key];
+          return (
+            <div key={key}>
+              <div className="flex justify-between items-baseline mb-1.5">
+                <span
+                  className="text-[10px] font-bold tracking-[0.14em] uppercase"
+                  style={{ color: meta.colorVar }}
+                >
+                  {t(meta.labelKey, lang)}
+                </span>
+                <span className="text-sm font-bold grain-tabular" style={{ color: 'var(--gm-text-primary)' }}>
+                  {meta.prefix} {value.toFixed(1)}{meta.unit}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={bounds.min}
+                max={bounds.max}
+                step={0.5}
+                value={value}
+                onChange={(e) => update(key, parseFloat(e.target.value))}
+                onPointerUp={() => commitToast(key)}
+                onKeyUp={() => commitToast(key)}
+                className="w-full grain-range h-1.5"
+                aria-label={t(meta.labelKey, lang)}
+                aria-valuetext={`${value.toFixed(1)}${meta.unit}`}
+              />
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[10px] leading-relaxed mt-4 mb-0" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('settings.thresholds_desc', lang)}
+      </p>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GLASS INTENSITY (Advanced Settings)
+   Drives computeGlassVars() live via settings.glassOpacity.
+   30% = subtle frosting · 100% = pronounced liquid glass.
+   Persists through updateSettings — survives reloads, theme
+   switches and (via IndexedDB) app restarts.
+   ═══════════════════════════════════════════════════════════ */
+
+function GlassIntensityCard({ lang }: { lang: AppLanguage }) {
+  const { settings, updateSettings } = useGrainStore();
+  const pct = Math.round(clampGlass(settings.glassOpacity) * 100);
+  const minPct = Math.round(GLASS_MIN * 100);
+  const maxPct = Math.round(GLASS_MAX * 100);
+
+  return (
+    <div className="grain-card p-4 mb-6">
+      <div className="flex justify-between items-baseline mb-1.5">
+        <label
+          htmlFor="glass-intensity-range"
+          className="text-[10px] font-bold tracking-[0.14em] uppercase"
+          style={{ color: 'var(--gm-text-secondary)' }}
+        >
+          {t('settings.glass', lang)}
+        </label>
+        <output
+          htmlFor="glass-intensity-range"
+          className="text-sm font-bold grain-tabular"
+          style={{ color: 'var(--gm-accent)' }}
+        >
+          {pct}%
+        </output>
+      </div>
+      <input
+        id="glass-intensity-range"
+        type="range"
+        min={minPct}
+        max={maxPct}
+        step={5}
+        value={pct}
+        onChange={(e) => updateSettings({ glassOpacity: parseInt(e.target.value, 10) / 100 })}
+        className="w-full grain-range h-1.5"
+        aria-label={t('settings.glass', lang)}
+        aria-valuemin={minPct}
+        aria-valuemax={maxPct}
+        aria-valuenow={pct}
+        aria-valuetext={`${pct}%`}
+      />
+      <p className="text-[10px] leading-relaxed mt-3 mb-0" style={{ color: 'var(--gm-text-tertiary)' }}>
+        {t('settings.glass_desc', lang)}
+      </p>
+    </div>
   );
 }

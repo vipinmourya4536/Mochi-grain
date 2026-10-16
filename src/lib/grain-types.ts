@@ -135,7 +135,16 @@ export interface DeviceInfo {
   signal: number | null;
 }
 
-/* ─── Mochi Decision Engine Output ─── */
+/* ─── Mochi Decision Engine Output ───
+   Cooldown memory is caller-owned: evaluate() receives the previous state
+   via options.cooldown and returns the next state via decision.cooldown so
+   the web client, a background service, or tests can persist it. */
+export interface EngineCooldownState {
+  ruleId: string;
+  state: string;
+  timestamp: number; // epoch ms of the last delivered alert
+}
+
 export interface MochiDecision {
   state: EngineState;
   severity: number; // 0–100
@@ -150,6 +159,11 @@ export interface MochiDecision {
   trend: TrendDirection;
   expression: MochiExpression;
   confidence: 'high' | 'medium' | 'low';
+  /** Notification dedup: true when an alert for this rule is inside the
+   *  cooldown window. Risk classification is NEVER affected by this. */
+  alertSuppressed?: boolean;
+  /** Cooldown/transition memory to persist after this evaluation. */
+  cooldown?: EngineCooldownState;
   variables: Record<string, number | string>;
   /* Engine debug */
   debug?: {
