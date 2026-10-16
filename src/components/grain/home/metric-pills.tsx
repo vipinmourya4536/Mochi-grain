@@ -33,7 +33,7 @@ export function MetricPills() {
         </div>
         <div className="flex items-baseline gap-1">
           <span className="text-2xl font-bold" style={{ color: 'var(--gm-text-primary)' }}>
-            {deviceInfo.signal}
+            {deviceInfo.signal ?? '—'}
           </span>
           <span className="text-xs font-medium" style={{ color: 'var(--gm-text-secondary)' }}>%</span>
         </div>

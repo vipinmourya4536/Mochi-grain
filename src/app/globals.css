@@ -492,49 +492,6 @@
   color: #EF4444;
 }
 
-/* ─── Demo state chip [ ● DEMO ] ─── */
-.grain-demo-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 9px;
-  border-radius: 999px;
-  background: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.22);
-  color: #22C55E;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  line-height: 1;
-  flex-shrink: 0;
-}
-.grain-demo-chip-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #22C55E;
-  animation: grain-dot-pulse 2s ease-in-out infinite;
-}
-/* Live interval tag inside the demo chip — visually secondary to the
-   state label, monospaced digits so the countdown cadence reads stable */
-.grain-demo-chip-int {
-  margin-left: 1px;
-  padding-left: 7px;
-  border-left: 1px solid rgba(34, 197, 94, 0.28);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em;
-  text-transform: none;
-  opacity: 0.8;
-}
-@keyframes grain-dot-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.35; transform: scale(0.75); }
-}
-
 /* ─── Offline state chip [ ⌿ OFFLINE ] ─── */
 .grain-offline-chip {
   display: inline-flex;
@@ -768,17 +725,8 @@
   fill: rgba(62, 28, 0, 0.75);
   stroke: rgba(255, 255, 255, 0.55);
 }
-.grain-spark-count {
-  fill: #4ADE80;
-  stroke: rgba(0, 0, 0, 0.30);
-  paint-order: stroke;
-}
-.grain-app[data-theme="light"] .grain-spark-count {
-  fill: #15803D;
-  stroke: rgba(255, 255, 255, 0.6);
-}
 
-/* Hero HTML sub-text (unit %, grain label) + demo countdown under the chart.
+/* Hero HTML sub-text (unit %, grain label) under the chart.
    The hero gradient fades toward near-white at its bottom in light mode, so
    white translucent text vanishes there — mirror the SVG halo treatment with
    theme-aware colors + a soft light halo (text-shadow). */
@@ -1816,7 +1764,6 @@
   .grain-grain-card:active {
     transform: none !important;
   }
-  .grain-demo-chip-dot,
   .grain-sparkline-pulse,
   .grain-pulse,
   .grain-status-dot-live {

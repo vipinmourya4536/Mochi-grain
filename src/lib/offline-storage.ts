@@ -7,14 +7,19 @@ import type { Reading, AppSettings, HistoryEntry, MochiDecision } from './grain-
 import { DEFAULT_SETTINGS } from './grain-types';
 
 const DB_NAME = 'grain-monitor-db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
+
+/** Legacy synthetic-probe id used by the removed demo mode.
+ *  Kept ONLY so the v3 upgrade can purge any rows a pre-3 database may
+ *  still contain. Never written by current code. */
+const LEGACY_DEMO_DEVICE_ID = 'DEMO-GRAIN-01';
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
 
 function getDB() {
   if (!dbPromise) {
     dbPromise = openDB(DB_NAME, DB_VERSION, {
-      upgrade(db, oldVersion) {
+      upgrade: async (db, oldVersion, _newVersion, transaction) => {
         // Readings store
         if (!db.objectStoreNames.contains('readings')) {
           const readings = db.createObjectStore('readings', { keyPath: 'id' });
@@ -34,6 +39,22 @@ function getDB() {
         // v2: Saved Discover videos (keyPath = video id string)
         if (oldVersion < 2 && !db.objectStoreNames.contains('bookmarks')) {
           db.createObjectStore('bookmarks', { keyPath: 'id' });
+        }
+        // v3: one-time purge of legacy synthetic demo rows. Only rows whose
+        // deviceId matches the retired demo probe id are deleted — every
+        // real reading, history entry, bookmark, and setting is preserved.
+        if (oldVersion > 0 && oldVersion < 3) {
+          const scope = IDBKeyRange.only(LEGACY_DEMO_DEVICE_ID);
+          const purge = async (storeName: 'readings' | 'history') => {
+            const index = transaction.objectStore(storeName).index('deviceId');
+            let cursor = await index.openCursor(scope);
+            while (cursor) {
+              cursor.delete();
+              cursor = await cursor.continue();
+            }
+          };
+          // Both purges share the version-change transaction and commit with it
+          await Promise.all([purge('readings'), purge('history')]);
         }
       },
     });
@@ -87,8 +108,6 @@ export async function getHistoryEntries(deviceId?: string, limit = 100): Promise
   } else {
     entries = await db.getAll('history');
   }
-  // Stale demo leftovers (crash mid-demo) never appear as real history
-  entries = entries.filter((e) => e.reading.deviceId !== 'DEMO-GRAIN-01');
   entries.sort((a, b) => b.reading.timestamp - a.reading.timestamp);
   return entries.slice(0, limit);
 }
@@ -102,31 +121,6 @@ export async function clearAllHistory(): Promise<void> {
   const db = await getDB();
   await db.clear('readings');
   await db.clear('history');
-}
-
-/* ── Demo data lifecycle ──
-   Demo readings live in the same stores (deviceId 'DEMO-GRAIN-01') so the
-   demo exercises the exact same persistence path as the real probe.
-   They are removed whenever the demo stops, and never surface as real
-   history after a crash (filtered above / excluded from exports). */
-export const DEMO_DEVICE_ID = 'DEMO-GRAIN-01';
-
-/** Remove every reading/history entry recorded by the demo probe */
-export async function deleteDemoData(): Promise<void> {
-  const db = await getDB();
-  const demoReadings: Reading[] = await db.getAllFromIndex('readings', 'deviceId', DEMO_DEVICE_ID);
-  if (demoReadings.length > 0) {
-    const rx = db.transaction('readings', 'readwrite');
-    await Promise.all(demoReadings.map((r) => rx.store.delete(r.id)));
-    await rx.done;
-  }
-
-  const demoHistory: HistoryEntry[] = await db.getAllFromIndex('history', 'deviceId', DEMO_DEVICE_ID);
-  if (demoHistory.length > 0) {
-    const hx = db.transaction('history', 'readwrite');
-    await Promise.all(demoHistory.map((e) => hx.store.delete(e.reading.id)));
-    await hx.done;
-  }
 }
 
 /* ── Discover video bookmarks ── */
@@ -195,17 +189,14 @@ export interface BackupFile {
   history: HistoryEntry[];
 }
 
-/** Serialize the complete local database (settings + all stores) as a JSON string.
- *  Demo-probe entries are synthetic and excluded from backups. */
+/** Serialize the complete local database (settings + all stores) as a JSON string. */
 export async function exportBackupJSON(): Promise<string> {
   const db = await getDB();
-  const [settings, allReadings, allHistory] = await Promise.all([
+  const [settings, readings, history] = await Promise.all([
     getSettings(),
     db.getAll('readings'),
     db.getAll('history'),
   ]);
-  const readings = allReadings.filter((r) => r.deviceId !== DEMO_DEVICE_ID);
-  const history = allHistory.filter((e) => e.reading.deviceId !== DEMO_DEVICE_ID);
   const backup: BackupFile = {
     app: 'grain-monitor',
     version: 1,

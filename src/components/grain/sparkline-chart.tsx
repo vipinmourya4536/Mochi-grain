@@ -8,10 +8,6 @@ interface SparklineChartProps {
   data: SparklinePoint[];
   height?: number;
   width?: number;
-  /** If provided, shows a countdown indicator for the next reading */
-  nextReadingCountdown?: number | null;
-  /** Interval label e.g. "10 min" */
-  intervalLabel?: string;
   /** Master haptics toggle from settings (drives the scrub tick) */
   hapticsEnabled?: boolean;
   /** Microcopy shown top-center until the first scrub (translated by parent) */
@@ -33,7 +29,6 @@ interface ChartPt {
  * - Time axis labels (first, middle, last)
  * - Min/Max value annotations
  * - Highlighted latest point with pulse
- * - Optional countdown indicator for demo mode
  * - SCRUB INSPECTION: pointer/touch drag or ←/→ keys inspect any historical
  *   point, with a glass tooltip (value + time), guide line and haptic tick.
  */
@@ -45,8 +40,6 @@ export function SparklineChart({
   data,
   height = 120,
   width = 340,
-  nextReadingCountdown,
-  intervalLabel,
   hapticsEnabled = true,
   scrubHint,
 }: SparklineChartProps) {
@@ -523,7 +516,7 @@ export function SparklineChart({
         ))}
 
         {/* First-run scrub hint (fades out after first interaction) */}
-        {scrubHint && !hasScrubbed && data.length >= 4 && nextReadingCountdown == null && (
+        {scrubHint && !hasScrubbed && data.length >= 4 && (
           <text
             x={width / 2}
             y={12}
@@ -536,49 +529,6 @@ export function SparklineChart({
             style={{ textTransform: 'uppercase' }}
           >
             {scrubHint}
-          </text>
-        )}
-
-        {/* Countdown indicator for demo mode */}
-        {nextReadingCountdown != null && (
-          <>
-            {/* Pulsing dot at right edge */}
-            <circle
-              cx={width - 16}
-              cy={12}
-              r={3}
-              fill="#22C55E"
-              opacity={0.8}
-            >
-              <animate attributeName="opacity" values="0.4;1;0.4" dur="2s" repeatCount="indefinite" />
-            </circle>
-            <text
-              x={width - 24}
-              y={15}
-              textAnchor="end"
-              className="grain-spark-count"
-              fontSize="8"
-              fontWeight="700"
-              fontFamily="system-ui, sans-serif"
-              letterSpacing="0.05em"
-            >
-              {formatCountdown(nextReadingCountdown)}
-            </text>
-          </>
-        )}
-
-        {/* Interval label (bottom-right) */}
-        {intervalLabel && (
-          <text
-            x={width - 4}
-            y={height - 4}
-            textAnchor="end"
-            className="grain-spark-text"
-            fontSize="7"
-            fontWeight="600"
-            fontFamily="system-ui, sans-serif"
-          >
-            Δ {intervalLabel}
           </text>
         )}
       </svg>
@@ -606,20 +556,6 @@ export function SparklineChart({
 function formatTime(ts: number): string {
   const d = new Date(ts);
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
-/** Format countdown seconds to human-readable */
-function formatCountdown(sec: number): string {
-  if (sec <= 0) return '...';
-  if (sec < 60) return `${sec}s`;
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  if (m >= 60) {
-    const h = Math.floor(m / 60);
-    const rm = m % 60;
-    return `${h}:${String(rm).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  }
-  return `${m}:${String(s).padStart(2, '0')}`;
 }
 
 /* ═══════════════════════════════════════════════════════════════

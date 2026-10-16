@@ -2,10 +2,10 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useGrainStore, DEMO_INTERVAL_PRESETS, type DemoIntervalPreset } from '@/lib/grain-store';
+import { useGrainStore } from '@/lib/grain-store';
 import {
   Cpu, DownloadSimple, ArrowClockwise, Trash, Power, Wrench,
-  Sun, Moon, CaretDown, SlidersHorizontal, Palette, Play, StopCircle, Check,
+  Sun, Moon, CaretDown, SlidersHorizontal, Palette, Check,
   DeviceMobile, Archive, UploadSimple, ArrowsClockwise, Warning, FileCsv,
 } from '@phosphor-icons/react/dist/ssr';
 import { type GrainType, type AccentColor, GRAIN_OPTIONS } from '@/lib/grain-types';
@@ -14,16 +14,9 @@ import { haptic, HAPTIC_SELECT } from '@/lib/haptics';
 import { buildReadingsCsv, deliverCsv } from '@/lib/csv-export';
 import { playSafeAlert } from '@/lib/alert-sound';
 import { usePwaInstall } from '@/lib/pwa';
+import { registerBackConsumer } from '@/lib/back-nav';
 import { exportBackupJSON, importBackupJSON } from '@/lib/offline-storage';
 import { format } from 'date-fns';
-
-const INTERVAL_OPTIONS: { sec: DemoIntervalPreset; key: string }[] = [
-  { sec: 60, key: 'demo.1m' },
-  { sec: 300, key: 'demo.5m' },
-  { sec: 600, key: 'demo.10m' },
-  { sec: 1800, key: 'demo.30m' },
-  { sec: 3600, key: 'demo.1h' },
-];
 
 const ACCENT_COLORS: { value: AccentColor; color: string; labelKey: string }[] = [
   { value: 'orange', color: '#F97316', labelKey: 'accent.orange' },
@@ -37,14 +30,13 @@ export function SettingsTab() {
   const {
     deviceInfo, settings, updateSettings, selectGrainType,
     disconnectProbe, sendProbeCommand, hasDevice, showToast,
-    demoMode,
   } = useGrainStore();
   const { canInstall, isStandalone, promptInstall } = usePwaInstall();
 
   const lang = settings.language as AppLanguage;
   const isDark = settings.theme === 'dark';
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const hasConnection = hasDevice && !demoMode;
+  const hasConnection = hasDevice;
 
   return (
     <div className="pt-2 pb-6 grain-fade-in">
@@ -344,14 +336,12 @@ function AdvancedSettingsContent() {
     disconnectProbe, sendProbeCommand,
     syncProbeHistory, clearHistory,
     hasDevice, showToast,
-    demoMode, enableDemoMode, disableDemoMode,
-    demoIntervalSec, setDemoIntervalSec,
     historyEntries,
     loadHistory, loadSettings,
   } = useGrainStore();
 
   const lang = settings.language as AppLanguage;
-  const hasConnection = hasDevice && !demoMode;
+  const hasConnection = hasDevice;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const importModeRef = useRef<'merge' | 'replace'>('merge');
   const [confirmReplace, setConfirmReplace] = useState(false);
@@ -404,6 +394,20 @@ function AdvancedSettingsContent() {
     };
   }, [confirmReplace]);
 
+  /* Android Back closes this confirmation first — it must NOT also trigger
+   * the parent Settings tab's back handler (handled=true stops the policy). */
+  useEffect(() => {
+    if (!confirmReplace) return;
+    return registerBackConsumer({
+      id: 'settings-replace-modal',
+      priority: 30,
+      onClose: () => {
+        setConfirmReplace(false);
+        return true;
+      },
+    });
+  }, [confirmReplace]);
+
   const openImportPicker = (mode: 'merge' | 'replace') => {
     importModeRef.current = mode;
     fileInputRef.current?.click();
@@ -430,74 +434,6 @@ function AdvancedSettingsContent() {
 
   return (
     <>
-      {/* ─── Demo Mode ─── */}
-      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1 mt-4" style={{ color: 'var(--gm-text-tertiary)' }}>
-        {t('demo.title', lang)}
-      </p>
-      <div className="grain-card p-5 mb-6">
-        <div className="flex items-start gap-4">
-          <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: demoMode ? 'rgba(34, 197, 94, 0.12)' : 'var(--gm-toggle-bg)', border: `1px solid ${demoMode ? 'rgba(34, 197, 94, 0.25)' : 'var(--gm-toggle-border)'}` }}
-          >
-            {demoMode
-              ? <StopCircle size={22} weight="fill" style={{ color: '#22C55E' }} />
-              : <Play size={22} weight="fill" style={{ color: 'var(--gm-text-secondary)' }} />}
-          </div>
-          <div className="flex-1">
-            <h3 className="font-bold text-sm tracking-tight mb-1" style={{ color: 'var(--gm-text-primary)' }}>
-              {t('demo.title', lang)}
-            </h3>
-            <p className="text-[11px] leading-relaxed mb-3" style={{ color: 'var(--gm-text-secondary)' }}>
-              {t('demo.desc', lang)}
-            </p>
-            <button
-              onClick={() => {
-                if (demoMode) {
-                  disableDemoMode();
-                } else {
-                  enableDemoMode();
-                }
-              }}
-              className="font-bold text-xs py-3 px-5 rounded-xl active:scale-95 transition-all tracking-wide"
-              style={{
-                background: demoMode ? 'rgba(239, 68, 68, 0.12)' : 'var(--gm-btn-primary-bg)',
-                color: demoMode ? '#EF4444' : 'var(--gm-btn-primary-text)',
-                border: demoMode ? '1px solid rgba(239, 68, 68, 0.25)' : 'none',
-              }}
-            >
-              {demoMode ? t('demo.stop', lang) : t('demo.start', lang)}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* ─── Data Interval ─── */}
-      <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-2 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
-        {t('demo.interval_title', lang)}
-      </p>
-      <p className="text-[10px] mb-3 px-1" style={{ color: 'var(--gm-text-tertiary)' }}>
-        {t('demo.sim_speed', lang)}
-      </p>
-      <div className="grain-card p-2 flex flex-wrap gap-2 mb-6">
-        {INTERVAL_OPTIONS.map((opt) => {
-          const isActive = demoIntervalSec === opt.sec;
-          return (
-            <button
-              key={opt.sec}
-              onClick={() => setDemoIntervalSec(opt.sec)}
-              className="px-3.5 py-2 rounded-xl text-[11px] font-bold tracking-wide transition-all"
-              style={{
-                background: isActive ? 'var(--gm-accent)' : 'transparent',
-                color: isActive ? '#fff' : 'var(--gm-text-secondary)',
-              }}
-            >
-              {t(opt.key, lang)}
-            </button>
-          );
-        })}
-      </div>
-
       {/* ─── Accent Color ─── */}
       <p className="text-[10px] font-bold tracking-[0.2em] uppercase mb-3 px-1 mt-4" style={{ color: 'var(--gm-text-tertiary)' }}>
         {t('accent.title', lang)}

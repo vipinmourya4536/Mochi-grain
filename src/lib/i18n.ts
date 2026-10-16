@@ -67,6 +67,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     // ── Hero Card ──
     'hero.moisture': 'Moisture',
     'hero.moisture_content': 'moisture content',
+    'hero.live': 'LIVE',
+    'hero.last_reading': 'Last reading',
 
     // ── Metric Pills ──
     'metric.temp': 'Temp',
@@ -265,8 +267,6 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.history_synced': 'History synchronised',
     'toast.syncing_history': 'Syncing probe history...',
     'toast.sync_failed': 'Sync command failed',
-    'toast.demo_on': 'Demo mode ON – simulating live data',
-    'toast.demo_off': 'Demo mode OFF',
     'toast.copied': 'Copied to clipboard',
     'toast.saved': 'Saved to your list',
     'toast.unsaved': 'Removed from saved',
@@ -274,23 +274,6 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.exported': 'Exported {n} readings',
     'toast.nothing_to_export': 'No readings to export yet',
 
-    // ── Demo Mode ──
-    'demo.title': 'Demo Mode',
-    'demo.desc': 'Simulate a connected probe with live-updating data. No hardware required.',
-    'demo.start': 'Start Demo',
-    'demo.stop': 'Stop Demo',
-    'demo.active': 'Demo Active',
-    'demo.badge': 'DEMO',
-    'demo.interval_title': 'Data Interval',
-    'demo.interval_desc': 'Time gap between readings in demo history',
-    'demo.1m': '1 min',
-    'demo.5m': '5 min',
-    'demo.10m': '10 min',
-    'demo.30m': '30 min',
-    'demo.1h': '1 hour',
-    'demo.sim_speed': 'Data updates at real-time intervals',
-    'demo.next_reading': 'Next reading in',
-    'demo.live': 'LIVE',
     'chart.scrub_hint': 'Swipe to inspect history',
 
     // ── Bluetooth Gate ──
@@ -439,6 +422,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     // ── Hero Card ──
     'hero.moisture': 'नमी',
     'hero.moisture_content': 'नमी सामग्री',
+    'hero.live': 'लाइव',
+    'hero.last_reading': 'अंतिम रीडिंग',
 
     // ── Metric Pills ──
     'metric.temp': 'तापमान',
@@ -637,8 +622,6 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.history_synced': 'इतिहास सिंक हुआ',
     'toast.syncing_history': 'प्रोब से इतिहास सिंक हो रहा है...',
     'toast.sync_failed': 'सिंक कमांड विफल',
-    'toast.demo_on': 'डेमो मोड चालू – लाइव डेटा सिमुलेट हो रहा है',
-    'toast.demo_off': 'डेमो मोड बंद',
     'toast.copied': 'क्लिपबोर्ड पर कॉपी हुआ',
     'toast.saved': 'आपकी सूची में सेव हुआ',
     'toast.unsaved': 'सेव से हटा दिया गया',
@@ -646,23 +629,6 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.exported': '{n} रीडिंग निर्यात हुईं',
     'toast.nothing_to_export': '\u0928\u093f\u0930\u094d\u092f\u093e\u0924 \u0915\u0947 \u0932\u093f\u090f \u0905\u092d\u0940 \u0915\u094b\u0908 \u0930\u0940\u0921\u093f\u0902\u0917 \u0928\u0939\u0940\u0902',
 
-    // ── Demo Mode ──
-    'demo.title': 'डेमो मोड',
-    'demo.desc': 'हार्डवेयर के बिना कनेक्टेड प्रोब का अनुकरण करें। लाइव डेटा अपडेट होगा।',
-    'demo.start': 'डेमो शुरू करें',
-    'demo.stop': 'डेमो बंद करें',
-    'demo.active': 'डेमो चल रहा है',
-    'demo.badge': 'डेमो',
-    'demo.interval_title': 'डेटा अंतराल',
-    'demo.interval_desc': 'डेमो इतिहास में रीडिंग के बीच समय अंतराल',
-    'demo.1m': '1 मिनट',
-    'demo.5m': '5 मिनट',
-    'demo.10m': '10 मिनट',
-    'demo.30m': '30 मिनट',
-    'demo.1h': '1 घंटा',
-    'demo.sim_speed': 'डेटा रियल-टाइम अंतराल पर अपडेट होता है',
-    'demo.next_reading': 'अगली रीडिंग',
-    'demo.live': 'लाइव',
     'chart.scrub_hint': 'इतिहास देखने के लिए स्वाइप करें',
 
     // ── Bluetooth Gate ──
@@ -811,6 +777,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     // ── Hero Card ──
     'hero.moisture': 'ओलावा',
     'hero.moisture_content': 'ओलावा सामग्री',
+    'hero.live': 'लाइव्ह',
+    'hero.last_reading': 'शेवटचे वाचन',
 
     // ── Metric Pills ──
     'metric.temp': 'तापमान',
@@ -1009,8 +977,6 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.history_synced': 'इतिहास सिंक झाला',
     'toast.syncing_history': 'प्रोबवरून इतिहास सिंक होत आहे...',
     'toast.sync_failed': 'सिंक कमांड अयशस्वी',
-    'toast.demo_on': 'डेमो मोड चालू – लाइव डेटा सिम्युलेट होत आहे',
-    'toast.demo_off': 'डेमो मोड बंद',
     'toast.copied': 'क्लिपबोर्डवर कॉपी झाले',
     'toast.saved': 'तुमच्या यादीत सेव्ह झाले',
     'toast.unsaved': 'सेव्हमधून काढले',
@@ -1018,23 +984,6 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.exported': '{n} वाचने निर्यात झाली',
     'toast.nothing_to_export': '\u0928\u093f\u0930\u094d\u092f\u093e\u0924 \u0915\u0930\u0923\u094d\u092f\u093e\u0938\u093e\u0920\u0940 \u0905\u091c\u0942\u0923 \u0935\u093e\u091a\u0928\u0947 \u0928\u093e\u0939\u0940\u0924',
 
-    // ── Demo Mode ──
-    'demo.title': 'डेमो मोड',
-    'demo.desc': 'हार्डवेअरशिवाय कनेक्टेड प्रोबचे अनुकरण करा. लाइव डेटा अपडेट होईल.',
-    'demo.start': 'डेमो सुरू करा',
-    'demo.stop': 'डेमो बंद करा',
-    'demo.active': 'डेमो चालू आहे',
-    'demo.badge': 'डेमो',
-    'demo.interval_title': 'डेटा अंतराल',
-    'demo.interval_desc': 'डेमो इतिहासातील रीडिंगमधील वेळेचा अंतराल',
-    'demo.1m': '1 मिनिट',
-    'demo.5m': '5 मिनिट',
-    'demo.10m': '10 मिनिट',
-    'demo.30m': '30 मिनिट',
-    'demo.1h': '1 तास',
-    'demo.sim_speed': 'डेटा रिअल-टाइम अंतरालावर अपडेट होतो',
-    'demo.next_reading': 'पुढील रीडिंग',
-    'demo.live': 'लाइव',
     'chart.scrub_hint': 'इतिहास पाहण्यासाठी स्वाइप करा',
 
     // ── Bluetooth Gate ──
@@ -1183,6 +1132,8 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     // ── Hero Card ──
     'hero.moisture': 'Moisture',
     'hero.moisture_content': 'moisture content',
+    'hero.live': 'LIVE',
+    'hero.last_reading': 'Last reading',
 
     // ── Metric Pills ──
     'metric.temp': 'Temp',
@@ -1381,8 +1332,6 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.history_synced': 'History sync hua',
     'toast.syncing_history': 'Probe se history sync ho rahi hai...',
     'toast.sync_failed': 'Sync command fail hua',
-    'toast.demo_on': 'Demo mode ON – live data simulate ho raha hai',
-    'toast.demo_off': 'Demo mode OFF',
     'toast.copied': 'Clipboard pe copy ho gaya',
     'toast.saved': 'List me save ho gaya',
     'toast.unsaved': 'Saved se hata diya',
@@ -1390,23 +1339,6 @@ const translations: Record<AppLanguage, Record<string, string>> = {
     'toast.exported': '{n} readings export ho gayi',
     'toast.nothing_to_export': 'Export ke liye abhi koi readings nahi hain',
 
-    // ── Demo Mode ──
-    'demo.title': 'Demo Mode',
-    'demo.desc': 'Bina hardware ke connected probe simulate karein. Live data update hoga.',
-    'demo.start': 'Demo Shuru Karein',
-    'demo.stop': 'Demo Band Karein',
-    'demo.active': 'Demo Chal Raha Hai',
-    'demo.badge': 'DEMO',
-    'demo.interval_title': 'Data Interval',
-    'demo.interval_desc': 'Demo history mein readings ke beech ka time gap',
-    'demo.1m': '1 min',
-    'demo.5m': '5 min',
-    'demo.10m': '10 min',
-    'demo.30m': '30 min',
-    'demo.1h': '1 hour',
-    'demo.sim_speed': 'Data real-time interval pe update hota hai',
-    'demo.next_reading': 'Aglee reading',
-    'demo.live': 'LIVE',
     'chart.scrub_hint': 'History dekhne ke liye swipe karo',
 
     // ── Bluetooth Gate ──

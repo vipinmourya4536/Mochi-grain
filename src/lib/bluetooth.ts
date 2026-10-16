@@ -59,8 +59,11 @@ export async function requestDevice(): Promise<DeviceInfo | null> {
       firmware: 'v1.2.4',
       platform: 'ESP32',
       grainType: 'wheat' as GrainType,
-      battery: 100,
-      signal: 85,
+      // No fabricated telemetry: battery/signal stay null until a real
+      // notification packet arrives. UI hides null values instead of
+      // showing placeholders.
+      battery: null,
+      signal: null,
     };
   } catch {
     return null;

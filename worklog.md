@@ -518,3 +518,34 @@ Work Log:
 Stage Summary:
 - The complete refined app (11 review rounds of fixes + features) is now the remote main branch of github.com/vipinmourya4536/Mochi-grain.
 - Remote repo now builds cleanly (no dead imports, no broken API routes).
+
+---
+Task ID: 13 (production-hardening round: P1 back-nav + P2 demo removal)
+Agent: Main Agent (Z.ai Code)
+Task: Technical assessment; implement Android Back navigation policy (P1); remove all demo mode + synthetic data (P2). Verified against origin/main @ fea7321.
+
+Work Log:
+- ASSESSMENT delivered in-chat: navigation (no History API before this round), demo inventory (6 files, all paths), sensor parsing (LE u16/i16/u8 layout, no range validation — P5), thresholds (sound engine flow, sliders must move to Advanced — P4), alerts (cooldown + haptics + sound), online deps (app is offline-capable in-session; NO service worker → cold offline start broken — P6), persistence (idb v2, solid; needs v3 demo purge), glass styling (glassOpacity dead — computeGlassVars hardcodes o=0.75 — P3), history overlays inventory (lang panel 40 / replace-modal 30 / score sheet 30 / detail 20 / tab 10).
+- mochi-engine verdict: v2.0 implementation ALREADY satisfies v2 (dedup, gaps, stability window, trends, escalation, recovery, cooldown, confidence, INVALID/STALE paths). NOT bumped.
+- P1 — NEW src/lib/back-nav.ts (driver-based policy):
+  - One synthetic history entry armed iff activeTab≠home; popstate → topmost consumer → fallback (history detail → secondary tab → Home) → re-arm only while interceptable. Stack length invariant (consume 1, push ≤1). Home Back exits normally. handleBackNative() for future Capacitor.
+  - Consumers registered by components: language-selector (40), settings replace-modal (30), history score sheet (30); each closes ONLY itself, returns handled flag.
+  - page.tsx: initBackNav on mount + syncBackNav on [activeTab].
+  - tests/back-nav.test.ts (bun:test, 8 tests, in-memory driver): secondary-tab return, nested overlay order, repeated presses, rapid tab switching (no stack growth), BLE/settings preservation spies, Capacitor native path, false-return fallthrough. ALL 8 PASS.
+- P2 — demo removal:
+  - grain-store.ts: deleted DEMO_INTERVAL_PRESETS/DemoIntervalPreset, demo state (_demoTimer/_demoTick), seededRandom/generateDemoReading/generateDemoHistory/historyCountForInterval, enableDemoMode/disableDemoMode/setDemoIntervalSec, demo branches in loadSelectedEntry + handleUnexpectedDisconnect, deleteDemoData import; unused GrainThresholds import removed.
+  - offline-storage.ts: DB_VERSION 2→3, async upgrade purges legacy 'DEMO-GRAIN-01' rows (readings + history by deviceId index cursor) inside the version-change transaction; real rows/bookmarks/settings untouched. deleteDemoData + DEMO_DEVICE_ID exports removed; read-time demo filter + backup filters removed (migration owns legacy).
+  - header.tsx: demo chip + interval maps removed; isLive → isConnected (real connection only).
+  - settings-tab.tsx: demo card, interval picker, INTERVAL_OPTIONS, Play/StopCircle icons, demoMode refs removed (hasConnection = hasDevice).
+  - hero-card.tsx rewritten: countdown/demo badge gone; honest telemetry badges — LIVE (connected + packet < 2min) vs LAST READING (stale, shows original timestamp, amber); 30s re-render tick.
+  - sparkline-chart.tsx: dead nextReadingCountdown/intervalLabel props, countdown render block, formatCountdown, .grain-spark-count CSS removed.
+  - i18n.ts: 19 demo keys × 4 languages removed (76 lines); hero.live + hero.last_reading added ×4 (count-verified 4 each).
+  - globals.css: .grain-demo-chip* + grain-dot-pulse keyframes removed; reduced-motion list updated.
+  - bluetooth.ts: requestDevice no longer fabricates battery:100/signal:85 → null until a real packet (DeviceInfo.battery/signal now number|null); header hides null battery, metric-pills shows '—', special-states hide battery block when null.
+- VERIFICATION (browser, agent-browser @390px): Back from History→Home ✓; Back closes language panel, stays on Settings, re-arms ✓; history.length constant (3) through 6 rapid tab switches, grainBack=false on Home ✓; rendered DOM contains ZERO demo strings across all 4 tabs ✓; History shows honest "No History Yet / Readings will appear here once you connect your probe" ✓; Home shows "No Device / CONNECT PROBE" ✓; zero console errors; dev.log clean (GET / 200).
+- VALIDATION: bun run lint clean; tsc --noEmit 0 errors in src+tests; bun test 8/8 pass; dev server 200.
+- NOT DONE (honest limits): no `bun run build` (sandbox dev-loop owns .next; production build must be run outside); NO real Android device testing in this sandbox — Back verified via Chromium popstate simulation only (documented, not claimed as device-tested). Thresholds→Advanced move = P4 (next round), glassOpacity wiring = P3, sensor range validation = P5, service worker = P6, static export + Capacitor = P7.
+
+Stage Summary:
+- Back gesture now behaves like a native app: overlay-first closure with explicit priorities, secondary tabs return Home, Home exits normally, history stack never grows, and the same policy object is reusable by a Capacitor listener.
+- The app ships ZERO synthetic measurement paths: no demo mode, no fake device info, no seeded data, no placeholder telemetry; legacy demo rows are purged by the idb v3 migration without touching real user history; UI states honestly distinguish live / last-reading / disconnected / unavailable.

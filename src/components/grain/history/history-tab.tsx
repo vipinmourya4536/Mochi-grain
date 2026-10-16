@@ -10,6 +10,7 @@ import { getRiskColor, getRiskBg } from '@/lib/accent-hex';
 import { computeStorageScore, scoreBandColor, type ScoreBand } from '@/lib/storage-score';
 import { haptic } from '@/lib/haptics';
 import { buildReadingsCsv, deliverCsv } from '@/lib/csv-export';
+import { registerBackConsumer } from '@/lib/back-nav';
 import { HistoryTrends } from './trends-chart';
 import { DetailSparkline } from './detail-sparkline';
 import { format } from 'date-fns';
@@ -245,6 +246,20 @@ function ScoreExplainerSheet({
     };
     document.addEventListener('keydown', onKey, true);
     return () => document.removeEventListener('keydown', onKey, true);
+  }, [open, requestClose]);
+
+  /* Android Back closes this sheet first — it must NOT also trigger the
+   * History tab's back handler (handled=true stops the policy). */
+  useEffect(() => {
+    if (!open) return;
+    return registerBackConsumer({
+      id: 'history-score-sheet',
+      priority: 30,
+      onClose: () => {
+        requestClose();
+        return true;
+      },
+    });
   }, [open, requestClose]);
 
   if (!open || !score) return null;

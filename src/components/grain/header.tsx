@@ -6,33 +6,22 @@ import { LanguageSelector } from '@/components/grain/language-selector';
 import { useOnlineStatus } from '@/lib/pwa';
 import { BatteryHigh, BatteryLow, WifiSlash } from '@phosphor-icons/react/dist/ssr';
 
-/** Compact interval tags for the demo chip (language-neutral) */
-const DEMO_INTERVAL_COMPACT: Record<number, string> = {
-  60: '1m', 300: '5m', 600: '10m', 1800: '30m', 3600: '1h',
-};
-/** Localized interval labels for the chip's accessible name */
-const DEMO_INTERVAL_KEYS: Record<number, string> = {
-  60: 'demo.1m', 300: 'demo.5m', 600: 'demo.10m', 1800: 'demo.30m', 3600: 'demo.1h',
-};
-
 /**
  * Premium instrument header.
  * LEFT:  status indicator + GRAIN MONITOR title
- * RIGHT: battery telemetry capsule → demo state chip → language utility action
+ * RIGHT: battery telemetry capsule → offline chip → language utility action
  * Each control has a deliberately different visual weight:
  *   - battery  = device telemetry (elongated glass capsule)
- *   - demo     = state label (lightweight chip with pulsing dot)
  *   - language = utility action (compact rounded rectangle)
  */
 export function Header() {
-  const { deviceState, deviceInfo, statusBadge, settings, activeTab, demoMode, demoIntervalSec } = useGrainStore();
+  const { deviceState, deviceInfo, settings, activeTab } = useGrainStore();
   const lang = settings.language as AppLanguage;
   const online = useOnlineStatus();
 
   const isConnected = deviceState !== 'disconnected' && deviceState !== 'connecting';
-  const isLive = isConnected || demoMode;
 
-  const dotStyle = !isLive
+  const dotStyle = !isConnected
     ? { background: 'var(--gm-dot-offline, #71717a)', boxShadow: '0 0 8px var(--gm-dot-offline, #71717a)' }
     : {};
 
@@ -45,7 +34,7 @@ export function Header() {
       <div className="grain-header-inner">
         {/* Left: status dot + title */}
         <div className="grain-header-brand">
-          <span className={`grain-status-dot w-2 h-2 rounded-full ${isLive ? 'grain-status-dot-live' : ''}`} style={dotStyle} />
+          <span className={`grain-status-dot w-2 h-2 rounded-full ${isConnected ? 'grain-status-dot-live' : ''}`} style={dotStyle} />
           <h1 className="grain-header-title">
             {t('app.title', lang)}
           </h1>
@@ -63,17 +52,6 @@ export function Header() {
                 ? <BatteryLow size={12} weight="fill" />
                 : <BatteryHigh size={12} weight="fill" />}
               <span>{battery}%</span>
-            </div>
-          )}
-          {demoMode && (
-            <div
-              className="grain-demo-chip"
-              role="status"
-              aria-label={`${t('demo.active', lang)} · ${t(DEMO_INTERVAL_KEYS[demoIntervalSec] ?? 'demo.10m', lang)}`}
-            >
-              <span className="grain-demo-chip-dot" />
-              <span>{t('demo.badge', lang)}</span>
-              <span className="grain-demo-chip-int" aria-hidden="true">{DEMO_INTERVAL_COMPACT[demoIntervalSec] ?? '10m'}</span>
             </div>
           )}
           {!online && (

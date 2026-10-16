@@ -1,0 +1,716 @@
+     1→'use client';
+     2→
+     3→import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+     4→import { createPortal } from 'react-dom';
+     5→import { useGrainStore } from '@/lib/grain-store';
+     6→import type { HistoryEntry } from '@/lib/grain-types';
+     7→import { X, TrendUp, TrendDown, Minus, ArrowClockwise, Trash, Gauge, ShareFat, Check, Question, Stack, Waves, ChartLine, DownloadSimple, Drop, Thermometer } from '@phosphor-icons/react/dist/ssr';
+     8→import { t, tGrain, tTrend, tp, type AppLanguage } from '@/lib/i18n';
+     9→import { getRiskColor, getRiskBg } from '@/lib/accent-hex';
+    10→import { computeStorageScore, scoreBandColor, type ScoreBand } from '@/lib/storage-score';
+    11→import { haptic } from '@/lib/haptics';
+    12→import { buildReadingsCsv, deliverCsv } from '@/lib/csv-export';
+    13→import { HistoryTrends } from './trends-chart';
+    14→import { DetailSparkline } from './detail-sparkline';
+    15→import { format } from 'date-fns';
+    16→
+    17→function getTrendIcon(trend: string) {
+    18→  switch (trend) {
+    19→    case 'rising': case 'spike': case 'rising_rapidly': return <TrendUp size={14} weight="bold" />;
+    20→    case 'falling': case 'drop': case 'falling_rapidly': return <TrendDown size={14} weight="bold" />;
+    21→    default: return <Minus size={14} weight="bold" />;
+    22→  }
+    23→}
+    24→
+    25→/** Compact human time span: "45m", "2h 30m", "3d 4h" */
+    26→function formatSpan(ms: number): string {
+    27→  const minutes = Math.round(ms / 60000);
+    28→  if (minutes < 1) return '—';
+    29→  if (minutes < 90) return `${minutes}m`;
+    30→  const hours = Math.floor(minutes / 60);
+    31→  if (hours < 48) return `${hours}h ${minutes % 60}m`;
+    32→  const days = Math.floor(hours / 24);
+    33→  return `${days}d ${hours % 24}h`;
+    34→}
+    35→
+    36→/* ═══ Delta vs previous reading ═══
+    37→   Storage semantics: rising moisture is the risk direction
+    38→   (amber), falling is recovering (green), ±<0.05 is flat. */
+    39→
+    40→interface Delta {
+    41→  dir: 'up' | 'down' | 'flat';
+    42→  value: number;
+    43→  color: string;
+    44→}
+    45→
+    46→function deltaColor(dir: Delta['dir']): string {
+    47→  if (dir === 'up') return 'var(--gm-up)';
+    48→  if (dir === 'down') return 'var(--gm-down)';
+    49→  return 'var(--gm-text-tertiary)';
+    50→}
+    51→
+    52→function computeDelta(entry: HistoryEntry, prev: HistoryEntry | undefined): Delta | null {
+    53→  if (!prev) return null;
+    54→  const d = entry.reading.moisture - prev.reading.moisture;
+    55→  if (Math.abs(d) < 0.05) return { dir: 'flat', value: d, color: deltaColor('flat') };
+    56→  return { dir: d > 0 ? 'up' : 'down', value: d, color: deltaColor(d > 0 ? 'up' : 'down') };
+    57→}
+    58→
+    59→function DeltaChip({ delta, ariaLabel }: { delta: Delta; ariaLabel: string }) {
+    60→  return (
+    61→    <span className="grain-delta-chip" style={{ color: delta.color }} role="status" aria-label={ariaLabel}>
+    62→      {delta.dir === 'up'
+    63→        ? <TrendUp size={10} weight="bold" />
+    64→        : delta.dir === 'down'
+    65→          ? <TrendDown size={10} weight="bold" />
+    66→          : <Minus size={10} weight="bold" />}
+    67→      {(delta.value > 0 ? '+' : '') + delta.value.toFixed(1)}%
+    68→    </span>
+    69→  );
+    70→}
+    71→
+    72→interface Stats {
+    73→  avg: number;
+    74→  min: number;
+    75→  max: number;
+    76→  avgTemp: number;
+    77→  count: number;
+    78→  spanMs: number;
+    79→}
+    80→
+    81→function computeStats(entries: HistoryEntry[]): Stats | null {
+    82→  if (entries.length === 0) return null;
+    83→  let sum = 0;
+    84→  let min = Number.POSITIVE_INFINITY;
+    85→  let max = Number.NEGATIVE_INFINITY;
+    86→  let tempSum = 0;
+    87→  let newest = 0;
+    88→  let oldest = Number.POSITIVE_INFINITY;
+    89→
+    90→  for (const e of entries) {
+    91→    const m = e.reading.moisture;
+    92→    sum += m;
+    93→    if (m < min) min = m;
+    94→    if (m > max) max = m;
+    95→    tempSum += e.reading.temperature;
+    96→    const ts = e.reading.timestamp;
+    97→    if (ts > newest) newest = ts;
+    98→    if (ts < oldest) oldest = ts;
+    99→  }
+   100→
+   101→  return {
+   102→    avg: sum / entries.length,
+   103→    min,
+   104→    max,
+   105→    avgTemp: tempSum / entries.length,
+   106→    count: entries.length,
+   107→    spanMs: newest - oldest,
+   108→  };
+   109→}
+   110→
+   111→/**
+   112→ * Aggregate summary for all stored readings, with a threshold-zone bar
+   113→ * showing where the session's moisture sits against the active grain profile.
+   114→ */
+   115→function HistoryStats({ entries }: { entries: HistoryEntry[] }) {
+   116→  const { settings } = useGrainStore();
+   117→  const lang = settings.language as AppLanguage;
+   118→  const { safe, warn, critical } = settings.thresholds;
+   119→
+   120→  const stats = useMemo(() => computeStats(entries), [entries]);
+   121→  if (!stats) return null;
+   122→
+   123→  // Zone bar domain: 0 → critical + 4 (stable visual scale)
+   124→  const barMax = critical + 4;
+   125→  const pct = (v: number) => `${Math.min(100, Math.max(0, (v / barMax) * 100))}%`;
+   126→  const safeW = pct(safe);
+   127→  const warnW = pct(critical - safe);
+   128→  const critW = pct(barMax - critical);
+   129→  const avgPos = pct(stats.avg);
+   130→  const minPos = pct(stats.min);
+   131→  const maxPos = pct(stats.max);
+   132→
+   133→  return (
+   134→    <div className="grain-stats-card mb-4" role="group" aria-label={t('history.stats_title', lang)}>
+   135→      {/* Header row: gauge icon + title */}
+   136→      <div className="flex items-center gap-2 mb-3">
+   137→        <Gauge size={13} weight="bold" style={{ color: 'var(--gm-accent)' }} />
+   138→        <span className="text-[9px] font-bold tracking-[0.18em] uppercase" style={{ color: 'var(--gm-text-tertiary)' }}>
+   139→          {t('history.stats_title', lang)}
+   140→        </span>
+   141→        <span className="ml-auto text-[9px] font-semibold tracking-wide" style={{ color: 'var(--gm-text-tertiary)' }}>
+   142→          {formatSpan(stats.spanMs)}
+   143→        </span>
+   144→      </div>
+   145→
+   146→      {/* Big average + mini stats grid */}
+   147→      <div className="flex items-stretch gap-4">
+   148→        <div className="shrink-0">
+   149→          <div className="text-[9px] font-bold tracking-[0.15em] uppercase mb-1" style={{ color: 'var(--gm-text-secondary)' }}>
+   150→            {t('history.stat_avg', lang)}
+   151→          </div>
+   152→          <div className="flex items-baseline gap-1 grain-tabular">
+   153→            <span className="text-4xl font-bold tracking-tight" style={{ color: 'var(--gm-text-primary)' }}>
+   154→              {stats.avg.toFixed(1)}
+   155→            </span>
+   156→            <span className="text-sm font-semibold" style={{ color: 'var(--gm-text-tertiary)' }}>%</span>
+   157→          </div>
+   158→        </div>
+   159→        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 flex-1 justify-items-end content-center grain-tabular">
+   160→          <StatCell label={t('history.stat_min', lang)} value={`${stats.min.toFixed(1)}%`} />
+   161→          <StatCell label={t('history.stat_max', lang)} value={`${stats.max.toFixed(1)}%`} />
+   162→          <StatCell label={t('history.stat_temp', lang)} value={`${stats.avgTemp.toFixed(1)}°C`} />
+   163→          <StatCell label={t('history.readings', lang)} value={String(stats.count)} />
+   164→        </div>
+   165→      </div>
+   166→
+   167→      {/* Threshold zone bar with min/avg/max markers */}
+   168→      <div className="mt-4">
+   169→        <div className="flex justify-between mb-1.5">
+   170→          <span className="text-[8px] font-bold tracking-[0.15em] uppercase" style={{ color: 'var(--gm-text-tertiary)' }}>
+   171→            {t('history.stat_range', lang)}
+   172→          </span>
+   173→          <span className="text-[8px] font-semibold grain-tabular" style={{ color: 'var(--gm-text-tertiary)' }}>
+   174→            &lt;{safe}% · &lt;{critical}%
+   175→          </span>
+   176→        </div>
+   177→        <div className="grain-stats-bar" aria-hidden="true">
+   178→          <div className="grain-stats-zone" style={{ left: 0, width: safeW, background: 'rgba(34, 197, 94, 0.5)' }} />
+   179→          <div className="grain-stats-zone" style={{ left: safeW, width: warnW, background: 'rgba(245, 158, 11, 0.45)' }} />
+   180→          <div className="grain-stats-zone" style={{ left: pct(critical), right: 0, width: critW, background: 'rgba(239, 68, 68, 0.5)' }} />
+   181→          <span className="grain-stats-marker" style={{ left: minPos }} />
+   182→          <span className="grain-stats-marker" style={{ left: maxPos }} />
+   183→          <span className="grain-stats-avg" style={{ left: avgPos }} />
+   184→        </div>
+   185→      </div>
+   186→    </div>
+   187→  );
+   188→}
+   189→
+   190→function StatCell({ label, value }: { label: string; value: string }) {
+   191→  return (
+   192→    <div className="text-right">
+   193→      <div className="text-[8px] font-bold tracking-[0.12em] uppercase" style={{ color: 'var(--gm-text-tertiary)' }}>{label}</div>
+   194→      <div className="text-[13px] font-bold leading-tight" style={{ color: 'var(--gm-text-secondary)' }}>{value}</div>
+   195→    </div>
+   196→  );
+   197→}
+   198→
+   199→/* ═══ Storage Score – 0–100 composite over the stored history ═══ */
+   200→
+   201→const SCORE_BAND_KEY: Record<ScoreBand, string> = {
+   202→  excellent: 'history.score_excellent',
+   203→  good: 'history.score_good',
+   204→  fair: 'history.score_fair',
+   205→  risky: 'history.score_risky',
+   206→};
+   207→
+   208→const SCORE_BAND_RANGE: Record<ScoreBand, string> = {
+   209→  excellent: '85–100',
+   210→  good: '70–84',
+   211→  fair: '50–69',
+   212→  risky: '0–49',
+   213→};
+   214→
+   215→/* ═══ Score explainer bottom sheet ═══
+   216→   Bottom-anchored glass sheet via portal into .grain-app
+   217→   (position:fixed works there — no transformed ancestors, and --gm-* tokens resolve). */
+   218→function ScoreExplainerSheet({
+   219→  open,
+   220→  onClose,
+   221→  score,
+   222→  opener,
+   223→}: {
+   224→  open: boolean;
+   225→  onClose: () => void;
+   226→  score: { band: ScoreBand; parts: { zones: number; stability: number; trend: number } } | null;
+   227→  opener: React.RefObject<HTMLButtonElement | null>;
+   228→}) {
+   229→  const { settings } = useGrainStore();
+   230→  const lang = settings.language as AppLanguage;
+   231→
+   232→  const requestClose = useCallback(() => {
+   233→    onClose();
+   234→    // restore focus to the trigger
+   235→    requestAnimationFrame(() => opener.current?.focus());
+   236→  }, [onClose, opener]);
+   237→
+   238→  useEffect(() => {
+   239→    if (!open) return;
+   240→    const onKey = (e: KeyboardEvent) => {
+   241→      if (e.key === 'Escape') {
+   242→        e.stopPropagation();
+   243→        requestClose();
+   244→      }
+   245→    };
+   246→    document.addEventListener('keydown', onKey, true);
+   247→    return () => document.removeEventListener('keydown', onKey, true);
+   248→  }, [open, requestClose]);
+   249→
+   250→  if (!open || !score) return null;
+   251→
+   252→  const parts = [
+   253→    {
+   254→      icon: <Stack size={16} weight="bold" style={{ color: 'var(--gm-accent)' }} />,
+   255→      label: t('history.score_zones', lang),
+   256→      weight: '55%',
+   257→      desc: t('history.sheet_zones_desc', lang),
+   258→      value: score.parts.zones,
+   259→    },
+   260→    {
+   261→      icon: <Waves size={16} weight="bold" style={{ color: 'var(--gm-accent)' }} />,
+   262→      label: t('history.score_stability', lang),
+   263→      weight: '25%',
+   264→      desc: t('history.sheet_stability_desc', lang),
+   265→      value: score.parts.stability,
+   266→    },
+   267→    {
+   268→      icon: <ChartLine size={16} weight="bold" style={{ color: 'var(--gm-accent)' }} />,
+   269→      label: t('history.score_trend', lang),
+   270→      weight: '20%',
+   271→      desc: t('history.sheet_trend_desc', lang),
+   272→      value: score.parts.trend,
+   273→    },
+   274→  ];
+   275→
+   276→  const bands: ScoreBand[] = ['excellent', 'good', 'fair', 'risky'];
+   277→
+   278→  return createPortal(
+   279→    <div
+   280→      className="grain-sheet-overlay"
+   281→      onClick={(e) => {
+   282→        if (e.target === e.currentTarget) requestClose();
+   283→      }}
+   284→    >
+   285→      <div className="grain-sheet-card" role="dialog" aria-modal="true" aria-label={t('history.sheet_title', lang)}>
+   286→        <div className="grain-sheet-grabber" aria-hidden="true" />
+   287→        <div className="flex items-center gap-2 mb-1">
+   288→          <h3 className="text-sm font-bold tracking-tight" style={{ color: 'var(--gm-text-primary)' }}>
+   289→            {t('history.sheet_title', lang)}
+   290→          </h3>
+   291→          <button
+   292→            type="button"
+   293→            className="ml-auto grain-sheet-close"
+   294→            onClick={requestClose}
+   295→            aria-label={t('settings.cancel', lang)}
+   296→          >
+   297→            <X size={13} weight="bold" />
+   298→          </button>
+   299→        </div>
+   300→
+   301→        {/* Component rows */}
+   302→        <div className="flex flex-col gap-3 mt-3">
+   303→          {parts.map((p) => (
+   304→            <div key={p.label} className="flex items-start gap-3">
+   305→              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--gm-accent-dim)' }}>
+   306→                {p.icon}
+   307→              </div>
+   308→              <div className="flex-1 min-w-0">
+   309→                <div className="flex items-center gap-2 mb-0.5">
+   310→                  <span className="text-[11px] font-bold" style={{ color: 'var(--gm-text-primary)' }}>{p.label}</span>
+   311→                  <span className="grain-sheet-weight grain-tabular">{p.weight}</span>
+   312→                  <span className="ml-auto text-[10px] font-bold grain-tabular" style={{ color: 'var(--gm-accent)' }}>{p.value}</span>
+   313→                </div>
+   314→                <p className="text-[10.5px] leading-relaxed" style={{ color: 'var(--gm-text-secondary)' }}>
+   315→                  {p.desc}
+   316→                </p>
+   317→              </div>
+   318→            </div>
+   319→          ))}
+   320→        </div>
+   321→
+   322→        {/* Band legend */}
+   323→        <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--gm-separator)' }}>
+   324→          <p className="text-[9px] font-bold tracking-[0.18em] uppercase mb-2" style={{ color: 'var(--gm-text-tertiary)' }}>
+   325→            {t('history.sheet_bands', lang)}
+   326→          </p>
+   327→          <div className="grid grid-cols-4 gap-2">
+   328→            {bands.map((b) => (
+   329→              <div key={b} className="flex flex-col items-center gap-1">
+   330→                <span className="w-2 h-2 rounded-full" style={{ background: scoreBandColor(b) }} />
+   331→                <span className="text-[8.5px] font-bold text-center leading-tight" style={{ color: 'var(--gm-text-secondary)' }}>
+   332→                  {t(SCORE_BAND_KEY[b], lang)}
+   333→                </span>
+   334→                <span className="text-[8px] grain-tabular" style={{ color: 'var(--gm-text-tertiary)' }}>
+   335→                  {SCORE_BAND_RANGE[b]}
+   336→                </span>
+   337→              </div>
+   338→            ))}
+   339→          </div>
+   340→        </div>
+   341→      </div>
+   342→    </div>,
+   343→    document.querySelector('.grain-app') ?? document.body,
+   344→  );
+   345→}
+   346→
+   347→function StorageScoreCard({ entries }: { entries: HistoryEntry[] }) {
+   348→  const { settings } = useGrainStore();
+   349→  const lang = settings.language as AppLanguage;
+   350→  const [sheetOpen, setSheetOpen] = useState(false);
+   351→  const triggerRef = useRef<HTMLButtonElement>(null);
+   352→
+   353→  const score = useMemo(
+   354→    () => computeStorageScore(entries, settings.thresholds),
+   355→    [entries, settings.thresholds],
+   356→  );
+   357→  if (!score) return null;
+   358→
+   359→  const bandColor = scoreBandColor(score.band);
+   360→
+   361→  // 270° arc gauge geometry
+   362→  const R = 30;
+   363→  const CIRC = 2 * Math.PI * R;
+   364→  const SWEEP = 0.75; // 270°
+   365→  const arcLen = CIRC * SWEEP;
+   366→
+   367→  const subs: { key: string; label: string; v: number }[] = [
+   368→    { key: 'zones', label: t('history.score_zones', lang), v: score.parts.zones },
+   369→    { key: 'stability', label: t('history.score_stability', lang), v: score.parts.stability },
+   370→    { key: 'trend', label: t('history.score_trend', lang), v: score.parts.trend },
+   371→  ];
+   372→
+   373→  return (
+   374→    <div className="grain-stats-card mb-4" role="group" aria-label={t('history.score_title', lang)}>
+   375→      <div className="flex items-center gap-2 mb-3">
+   376→        <span className="text-[9px] font-bold tracking-[0.18em] uppercase" style={{ color: 'var(--gm-text-tertiary)' }}>
+   377→          {t('history.score_title', lang)}
+   378→        </span>
+   379→        <span
+   380→          className="ml-auto text-[9px] font-bold tracking-[0.14em] uppercase grain-delta-chip"
+   381→          style={{ color: bandColor, borderColor: 'transparent', background: 'transparent', padding: 0, animation: 'none' }}
+   382→        >
+   383→          {t(SCORE_BAND_KEY[score.band], lang)}
+   384→        </span>
+   385→        <button
+   386→          ref={triggerRef}
+   387→          type="button"
+   388→          className="grain-sheet-trigger"
+   389→          aria-haspopup="dialog"
+   390→          aria-expanded={sheetOpen}
+   391→          aria-label={t('history.sheet_title', lang)}
+   392→          onClick={() => setSheetOpen(true)}
+   393→        >
+   394→          <Question size={12} weight="bold" />
+   395→        </button>
+   396→      </div>
+   397→
+   398→      <div className="flex items-center gap-4">
+   399→        {/* Arc gauge */}
+   400→        <svg width="76" height="76" viewBox="0 0 76 76" className="shrink-0" role="img"
+   401→          aria-label={`${t('history.score_title', lang)} ${score.score}/100`}>
+   402→          <circle
+   403→            cx="38" cy="38" r={R} fill="none"
+   404→            stroke="var(--gm-toggle-bg)" strokeWidth="7" strokeLinecap="round"
+   405→            strokeDasharray={`${arcLen} ${CIRC}`} transform="rotate(135 38 38)"
+   406→          />
+   407→          <circle
+   408→            className="grain-score-arc"
+   409→            cx="38" cy="38" r={R} fill="none"
+   410→            stroke={bandColor} strokeWidth="7" strokeLinecap="round"
+   411→            strokeDasharray={`${arcLen * (score.score / 100)} ${CIRC}`} transform="rotate(135 38 38)"
+   412→          />
+   413→          <text x="38" y="41" textAnchor="middle" fill="var(--gm-text-primary)"
+   414→            fontSize="19" fontWeight="800" fontFamily="system-ui, sans-serif">
+   415→            {score.score}
+   416→          </text>
+   417→          <text x="38" y="52" textAnchor="middle" fill="var(--gm-text-tertiary)"
+   418→            fontSize="7.5" fontWeight="700" fontFamily="system-ui, sans-serif">
+   419→            /100
+   420→          </text>
+   421→        </svg>
+   422→
+   423→        {/* Component breakdown */}
+   424→        <div className="flex-1 flex flex-col gap-2.5 min-w-0">
+   425→          {subs.map((s) => (
+   426→            <div key={s.key} className="flex items-center gap-2.5">
+   427→              <span className="text-[8px] font-bold tracking-[0.1em] uppercase w-[62px] shrink-0 truncate" style={{ color: 'var(--gm-text-tertiary)' }}>
+   428→                {s.label}
+   429→              </span>
+   430→              <div className="grain-score-bar-track flex-1">
+   431→                <div className="grain-score-bar-fill" style={{ width: `${s.v}%`, background: bandColor, opacity: 0.85 }} />
+   432→              </div>
+   433→              <span className="text-[10px] font-bold grain-tabular w-[22px] text-right shrink-0" style={{ color: 'var(--gm-text-secondary)' }}>
+   434→                {s.v}
+   435→              </span>
+   436→            </div>
+   437→          ))}
+   438→        </div>
+   439→      </div>
+   440→
+   441→      <ScoreExplainerSheet
+   442→        open={sheetOpen}
+   443→        onClose={() => setSheetOpen(false)}
+   444→        score={score}
+   445→        opener={triggerRef}
+   446→      />
+   447→    </div>
+   448→  );
+   449→}
+   450→
+   451→function ReadingList() {
+   452→  const { historyEntries, setSelectedHistoryId, settings } = useGrainStore();
+   453→  const lang = settings.language as AppLanguage;
+   454→  const accent = settings.accentColor;
+   455→
+   456→  if (historyEntries.length === 0) {
+   457→    return (
+   458→      <div className="flex flex-col items-center justify-center py-16 text-center grain-fade-in">
+   459→        <div className="w-16 h-16 rounded-3xl flex items-center justify-center mb-5 grain-card" style={{ transform: 'rotate(-4deg)' }}>
+   460→          <ArrowClockwise size={28} weight="bold" style={{ color: 'var(--gm-accent)' }} />
+   461→        </div>
+   462→        <p className="text-sm font-bold mb-1.5" style={{ color: 'var(--gm-text-primary)' }}>{t('history.no_history', lang)}</p>
+   463→        <p className="text-xs max-w-[220px] leading-relaxed" style={{ color: 'var(--gm-text-tertiary)' }}>{t('history.no_history_desc', lang)}</p>
+   464→      </div>
+   465→    );
+   466→  }
+   467→
+   468→  return (
+   469→    <div className="flex flex-col gap-2 grain-fade-in">
+   470→      <HistoryStats entries={historyEntries} />
+   471→      {historyEntries.length >= 3 && <StorageScoreCard entries={historyEntries} />}
+   472→      {historyEntries.length >= 2 && <HistoryTrends entries={historyEntries} />}
+   473→      {historyEntries.map((entry, i) => {
+   474→        const dotHex = getRiskColor(entry.decision.state, accent);
+   475→        // Entries are newest-first → the previous chronological reading sits one slot down
+   476→        const delta = computeDelta(entry, historyEntries[i + 1]);
+   477→        return (
+   478→          <div key={entry.reading.id} className="grain-reading-item grain-card p-4 flex items-center gap-4 transition-transform duration-150 active:scale-[0.98]" onClick={() => setSelectedHistoryId(entry.reading.id)}>
+   479→            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-sm font-bold grain-tabular" style={{ background: getRiskBg(entry.decision.state, accent, 0.13), color: dotHex }}>
+   480→              {new Date(entry.reading.timestamp).getDate()}
+   481→            </div>
+   482→            <div className="flex-1 min-w-0">
+   483→              <div className="flex items-center gap-2 mb-0.5">
+   484→                <span className="text-xs font-semibold" style={{ color: 'var(--gm-text-primary)' }}>{format(entry.reading.timestamp, 'MMM d, yyyy')}</span>
+   485→                <span className="w-1 h-1 rounded-full" style={{ background: 'var(--gm-separator)' }} />
+   486→                <span className="text-[10px] grain-tabular" style={{ color: 'var(--gm-text-secondary)' }}>{format(entry.reading.timestamp, 'h:mm a')}</span>
+   487→              </div>
+   488→              <div className="text-sm font-bold grain-tabular" style={{ color: 'var(--gm-text-primary)' }}>{entry.reading.moisture.toFixed(1)}%{' '}<span className="font-normal text-xs" style={{ color: 'var(--gm-text-secondary)' }}>/ {Math.round(entry.reading.temperature)}°C / {tGrain(entry.reading.grainType, lang)}</span></div>
+   489→            </div>
+   490→            <div className="flex items-center gap-2 shrink-0">
+   491→              {delta && <DeltaChip delta={delta} ariaLabel={`${t('history.delta_prev', lang)} ${(delta.value > 0 ? '+' : '') + delta.value.toFixed(1)}%`} />}
+   492→              <div style={{ color: dotHex }}>{getTrendIcon(entry.decision.trend)}</div>
+   493→              <div className="w-2 h-2 rounded-full" style={{ background: dotHex }} />
+   494→            </div>
+   495→          </div>
+   496→        );
+   497→      })}
+   498→    </div>
+   499→  );
+   500→}
+   501→
+   502→function ReadingDetail({ entry, onClose }: { entry: HistoryEntry; onClose: () => void }) {
+   503→  const { reading, decision } = entry;
+   504→  const { settings, historyEntries, showToast, updateSettings } = useGrainStore();
+   505→  const lang = settings.language as AppLanguage;
+   506→  const accent = settings.accentColor;
+   507→  const dotHex = getRiskColor(decision.state, accent);
+   508→  const [shared, setShared] = useState(false);
+   509→  // Context-sparkline metric — persisted (settings.detailMetric) like the
+   510→  // trends chart metric, so the detail view reopens on the last series used
+   511→  const sparkMetric = settings.detailMetric;
+   512→  const setSparkMetric = (m: typeof sparkMetric) => updateSettings({ detailMetric: m });
+   513→
+   514→  // Use i18n keys if available, fallback to stored English
+   515→  const messageText = decision.messageKey ? t(decision.messageKey, lang) : decision.message;
+   516→  const actionText = decision.actionKey ? t(decision.actionKey, lang) : decision.action;
+   517→  const trendLabel = tTrend(decision.trend, lang);
+   518→
+   519→  // Delta vs the previous chronological reading (list is newest-first)
+   520→  const idx = historyEntries.findIndex((e) => e.reading.id === reading.id);
+   521→  const prev = idx >= 0 ? historyEntries[idx + 1] : undefined;
+   522→  const delta = computeDelta(entry, prev);
+   523→
+   524→  const stateLabel =
+   525→    decision.state === 'safe' ? t('history.safe', lang)
+   526→    : decision.state === 'warning' ? t('history.warning', lang)
+   527→    : decision.state === 'critical' ? t('history.critical', lang)
+   528→    : decision.state === 'monitor' ? t('status.monitor', lang)
+   529→    : decision.state === 'recovery' ? t('status.recovery', lang)
+   530→    : decision.state === 'insufficient_data' ? t('status.learning', lang)
+   531→    : decision.state === 'invalid' ? t('status.invalid', lang)
+   532→    : decision.state;
+   533→
+   534→  /* Share via the Web Share API when available (PWA-friendly),
+   535→     falling back to clipboard copy. User-cancel is silent. */
+   536→  const shareReading = async () => {
+   537→    haptic(settings.hapticsEnabled, 8);
+   538→    const text =
+   539→      `Grain Monitor — ${tGrain(reading.grainType, lang)}\n` +
+   540→      `${t('history.moisture', lang)}: ${reading.moisture.toFixed(1)}% · ${t('history.temperature', lang)}: ${Math.round(reading.temperature)}°C\n` +
+   541→      `${format(reading.timestamp, 'MMM d, yyyy · h:mm a')}\n` +
+   542→      `${stateLabel} · ${messageText}`;
+   543→    // Cast mirrors bluetooth.ts: web-bluetooth Navigator typing breaks
+   544→    // `in`-narrowing for share(), so we model the optional members directly.
+   545→    const navExt = (typeof navigator !== 'undefined' ? navigator : undefined) as
+   546→      | (Navigator & { share?: (data?: ShareData) => Promise<void> })
+   547→      | undefined;
+   548→    try {
+   549→      if (navExt?.share) {
+   550→        await navExt.share({ title: 'Grain Monitor', text });
+   551→        return;
+   552→      }
+   553→      if (navExt?.clipboard?.writeText) {
+   554→        await navExt.clipboard.writeText(text);
+   555→        showToast(t('toast.copied', lang));
+   556→        setShared(true);
+   557→        setTimeout(() => setShared(false), 1600);
+   558→        return;
+   559→      }
+   560→      showToast(t('toast.share_fail', lang));
+   561→    } catch (err) {
+   562→      // AbortError = the user dismissed the share sheet — not a failure
+   563→      if (err instanceof DOMException && err.name === 'AbortError') return;
+   564→      showToast(t('toast.share_fail', lang));
+   565→    }
+   566→  };
+   567→
+   568→  return (
+   569→    <div className="grain-fade-in">
+   570→      <div className="flex items-center justify-between mb-5">
+   571→        <div>
+   572→          <h3 className="text-lg font-bold tracking-tight" style={{ color: 'var(--gm-text-primary)' }}>{t('history.detail', lang)}</h3>
+   573→          <p className="text-xs grain-tabular" style={{ color: 'var(--gm-text-secondary)' }}>{format(reading.timestamp, 'EEEE, MMMM d, yyyy · h:mm a')}</p>
+   574→        </div>
+   575→        <div className="flex items-center gap-2">
+   576→          <button onClick={shareReading} className="grain-share-btn" aria-label={t('history.share', lang)}>
+   577→            {shared
+   578→              ? <Check size={15} weight="bold" />
+   579→              : <ShareFat size={15} weight="bold" />}
+   580→          </button>
+   581→          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center grain-card" style={{ color: 'var(--gm-text-secondary)' }} aria-label={t('history.detail', lang)}><X size={16} weight="bold" /></button>
+   582→        </div>
+   583→      </div>
+   584→      <div className="grid grid-cols-2 gap-3 mb-4">
+   585→        <div className="grain-card p-4">
+   586→          <div className="text-[9px] font-bold tracking-[0.15em] uppercase mb-2" style={{ color: 'var(--gm-text-secondary)' }}>{t('history.moisture', lang)}</div>
+   587→          <div className="flex items-baseline gap-1.5 grain-tabular">
+   588→            <span className="text-3xl font-bold" style={{ color: dotHex }}>{reading.moisture.toFixed(1)}</span><span className="text-xs" style={{ color: 'var(--gm-text-secondary)' }}>%</span>
+   589→            {delta && <DeltaChip delta={delta} ariaLabel={`${t('history.delta_prev', lang)} ${(delta.value > 0 ? '+' : '') + delta.value.toFixed(1)}%`} />}
+   590→          </div>
+   591→        </div>
+   592→        <div className="grain-card p-4">
+   593→          <div className="text-[9px] font-bold tracking-[0.15em] uppercase mb-2" style={{ color: 'var(--gm-text-secondary)' }}>{t('history.temperature', lang)}</div>
+   594→          <div className="flex items-baseline gap-1 grain-tabular"><span className="text-3xl font-bold" style={{ color: 'var(--gm-text-primary)' }}>{Math.round(reading.temperature)}</span><span className="text-xs" style={{ color: 'var(--gm-text-secondary)' }}>°C</span></div>
+   595→        </div>
+   596→      </div>
+   597→      <div className="grid grid-cols-3 gap-3 mb-4">
+   598→        <div className="grain-card p-3"><div className="text-[9px] font-bold tracking-[0.15em] uppercase mb-1" style={{ color: 'var(--gm-text-secondary)' }}>{t('history.battery', lang)}</div><span className="text-sm font-bold grain-tabular" style={{ color: 'var(--gm-text-primary)' }}>{reading.battery}%</span></div>
+   599→        <div className="grain-card p-3"><div className="text-[9px] font-bold tracking-[0.15em] uppercase mb-1" style={{ color: 'var(--gm-text-secondary)' }}>{t('history.signal', lang)}</div><span className="text-sm font-bold grain-tabular" style={{ color: 'var(--gm-text-primary)' }}>{reading.signal}%</span></div>
+   600→        <div className="grain-card p-3"><div className="text-[9px] font-bold tracking-[0.15em] uppercase mb-1" style={{ color: 'var(--gm-text-secondary)' }}>{t('history.grain', lang)}</div><span className="text-sm font-bold" style={{ color: 'var(--gm-text-primary)' }}>{tGrain(reading.grainType, lang)}</span></div>
+   601→      </div>
+   602→
+   603→      {/* Local trajectory: the ~16 readings surrounding this one */}
+   604→      <div className="grain-card p-4 mb-4">
+   605→        <div className="flex items-center justify-between mb-2">
+   606→          <span className="text-[9px] font-bold tracking-[0.15em] uppercase" style={{ color: 'var(--gm-text-secondary)' }}>
+   607→            {t('history.detail_context', lang)}
+   608→          </span>
+   609→          <div className="flex items-center gap-2">
+   610→            <span className="text-[9px] font-semibold grain-tabular" style={{ color: 'var(--gm-text-tertiary)' }}>
+   611→              {sparkMetric === 'moisture'
+   612→                ? `${reading.moisture.toFixed(1)}% · ${format(reading.timestamp, 'HH:mm')}`
+   613→                : `${Math.round(reading.temperature)}°C · ${format(reading.timestamp, 'HH:mm')}`}
+   614→            </span>
+   615→            <div className="grain-spark-seg" role="group" aria-label={t('history.detail_metric', lang)}>
+   616→              <button
+   617→                type="button"
+   618→                className={sparkMetric === 'moisture' ? 'active' : ''}
+   619→                aria-pressed={sparkMetric === 'moisture'}
+   620→                aria-label={t('history.moisture', lang)}
+   621→                title={t('history.moisture', lang)}
+   622→                onClick={() => { haptic(settings.hapticsEnabled, 6); setSparkMetric('moisture'); }}
+   623→              >
+   624→                <Drop size={10} weight="bold" />
+   625→              </button>
+   626→              <button
+   627→                type="button"
+   628→                className={sparkMetric === 'temp' ? 'active' : ''}
+   629→                aria-pressed={sparkMetric === 'temp'}
+   630→                aria-label={t('history.temperature', lang)}
+   631→                title={t('history.temperature', lang)}
+   632→                onClick={() => { haptic(settings.hapticsEnabled, 6); setSparkMetric('temp'); }}
+   633→              >
+   634→                <Thermometer size={10} weight="bold" />
+   635→              </button>
+   636→            </div>
+   637→          </div>
+   638→        </div>
+   639→        <DetailSparkline
+   640→          entries={historyEntries}
+   641→          selected={entry}
+   642→          accentColor={accent}
+   643→          metric={sparkMetric}
+   644→          safe={settings.thresholds.safe}
+   645→          critical={settings.thresholds.critical}
+   646→          tempSafe={settings.thresholds.tempSafe}
+   647→          tempCritical={settings.thresholds.tempCritical}
+   648→          positionLabel={t('history.detail_context', lang)}
+   649→          scrubAria={t('history.detail_scrub_aria', lang)}
+   650→        />
+   651→      </div>
+   652→
+   653→      <div className="grain-insight-card mb-5">
+   654→        <h4 className="text-xs font-bold tracking-wide uppercase mb-2" style={{ color: dotHex }}>{stateLabel} · {trendLabel}</h4>
+   655→        <p className="text-sm leading-relaxed" style={{ color: 'var(--gm-text-secondary)' }}>{messageText}</p>
+   656→        <p className="text-[11px] mt-2 leading-relaxed" style={{ color: 'var(--gm-text-tertiary)' }}>{actionText}</p>
+   657→      </div>
+   658→      <div className="grain-card p-4">
+   659→        <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: 'var(--gm-text-tertiary)' }}>{t('history.rule', lang)}</span><span className="text-[11px] font-mono" style={{ color: 'var(--gm-text-secondary)' }}>{decision.ruleId}</span></div>
+   660→        <div className="flex justify-between items-center mb-2"><span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: 'var(--gm-text-tertiary)' }}>{t('history.confidence', lang)}</span><span className="text-[11px] font-bold" style={{ color: 'var(--gm-text-primary)' }}>{decision.confidence.toUpperCase()}</span></div>
+   661→        <div className="flex justify-between items-center"><span className="text-[10px] font-bold tracking-wider uppercase" style={{ color: 'var(--gm-text-tertiary)' }}>{t('history.severity', lang)}</span><span className="text-[11px] font-bold grain-tabular" style={{ color: dotHex }}>{decision.severity}/100</span></div>
+   662→      </div>
+   663→    </div>
+   664→  );
+   665→}
+   666→
+   667→export function HistoryTab() {
+   668→  const { selectedHistoryEntry, setSelectedHistoryId, historyEntries, clearHistory, settings, showToast } = useGrainStore();
+   669→  const lang = settings.language as AppLanguage;
+   670→
+   671→  /* Build a CSV of every stored reading (shared client-side builder —
+   672→   * the readings live in IndexedDB, so a server route could never read
+   673→   * them) and hand it to the user: Web Share with a file when the
+   674→   * platform supports it, otherwise a classic blob download.
+   675→   * Decision message/action columns follow settings.exportDecisions. */
+   676→  const exportCsv = async () => {
+   677→    if (historyEntries.length === 0) {
+   678→      showToast(t('toast.nothing_to_export', lang));
+   679→      return;
+   680→    }
+   681→    haptic(settings.hapticsEnabled, 8);
+   682→    const csv = buildReadingsCsv(historyEntries, lang, settings.exportDecisions);
+   683→    const filename = `mochi-grain-readings-${format(Date.now(), 'yyyy-MM-dd')}.csv`;
+   684→    const outcome = await deliverCsv(csv, filename);
+   685→    if (outcome !== 'cancelled') {
+   686→      showToast(tp('toast.exported', lang, { n: historyEntries.length }));
+   687→    }
+   688→  };
+   689→
+   690→  return (
+   691→    <div className="pt-2 pb-6 grain-fade-in">
+   692→      {!selectedHistoryEntry ? (
+   693→        <>
+   694→          <div className="flex items-start justify-between mb-5">
+   695→            <div>
+   696→              <h2 className="text-2xl font-bold tracking-tight mb-1" style={{ color: 'var(--gm-text-primary)' }}>{t('history.title', lang)}</h2>
+   697→              <p className="text-sm" style={{ color: 'var(--gm-text-secondary)' }}>{historyEntries.length > 0 ? `${historyEntries.length} ${historyEntries.length !== 1 ? t('history.readings', lang) : t('history.reading', lang)}` : t('history.past', lang)}</p>
+   698→            </div>
+   699→            {historyEntries.length > 0 && (
+   700→              <div className="flex items-center gap-2">
+   701→                <button onClick={exportCsv} className="grain-export-btn" aria-label={t('history.export', lang)} title={t('history.export', lang)}>
+   702→                  <DownloadSimple size={16} weight="bold" />
+   703→                </button>
+   704→                <button onClick={clearHistory} className="w-8 h-8 rounded-lg flex items-center justify-center grain-card" style={{ color: 'var(--gm-text-tertiary)' }} aria-label={t('settings.clear_history', lang)}><Trash size={16} weight="bold" /></button>
+   705→              </div>
+   706→            )}
+   707→          </div>
+   708→          <ReadingList />
+   709→        </>
+   710→      ) : (
+   711→        <ReadingDetail entry={selectedHistoryEntry} onClose={() => setSelectedHistoryId(null)} />
+   712→      )}
+   713→    </div>
+   714→  );
+   715→}
+   716→

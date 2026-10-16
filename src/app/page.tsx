@@ -15,6 +15,7 @@ import { HistoryTab } from '@/components/grain/history/history-tab';
 import { SettingsTab } from '@/components/grain/settings/settings-tab';
 import type { AppLanguage } from '@/lib/i18n';
 import { primeAlertSound } from '@/lib/alert-sound';
+import { initBackNav, syncBackNav } from '@/lib/back-nav';
 
 const LANG_MAP: Record<string, string> = {
   en: 'en', hi: 'hi', mr: 'mr', hinglish: 'en',
@@ -166,6 +167,36 @@ export default function GrainMonitorPage() {
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  }, [activeTab]);
+
+  /* ── Android Back / PWA popstate policy ──
+   * One synthetic history entry is armed while a secondary tab is open.
+   * System Back pops it → the policy closes the topmost overlay (registered
+   * by the overlay components) or falls back: history detail view → Home.
+   * On Home nothing is armed, so Back exits the app normally. The same
+   * policy object is reusable by a future Capacitor native Back listener
+   * (handleBackNative). */
+  useEffect(() => {
+    return initBackNav({
+      consumeFallback: () => {
+        const s = useGrainStore.getState();
+        if (s.selectedHistoryEntry) {
+          s.setSelectedHistoryId(null); // close the detail view first
+          return true;
+        }
+        if (s.activeTab !== 'home') {
+          s.setActiveTab('home');
+          return true;
+        }
+        return false; // Home + no overlays → let the OS exit
+      },
+      isInterceptable: () => useGrainStore.getState().activeTab !== 'home',
+    });
+  }, []);
+
+  // Re-arm/disarm whenever the active tab changes (never accumulates entries)
+  useEffect(() => {
+    syncBackNav();
   }, [activeTab]);
 
   const renderHomeState = () => {

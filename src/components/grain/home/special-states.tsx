@@ -19,7 +19,7 @@ export function SleepingView() {
       <p className="text-sm mb-6 text-center max-w-[220px] leading-relaxed" style={{ color: 'var(--gm-text-secondary)' }}>
         {t('sleeping.desc', lang)}
       </p>
-      {deviceInfo && (
+      {deviceInfo && deviceInfo.battery != null && (
         <div className="grain-card p-4 w-full max-w-[240px]">
           <div className="flex items-center justify-between">
             <span className="text-xs" style={{ color: 'var(--gm-text-secondary)' }}>{t('sleeping.battery', lang)}</span>
@@ -64,7 +64,7 @@ export function LowBatteryView() {
       <p className="text-sm mb-6 text-center max-w-[240px] leading-relaxed" style={{ color: 'var(--gm-text-secondary)' }}>
         {t('lowbattery.desc', lang)}
       </p>
-      {deviceInfo && (
+      {deviceInfo && deviceInfo.battery != null && (
         <div className="grain-card p-4 w-full max-w-[240px]">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs" style={{ color: 'var(--gm-text-secondary)' }}>{t('lowbattery.level', lang)}</span>

@@ -129,8 +129,10 @@ export interface DeviceInfo {
   firmware: string;
   platform: string;
   grainType: GrainType;
-  battery: number;
-  signal: number;
+  /** Real telemetry only: null until an actual packet reports a value.
+   *  Never pre-filled with fabricated defaults. */
+  battery: number | null;
+  signal: number | null;
 }
 
 /* ─── Mochi Decision Engine Output ─── */

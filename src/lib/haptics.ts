@@ -20,6 +20,6 @@ export function haptic(enabled: boolean, pattern: number | number[] = 8): void {
 /** Standard interaction taps */
 export const HAPTIC_TAP = 8;              // nav switch, small selections
 export const HAPTIC_SELECT = 6;           // grain / option selection
-export const HAPTIC_TOGGLE = 10;          // toggles, demo start/stop
+export const HAPTIC_TOGGLE = 10;          // toggles, destructive confirms
 export const HAPTIC_ALERT: number[] = [12, 70, 12]; // warning escalation
 export const HAPTIC_CRITICAL: number[] = [16, 60, 16, 60, 24]; // critical escalation

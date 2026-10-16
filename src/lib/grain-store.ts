@@ -11,7 +11,6 @@ import type {
   DeviceInfo,
   AppSettings,
   GrainType,
-  GrainThresholds,
   HistoryEntry,
   StatusBadge,
 } from './grain-types';
@@ -24,7 +23,6 @@ import {
   getHistoryEntries,
   getHistoryEntry,
   clearAllHistory,
-  deleteDemoData,
   getSettings as getStoredSettings,
   saveSettings as storeSettings,
 } from './offline-storage';
@@ -48,20 +46,7 @@ export interface SparklinePoint {
   t: number;   // epoch ms
 }
 
-/** Available demo interval presets (in seconds) */
-export const DEMO_INTERVAL_PRESETS = [60, 300, 600, 1800, 3600] as const;
-export type DemoIntervalPreset = (typeof DEMO_INTERVAL_PRESETS)[number];
-
 interface GrainStore {
-  /* ── Demo Mode (completely isolated from BLE) ── */
-  demoMode: boolean;
-  demoIntervalSec: DemoIntervalPreset;
-  _demoTimer: ReturnType<typeof setInterval> | null;
-  _demoTick: number;
-  enableDemoMode: () => void;
-  disableDemoMode: () => void;
-  setDemoIntervalSec: (sec: DemoIntervalPreset) => void;
-
   /* ── Navigation ── */
   activeTab: TabId;
   setActiveTab: (tab: TabId) => void;
@@ -121,89 +106,6 @@ function getLang(store: GrainStore): AppLanguage {
   return store.settings.language as AppLanguage;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   DEMO DATA GENERATOR – isolated fake world
-   ═══════════════════════════════════════════════════════════════ */
-
-/** Seedable pseudo-random for deterministic demo data */
-function seededRandom(seed: number): number {
-  let s = seed;
-  s = (s * 16807 + 0) % 2147483647;
-  return (s - 1) / 2147483646;
-}
-
-function generateDemoReading(grainType: GrainType, ts: number, tick: number): Reading {
-  // Deterministic but natural-looking values using seeded random + smooth waves
-  const r1 = seededRandom(tick * 7 + 3);
-  const r2 = seededRandom(tick * 13 + 7);
-  const r3 = seededRandom(tick * 19 + 11);
-
-  // Moisture: slow sine wave + small random walk, stays within realistic 9–16% range
-  const baseWave = Math.sin(tick * 0.15) * 1.5 + Math.cos(tick * 0.07) * 0.8;
-  const randomWalk = (r1 - 0.5) * 0.6;
-  const moisture = Math.round((12.0 + baseWave + randomWalk) * 10) / 10;
-
-  // Temperature: slow drift around 27°C ± 3
-  const tempWave = Math.sin(tick * 0.1 + 1.5) * 1.8 + (r2 - 0.5) * 0.4;
-  const temperature = Math.round((27 + tempWave) * 10) / 10;
-
-  // Battery: slow drain from 95% down, with small jitter
-  const battery = Math.max(12, Math.min(100, Math.round(95 - tick * 0.15 + (r3 - 0.5) * 2)));
-
-  // Signal: varies 65–95%
-  const signal = Math.max(50, Math.min(98, Math.round(80 + Math.sin(tick * 0.2) * 12 + (r1 - 0.5) * 5)));
-
-  return {
-    id: `demo-${ts}-${tick}`,
-    deviceId: 'DEMO-GRAIN-01',
-    grainType,
-    moisture: Math.max(8, Math.min(20, moisture)),
-    temperature: Math.max(20, Math.min(40, temperature)),
-    battery,
-    timestamp: ts,
-    signal,
-    deviceStatus: 'connected' as DeviceState,
-  };
-}
-
-/**
- * Generate a batch of demo history entries.
- * Entries are spaced exactly `intervalSec` apart in timestamp space.
- * The most recent entry is at `now`, going backwards.
- */
-function generateDemoHistory(
-  grainType: GrainType,
-  thresholds: GrainThresholds,
-  intervalSec: number,
-  count: number,
-): HistoryEntry[] {
-  const now = Date.now();
-  const entries: HistoryEntry[] = [];
-
-  for (let i = 0; i < count; i++) {
-    const ts = now - (i * intervalSec * 1000);
-    const tick = i; // each entry has a unique tick for deterministic data
-    const reading = generateDemoReading(grainType, ts, tick);
-
-    // Build mini-history for Mochi trend detection (previous readings)
-    const miniHistory = Array.from({ length: Math.min(i + 1, 6) }, (_, j) =>
-      generateDemoReading(grainType, ts - (j + 1) * intervalSec * 1000, tick + j + 1),
-    );
-
-    const decision = evaluate(reading, miniHistory, thresholds);
-    entries.push({ reading, decision });
-  }
-
-  return entries;
-}
-
-/** How many history entries to generate based on interval */
-function historyCountForInterval(intervalSec: number): number {
-  // Aim for ~48 hours of history, but clamp to reasonable range
-  const total = Math.floor((48 * 3600) / intervalSec);
-  return Math.min(60, Math.max(12, total));
-}
-
 /* ══ Store-level MA-crossing signal (moisture) ══
  * The trends chart draws crossing rings locally, but the tactile cue
  * must fire wherever the user happens to be — so the store runs the
@@ -240,179 +142,7 @@ function notifyMaCrossing(values: number[], win: number, movingAvgOn: boolean, h
   else if (dir === 'down') haptic(hapticsOn, 12);
 }
 
-/** No simulation acceleration — demo uses real-time intervals as configured */
-
 export const useGrainStore = create<GrainStore>((set, get) => ({
-  /* ── Demo Mode ── */
-  demoMode: false,
-  demoIntervalSec: 600, // default 10 minutes
-  _demoTimer: null,
-  _demoTick: 0,
-
-  enableDemoMode: () => {
-    const { settings, demoIntervalSec } = get();
-    const lang = settings.language as AppLanguage;
-    const grainType = settings.grainType;
-    const thresholds = settings.thresholds;
-
-    // Generate initial demo history spaced at the configured interval
-    const count = historyCountForInterval(demoIntervalSec);
-    const historyEntries = generateDemoHistory(grainType, thresholds, demoIntervalSec, count);
-
-    // Latest reading
-    const latestEntry = historyEntries[0];
-    const currentReading = latestEntry.reading;
-    const decision = latestEntry.decision;
-    const badge = getStatusBadge(decision, 'connected');
-    const riskTheme = stateToRiskTheme(decision.state);
-
-    // Sparkline: last 16 entries as {v, t} points
-    const sparklineData: SparklinePoint[] = historyEntries.slice(0, 16).map((e) => ({
-      v: e.reading.moisture,
-      t: e.reading.timestamp,
-    })).reverse(); // oldest first for chart
-
-    const deviceInfo: DeviceInfo = {
-      id: 'DEMO-GRAIN-01',
-      name: 'GRAIN-01 (Demo)',
-      firmware: 'v1.2.0-demo',
-      platform: 'ESP32',
-      grainType,
-      battery: currentReading.battery,
-      signal: currentReading.signal,
-    };
-
-    const startTick = count; // continue the tick sequence
-
-    set({
-      demoMode: true,
-      deviceState: 'connected',
-      hasDevice: true,
-      deviceInfo,
-      currentReading,
-      decision,
-      statusBadge: badge,
-      riskTheme,
-      sparklineData,
-      historyEntries,
-      selectedHistoryId: null,
-      selectedHistoryEntry: null,
-      activeTab: 'home',
-      _demoTick: startTick,
-    });
-
-    get().showToast(t('toast.demo_on', lang));
-
-    // Persist the synthetic batch so demo exercises the REAL persistence path
-    // (history/stats/trends survive reloads while the demo is running).
-    // Stale leftovers from a previous crashed demo session are removed first.
-    deleteDemoData()
-      .then(() => Promise.all([
-        ...historyEntries.map((e) => saveReading(e.reading)),
-        ...historyEntries.map((e) => saveHistoryEntry(e)),
-      ]))
-      .catch(() => {/* persistence is best-effort in demo */});
-
-    // Live updates at the REAL configured interval (no simulation acceleration)
-    const intervalMs = demoIntervalSec * 1000;
-    const timer = setInterval(() => {
-      const s = get();
-      if (!s.demoMode) return;
-
-      const nextTick = s._demoTick + 1;
-      // Timestamp reflects the actual real-time moment this reading arrives
-      const newTs = Date.now();
-
-      const newReading = generateDemoReading(s.settings.grainType, newTs, nextTick);
-      const miniHistory = [...s.historyEntries.slice(0, 6).map((e) => e.reading), newReading];
-      const newDecision = evaluate(newReading, miniHistory, s.settings.thresholds);
-      const newBadge = getStatusBadge(newDecision, 'connected');
-      const newRiskTheme = stateToRiskTheme(newDecision.state);
-      const newEntry: HistoryEntry = { reading: newReading, decision: newDecision };
-
-      // Store-level momentum cue: fire a soft haptic when the new reading
-      // crosses its trailing MA (fires even when History is not the open tab)
-      notifyMaCrossing(
-        [newReading, ...s.historyEntries.slice(0, s.settings.trendsMaWindow).map((e) => e.reading)]
-          .map((r) => r.moisture)
-          .reverse(),
-        s.settings.trendsMaWindow,
-        s.settings.trendsMovingAvg,
-        s.settings.hapticsEnabled,
-      );
-
-      // Update sparkline: add new point at end (newest), keep max 16
-      const newSparkline: SparklinePoint[] = [
-        ...s.sparklineData.slice(-(16 - 1)),
-        { v: newReading.moisture, t: newTs },
-      ];
-
-      set({
-        _demoTick: nextTick,
-        currentReading: newReading,
-        decision: newDecision,
-        statusBadge: newBadge,
-        riskTheme: newRiskTheme,
-        deviceInfo: {
-          ...s.deviceInfo!,
-          battery: newReading.battery,
-          signal: newReading.signal,
-          grainType: newReading.grainType,
-        },
-        sparklineData: newSparkline,
-        historyEntries: [newEntry, ...s.historyEntries].slice(0, 100),
-      });
-
-      // Persist like the real probe path — fire-and-forget
-      saveReading(newReading).catch(() => {});
-      saveHistoryEntry(newEntry).catch(() => {});
-    }, intervalMs);
-
-    set({ _demoTimer: timer });
-  },
-
-  disableDemoMode: () => {
-    const { _demoTimer } = get();
-    if (_demoTimer) clearInterval(_demoTimer);
-
-    const lang = getLang(get());
-    set({
-      demoMode: false,
-      _demoTimer: null,
-      _demoTick: 0,
-      deviceState: 'disconnected',
-      deviceInfo: null,
-      hasDevice: false,
-      currentReading: null,
-      decision: null,
-      statusBadge: 'OFFLINE',
-      riskTheme: 'safe',
-      sparklineData: [],
-      historyEntries: [],
-      selectedHistoryId: null,
-      selectedHistoryEntry: null,
-      activeTab: 'settings',
-    });
-    get().showToast(t('toast.demo_off', lang));
-    // Remove synthetic readings and bring back the user's real history
-    deleteDemoData()
-      .catch(() => {})
-      .then(() => get().loadHistory());
-  },
-
-  setDemoIntervalSec: (sec: DemoIntervalPreset) => {
-    const wasRunning = get().demoMode;
-    if (wasRunning) {
-      // Stop and restart with new interval
-      get().disableDemoMode();
-    }
-    set({ demoIntervalSec: sec });
-    if (wasRunning) {
-      // Small delay so state settles, then re-enable
-      setTimeout(() => get().enableDemoMode(), 100);
-    }
-  },
-
   /* ── Nav ── */
   activeTab: 'home',
   setActiveTab: (tab) => set({ activeTab: tab }),
@@ -497,7 +227,7 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
     setTimeout(() => set({ toast: '' }), 2500);
   },
 
-  /* ═══ REAL BLE Actions (never touched by demo) ═══ */
+  /* ═══ BLE Actions ═══ */
 
   connectProbe: async () => {
     const lang = getLang(get());
@@ -578,12 +308,6 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
   loadSelectedEntry: async () => {
     const id = get().selectedHistoryId;
     if (!id) return;
-    // In demo mode, find entry from in-memory history
-    if (get().demoMode) {
-      const entry = get().historyEntries.find((e) => e.reading.id === id);
-      set({ selectedHistoryEntry: entry || null });
-      return;
-    }
     const entry = await getHistoryEntry(id);
     set({ selectedHistoryEntry: entry || null });
   },
@@ -600,7 +324,7 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
     get().showToast(ok ? t('toast.syncing_history', lang) : t('toast.sync_failed', lang));
   },
 
-  /* ═══ Internal – REAL BLE only ═══ */
+  /* ═══ Internal ═══ */
   handleReading: (rawReading: Reading) => {
     const { settings, deviceState } = get();
 
@@ -669,9 +393,9 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
     const s = get();
     const lang = getLang(s);
 
-    // Demo mode is fully isolated from BLE; intentional disconnects already
-    // cleaned up via disconnectProbe (which clears hasDevice first).
-    if (s.demoMode || !s.hasDevice || s.deviceState === 'connecting') return;
+    // Intentional disconnects already cleaned up via disconnectProbe
+    // (which clears hasDevice first).
+    if (!s.hasDevice || s.deviceState === 'connecting') return;
 
     bleDisconnect(); // release characteristics; listener removed inside
     set({
@@ -691,9 +415,9 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
     // Auto-reconnect: 3 quiet attempts, 4s apart, no browser chooser
     let attempt = 0;
     const tryReconnect = async () => {
-      // Bail out if the user started demo mode or another connect meanwhile
+      // Bail out if the user started another connect meanwhile
       const cur = get();
-      if (cur.demoMode || cur.hasDevice) return;
+      if (cur.hasDevice) return;
 
       attempt += 1;
       set({ deviceState: 'connecting' });
@@ -701,14 +425,14 @@ export const useGrainStore = create<GrainStore>((set, get) => ({
 
       const ok = await bleReconnect();
       const after = get();
-      if (ok && !after.demoMode && !after.hasDevice) {
+      if (ok && !after.hasDevice) {
         set({ deviceState: 'connected', hasDevice: true });
         get().showToast(t('toast.reconnected', lang));
         bleOnReading((reading) => get().handleReading(reading));
         if (after.settings.wakeOnConnect) {
           sendCommand('wake');
         }
-      } else if (attempt < 3 && !get().demoMode && !get().hasDevice) {
+      } else if (attempt < 3 && !get().hasDevice) {
         set({ deviceState: 'disconnected' });
         setTimeout(tryReconnect, 4000);
       } else if (!get().hasDevice) {

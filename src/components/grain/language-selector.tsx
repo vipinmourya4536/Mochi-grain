@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useGrainStore } from '@/lib/grain-store';
+import { registerBackConsumer } from '@/lib/back-nav';
 import { LANGUAGE_OPTIONS, t, type AppLanguage } from '@/lib/i18n';
 import { Check, CaretDown } from '@phosphor-icons/react/dist/ssr';
 
@@ -23,6 +24,20 @@ export function LanguageSelector() {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
+  }, [open]);
+
+  /* Android Back closes this panel first (top priority overlay).
+   * onClose touches ONLY this panel — never the parent tab. */
+  useEffect(() => {
+    if (!open) return;
+    return registerBackConsumer({
+      id: 'language-panel',
+      priority: 40,
+      onClose: () => {
+        setOpen(false);
+        return true;
+      },
+    });
   }, [open]);
 
   // Close on outside pointer press

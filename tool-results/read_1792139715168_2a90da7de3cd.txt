@@ -1,0 +1,812 @@
+     1→/* ═══════════════════════════════════════════════════════════════
+     2→   MOCHI DECISION ENGINE v2.0
+     3→   Full rule-based expert system with:
+     4→   - History analysis (dedup, gap detection, stability windows)
+     5→   - Trend detection (stable/rising/falling/rapid)
+     6→   - Risk evaluation (moisture + temperature + trend escalation)
+     7→   - Rule selection with recovery detection
+     8→   - Cooldown management (suppresses repeated alerts)
+     9→   - Confidence scoring
+    10→   ═══════════════════════════════════════════════════════════════ */
+    11→
+    12→import type {
+    13→  Reading,
+    14→  GrainThresholds,
+    15→  TrendDirection,
+    16→  MochiDecision,
+    17→  EngineState,
+    18→  MochiExpression,
+    19→  RiskTheme,
+    20→  StatusBadge,
+    21→} from './grain-types';
+    22→import { STATE, EXPRESSION, PRIORITY, TREND, stateToRiskTheme } from './grain-types';
+    23→
+    24→/* ═══════════════════════════════════════════════════════════════
+    25→   ENGINE SETTINGS (defaults)
+    26→   ═══════════════════════════════════════════════════════════════ */
+    27→
+    28→export interface EngineSettings {
+    29→  stabilityWindowHours: number;
+    30→  moistureTolerance: number;
+    31→  temperatureTolerance: number;
+    32→  rapidChangeThreshold: number;
+    33→  messageCooldownMs: number;
+    34→  staleThresholdMs: number;
+    35→  historyGapThresholdMs: number;
+    36→}
+    37→
+    38→const DEFAULT_ENGINE_SETTINGS: EngineSettings = {
+    39→  stabilityWindowHours: 72,
+    40→  moistureTolerance: 0.5,
+    41→  temperatureTolerance: 1.0,
+    42→  rapidChangeThreshold: 1.5,
+    43→  messageCooldownMs: 1800000,
+    44→  staleThresholdMs: 3600000,
+    45→  historyGapThresholdMs: 6 * 3600 * 1000,
+    46→};
+    47→
+    48→/* ═══════════════════════════════════════════════════════════════
+    49→   GRAIN PROFILES — risk thresholds mapped to engine
+    50→   ═══════════════════════════════════════════════════════════════ */
+    51→
+    52→interface GrainProfileRisk {
+    53→  moisture: { criticalAbove: number; warningMax: number; monitorMax: number };
+    54→  temperature: { highAbove: number; warmAbove: number };
+    55→}
+    56→
+    57→function thresholdsToProfile(t: GrainThresholds): GrainProfileRisk {
+    58→  return {
+    59→    moisture: {
+    60→      criticalAbove: t.critical,
+    61→      warningMax: t.warn,
+    62→      monitorMax: t.safe + (t.warn - t.safe) * 0.5,
+    63→    },
+    64→    temperature: {
+    65→      highAbove: t.tempCritical,
+    66→      warmAbove: t.tempWarn,
+    67→    },
+    68→  };
+    69→}
+    70→
+    71→/* ═══════════════════════════════════════════════════════════════
+    72→   1. TREND ANALYZER
+    73→   ═══════════════════════════════════════════════════════════════ */
+    74→
+    75→interface TrendResult {
+    76→  trend: TrendDirection;
+    77→  moistureChange: number | null;
+    78→  tempChange: number | null;
+    79→}
+    80→
+    81→function analyzeTrend(
+    82→  current: Reading,
+    83→  previous: Reading | null,
+    84→  settings: EngineSettings,
+    85→): TrendResult {
+    86→  if (!current || !previous || current.moisture == null || previous.moisture == null) {
+    87→    return { trend: TREND.INSUFFICIENT_DATA, moistureChange: null, tempChange: null };
+    88→  }
+    89→
+    90→  const moistureChange = current.moisture - previous.moisture;
+    91→  const tempChange =
+    92→    current.temperature != null && previous.temperature != null
+    93→      ? current.temperature - previous.temperature
+    94→      : null;
+    95→
+    96→  const absDelta = Math.abs(moistureChange);
+    97→  const tolerance = settings.moistureTolerance;
+    98→  const rapidThreshold = settings.rapidChangeThreshold;
+    99→
+   100→  let trend: TrendDirection = TREND.STABLE;
+   101→  if (absDelta > tolerance) {
+   102→    if (moistureChange > 0) {
+   103→      trend = absDelta >= rapidThreshold ? TREND.RISING_RAPIDLY : TREND.RISING;
+   104→    } else {
+   105→      trend = absDelta >= rapidThreshold ? TREND.FALLING_RAPIDLY : TREND.FALLING;
+   106→    }
+   107→  }
+   108→
+   109→  return { trend, moistureChange, tempChange };
+   110→}
+   111→
+   112→/* ═══════════════════════════════════════════════════════════════
+   113→   2. HISTORY ANALYZER
+   114→   ═══════════════════════════════════════════════════════════════ */
+   115→
+   116→interface HistoryAnalysis {
+   117→  trend: TrendDirection;
+   118→  isStableWindow: boolean;
+   119→  gaps: { from: number; to: number }[];
+   120→  duplicatesRemoved: number;
+   121→  previousReading: Reading | null;
+   122→  recentReadingsCount: number;
+   123→  moistureChange: number | null;
+   124→  tempChange: number | null;
+   125→}
+   126→
+   127→function analyzeHistory(
+   128→  history: Reading[],
+   129→  currentReading: Reading | null,
+   130→  settings: EngineSettings,
+   131→): HistoryAnalysis {
+   132→  if (!history || history.length === 0) {
+   133→    return {
+   134→      trend: TREND.INSUFFICIENT_DATA,
+   135→      isStableWindow: false,
+   136→      gaps: [],
+   137→      duplicatesRemoved: 0,
+   138→      previousReading: null,
+   139→      recentReadingsCount: 0,
+   140→      moistureChange: null,
+   141→      tempChange: null,
+   142→    };
+   143→  }
+   144→
+   145→  // Dedup by timestamp
+   146→  const seen = new Set<number>();
+   147→  const deduped: Reading[] = [];
+   148→  let duplicates = 0;
+   149→
+   150→  const allReadings =
+   151→    currentReading && currentReading.timestamp
+   152→      ? [...history, currentReading]
+   153→      : [...history];
+   154→
+   155→  for (const r of allReadings) {
+   156→    if (r && r.timestamp) {
+   157→      if (seen.has(r.timestamp)) {
+   158→        duplicates++;
+   159→      } else {
+   160→        seen.add(r.timestamp);
+   161→        deduped.push(r);
+   162→      }
+   163→    }
+   164→  }
+   165→
+   166→  // Sort chronologically
+   167→  deduped.sort((a, b) => a.timestamp - b.timestamp);
+   168→
+   169→  // Gap detection
+   170→  const gapThresholdMs = settings.historyGapThresholdMs;
+   171→  const gaps: { from: number; to: number }[] = [];
+   172→  for (let i = 1; i < deduped.length; i++) {
+   173→    const diff = deduped[i].timestamp - deduped[i - 1].timestamp;
+   174→    if (diff > gapThresholdMs) {
+   175→      gaps.push({ from: deduped[i - 1].timestamp, to: deduped[i].timestamp });
+   176→    }
+   177→  }
+   178→
+   179→  // Stability window check
+   180→  const windowMs = settings.stabilityWindowHours * 3600 * 1000;
+   181→  const windowStart = Date.now() - windowMs;
+   182→  const recentReadings = deduped.filter((r) => r.timestamp >= windowStart);
+   183→
+   184→  let isStableWindow = false;
+   185→  if (recentReadings.length >= 3 && gaps.length === 0) {
+   186→    const moistures = recentReadings.map((r) => r.moisture).filter((m) => m != null);
+   187→    const temps = recentReadings.map((r) => r.temperature).filter((t) => t != null);
+   188→
+   189→    if (
+   190→      moistures.length === recentReadings.length &&
+   191→      temps.length === recentReadings.length
+   192→    ) {
+   193→      const mVar = Math.max(...moistures) - Math.min(...moistures);
+   194→      const tVar = Math.max(...temps) - Math.min(...temps);
+   195→
+   196→      if (mVar <= settings.moistureTolerance && tVar <= settings.temperatureTolerance) {
+   197→        isStableWindow = true;
+   198→      }
+   199→    }
+   200→  }
+   201→
+   202→  // Trend between last two readings
+   203→  const current = deduped[deduped.length - 1];
+   204→  const previous = deduped.length > 1 ? deduped[deduped.length - 2] : null;
+   205→  const trendData = analyzeTrend(current, previous, settings);
+   206→
+   207→  return {
+   208→    ...trendData,
+   209→    isStableWindow,
+   210→    gaps,
+   211→    duplicatesRemoved: duplicates,
+   212→    previousReading: previous,
+   213→    recentReadingsCount: recentReadings.length,
+   214→  };
+   215→}
+   216→
+   217→/* ═══════════════════════════════════════════════════════════════
+   218→   3. RISK EVALUATOR
+   219→   ═══════════════════════════════════════════════════════════════ */
+   220→
+   221→interface RiskAssessment {
+   222→  state: EngineState;
+   223→  severity: number;
+   224→  reasonCodes: string[];
+   225→  profile: GrainProfileRisk;
+   226→}
+   227→
+   228→function evaluateRisk(
+   229→  reading: Reading,
+   230→  historyAnalysis: HistoryAnalysis,
+   231→  thresholds: GrainThresholds,
+   232→  settings: EngineSettings,
+   233→): RiskAssessment {
+   234→  const profile = thresholdsToProfile(thresholds);
+   235→  const { moisture, temperature } = reading;
+   236→  const reasonCodes: string[] = [];
+   237→  let state: EngineState = STATE.SAFE;
+   238→  let severity: number = PRIORITY.SAFE;
+   239→
+   240→  // Moisture evaluation
+   241→  if (moisture > profile.moisture.criticalAbove) {
+   242→    state = STATE.CRITICAL;
+   243→    severity = PRIORITY.CRITICAL;
+   244→    reasonCodes.push('MOISTURE_ABOVE_LIMIT');
+   245→  } else if (moisture > profile.moisture.warningMax) {
+   246→    state = STATE.WARNING;
+   247→    severity = PRIORITY.WARNING;
+   248→    reasonCodes.push('MOISTURE_ABOVE_LIMIT');
+   249→  } else if (moisture > profile.moisture.monitorMax) {
+   250→    if (state === STATE.SAFE) {
+   251→      state = STATE.MONITOR;
+   252→      severity = PRIORITY.MONITOR;
+   253→    }
+   254→    reasonCodes.push('MOISTURE_NEAR_LIMIT');
+   255→  } else {
+   256→    reasonCodes.push('MOISTURE_WITHIN_SAFE_RANGE');
+   257→  }
+   258→
+   259→  // Temperature evaluation (can escalate state)
+   260→  if (temperature > profile.temperature.highAbove) {
+   261→    if (state !== STATE.CRITICAL) {
+   262→      state = STATE.WARNING;
+   263→      severity = Math.max(severity, PRIORITY.WARNING);
+   264→    }
+   265→    reasonCodes.push('TEMPERATURE_HIGH');
+   266→  } else if (temperature > profile.temperature.warmAbove) {
+   267→    if (state === STATE.SAFE) {
+   268→      state = STATE.MONITOR;
+   269→      severity = Math.max(severity, PRIORITY.MONITOR);
+   270→    }
+   271→    reasonCodes.push('TEMPERATURE_WARM');
+   272→  }
+   273→
+   274→  // Trend escalation
+   275→  if (historyAnalysis.trend === TREND.RISING_RAPIDLY) {
+   276→    reasonCodes.push('MOISTURE_RISING_RAPIDLY');
+   277→    if (state === STATE.MONITOR) {
+   278→      state = STATE.WARNING;
+   279→      severity = PRIORITY.WARNING;
+   280→    }
+   281→  } else if (historyAnalysis.trend === TREND.RISING) {
+   282→    reasonCodes.push('MOISTURE_RISING');
+   283→  } else if (
+   284→    historyAnalysis.trend === TREND.STABLE &&
+   285→    historyAnalysis.isStableWindow
+   286→  ) {
+   287→    reasonCodes.push('STABLE_WINDOW_CONFIRMED');
+   288→  }
+   289→
+   290→  return { state, severity, reasonCodes, profile };
+   291→}
+   292→
+   293→/* ═══════════════════════════════════════════════════════════════
+   294→   4. RULE EVALUATOR
+   295→   ═══════════════════════════════════════════════════════════════ */
+   296→
+   297→interface SelectedRule {
+   298→  state: EngineState;
+   299→  priority: number;
+   300→  expression: MochiExpression;
+   301→  ruleId: string;
+   302→  messageId: string;
+   303→  reasonCodes: string[];
+   304→  action: string;
+   305→}
+   306→
+   307→function selectGrainRule(
+   308→  risk: RiskAssessment,
+   309→  historyAnalysis: HistoryAnalysis,
+   310→  prevEngineState: { state: string } | null,
+   311→): SelectedRule {
+   312→  const baseRule: SelectedRule = {
+   313→    state: risk.state,
+   314→    priority: 0,
+   315→    expression: EXPRESSION.SAFE,
+   316→    ruleId: '',
+   317→    messageId: '',
+   318→    reasonCodes: risk.reasonCodes,
+   319→    action: 'monitor',
+   320→  };
+   321→
+   322→  // Recovery: previous was warning/critical, now safe
+   323→  const priorCriticalStates: EngineState[] = [STATE.WARNING, STATE.CRITICAL];
+   324→  if (
+   325→    prevEngineState &&
+   326→    priorCriticalStates.includes(prevEngineState.state as EngineState) &&
+   327→    risk.state === STATE.SAFE
+   328→  ) {
+   329→    return {
+   330→      ...baseRule,
+   331→      state: STATE.SAFE,
+   332→      priority: PRIORITY.SAFE,
+   333→      expression: EXPRESSION.SUCCESS,
+   334→      ruleId: 'RECOVERY',
+   335→      messageId: 'RECOVERY',
+   336→      action: 'none',
+   337→    };
+   338→  }
+   339→
+   340→  if (risk.state === STATE.CRITICAL) {
+   341→    baseRule.priority = PRIORITY.CRITICAL;
+   342→    baseRule.expression = EXPRESSION.CRITICAL;
+   343→    baseRule.ruleId = 'CRITICAL_CONDITION';
+   344→    baseRule.messageId = 'CRITICAL_CONDITION';
+   345→    baseRule.action = 'dry_grain_immediately';
+   346→  } else if (risk.state === STATE.WARNING) {
+   347→    const isHighMoistureWarm =
+   348→      risk.reasonCodes.includes('MOISTURE_ABOVE_LIMIT') &&
+   349→      risk.reasonCodes.includes('TEMPERATURE_WARM');
+   350→    baseRule.priority = PRIORITY.WARNING;
+   351→    baseRule.expression = EXPRESSION.CONCERNED;
+   352→    baseRule.ruleId = isHighMoistureWarm ? 'HIGH_MOISTURE_WARM' : 'WARNING_CONDITION';
+   353→    baseRule.messageId = baseRule.ruleId;
+   354→    baseRule.action = 'inspect_storage';
+   355→  } else if (historyAnalysis.trend === TREND.RISING_RAPIDLY) {
+   356→    baseRule.priority = PRIORITY.MONITOR;
+   357→    baseRule.expression = EXPRESSION.CONCERNED;
+   358→    baseRule.ruleId = 'MOISTURE_RISING_RAPIDLY';
+   359→    baseRule.messageId = 'MOISTURE_RISING_RAPIDLY';
+   360→  } else if (historyAnalysis.trend === TREND.RISING) {
+   361→    baseRule.priority = PRIORITY.MONITOR;
+   362→    baseRule.expression = EXPRESSION.THINKING;
+   363→    baseRule.ruleId = 'MOISTURE_RISING';
+   364→    baseRule.messageId = 'MOISTURE_RISING';
+   365→  } else if (risk.state === STATE.MONITOR) {
+   366→    baseRule.priority = PRIORITY.MONITOR;
+   367→    baseRule.expression = EXPRESSION.THINKING;
+   368→    baseRule.ruleId = 'MONITOR_CONDITION';
+   369→    baseRule.messageId = 'MONITOR_CONDITION';
+   370→  } else if (historyAnalysis.isStableWindow) {
+   371→    baseRule.priority = PRIORITY.SAFE;
+   372→    baseRule.expression = EXPRESSION.SAFE;
+   373→    baseRule.ruleId = 'MOISTURE_STABLE';
+   374→    baseRule.messageId = 'MOISTURE_STABLE';
+   375→    baseRule.action = 'none';
+   376→  } else if (risk.state === STATE.SAFE) {
+   377→    baseRule.priority = PRIORITY.SAFE;
+   378→    baseRule.expression = EXPRESSION.SAFE;
+   379→    baseRule.ruleId = 'SAFE_CONDITION';
+   380→    baseRule.messageId = 'SAFE_CONDITION';
+   381→    baseRule.action = 'none';
+   382→  } else if (
+   383→    risk.state === STATE.INSUFFICIENT_DATA ||
+   384→    historyAnalysis.trend === TREND.INSUFFICIENT_DATA
+   385→  ) {
+   386→    baseRule.priority = PRIORITY.INSUFFICIENT_DATA;
+   387→    baseRule.expression = EXPRESSION.THINKING;
+   388→    baseRule.ruleId = 'INSUFFICIENT_DATA';
+   389→    baseRule.messageId = 'INSUFFICIENT_DATA';
+   390→    baseRule.state = STATE.INSUFFICIENT_DATA;
+   391→    baseRule.action = 'collect_data';
+   392→  } else {
+   393→    baseRule.priority = PRIORITY.IDLE;
+   394→    baseRule.expression = EXPRESSION.THINKING;
+   395→    baseRule.ruleId = 'IDLE';
+   396→    baseRule.messageId = 'IDLE';
+   397→    baseRule.state = STATE.IDLE;
+   398→  }
+   399→
+   400→  return baseRule;
+   401→}
+   402→
+   403→/* ═══════════════════════════════════════════════════════════════
+   404→   5. COOLDOWN MANAGER
+   405→   ═══════════════════════════════════════════════════════════════ */
+   406→
+   407→interface CooldownState {
+   408→  ruleId: string;
+   409→  state: string;
+   410→  timestamp: number;
+   411→}
+   412→
+   413→function createCooldownManager(): {
+   414→  shouldSuppress: (ruleId: string) => boolean;
+   415→  updateCooldown: (ruleId: string, engineState: string) => void;
+   416→  getState: () => CooldownState;
+   417→} {
+   418→  let state: CooldownState = { ruleId: '', state: '', timestamp: 0 };
+   419→
+   420→  return {
+   421→    shouldSuppress(ruleId: string): boolean {
+   422→      if (state.ruleId === ruleId) {
+   423→        const cooldownMs = DEFAULT_ENGINE_SETTINGS.messageCooldownMs;
+   424→        if (Date.now() - state.timestamp < cooldownMs) {
+   425→          return true;
+   426→        }
+   427→      }
+   428→      return false;
+   429→    },
+   430→    updateCooldown(ruleId: string, engineState: string) {
+   431→      state = { ruleId, state: engineState, timestamp: Date.now() };
+   432→    },
+   433→    getState() {
+   434→      return state;
+   435→    },
+   436→  };
+   437→}
+   438→
+   439→/* ═══════════════════════════════════════════════════════════════
+   440→   6. MESSAGE RESOLVER
+   441→   ═══════════════════════════════════════════════════════════════ */
+   442→
+   443→const MESSAGES: Record<string, { en: string; key: string; action: string; actionKey: string }> = {
+   444→  SAFE_CONDITION: {
+   445→    en: 'All readings within normal range.',
+   446→    key: 'engine.safe_condition',
+   447→    action: 'Maintain current storage conditions.',
+   448→    actionKey: 'engine.safe_action',
+   449→  },
+   450→  MOISTURE_STABLE: {
+   451→    en: 'Conditions are stable. Readings consistent over the monitoring window.',
+   452→    key: 'engine.moisture_stable',
+   453→    action: 'No action needed. Continue monitoring.',
+   454→    actionKey: 'engine.stable_action',
+   455→  },
+   456→  MONITOR_CONDITION: {
+   457→    en: 'Moisture or temperature approaching threshold. Close monitoring recommended.',
+   458→    key: 'engine.monitor_condition',
+   459→    action: 'Check ventilation. Monitor for changes.',
+   460→    actionKey: 'engine.monitor_action',
+   461→  },
+   462→  WARNING_CONDITION: {
+   463→    en: 'Moisture above safe limit. Risk of grain quality degradation.',
+   464→    key: 'engine.warning_condition',
+   465→    action: 'Inspect storage. Improve ventilation or begin aeration.',
+   466→    actionKey: 'engine.warning_action',
+   467→  },
+   468→  HIGH_MOISTURE_WARM: {
+   469→    en: 'High moisture combined with elevated temperature. Spoilage risk increasing.',
+   470→    key: 'engine.high_moisture_warm',
+   471→    action: 'Act immediately — aerate grain, reduce temperature, inspect for hot spots.',
+   472→    actionKey: 'engine.high_moisture_warm_action',
+   473→  },
+   474→  CRITICAL_CONDITION: {
+   475→    en: 'Dangerous moisture and temperature levels detected. Spoilage imminent.',
+   476→    key: 'engine.critical_condition',
+   477→    action: 'Begin drying immediately. Contact storage facility. Do not delay.',
+   478→    actionKey: 'engine.critical_action',
+   479→  },
+   480→  MOISTURE_RISING: {
+   481→    en: 'Moisture is gradually rising. Trend detected in recent readings.',
+   482→    key: 'engine.moisture_rising',
+   483→    action: 'Monitor closely. Check for moisture sources or leaks.',
+   484→    actionKey: 'engine.rising_action',
+   485→  },
+   486→  MOISTURE_RISING_RAPIDLY: {
+   487→    en: 'Moisture rising rapidly. Significant increase detected between readings.',
+   488→    key: 'engine.moisture_rising_rapidly',
+   489→    action: 'Investigate immediately. Check ventilation, condensation, and grain condition.',
+   490→    actionKey: 'engine.rising_rapidly_action',
+   491→  },
+   492→  RECOVERY: {
+   493→    en: 'Storage conditions have returned to safe levels. Improvement detected.',
+   494→    key: 'engine.recovery',
+   495→    action: 'Conditions improving. Continue current practices.',
+   496→    actionKey: 'engine.recovery_action',
+   497→  },
+   498→  INSUFFICIENT_DATA: {
+   499→    en: 'Not enough data for analysis. Collecting readings to establish baseline.',
+   500→    key: 'engine.insufficient_data',
+   501→    action: 'Keep the probe connected. Analysis will improve with more readings.',
+   502→    actionKey: 'engine.insufficient_data_action',
+   503→  },
+   504→  INVALID_READING: {
+   505→    en: 'Sensor reading appears invalid. Check probe connection.',
+   506→    key: 'engine.invalid_reading',
+   507→    action: 'Verify the probe is properly inserted and connected.',
+   508→    actionKey: 'engine.invalid_action',
+   509→  },
+   510→  STALE_READING: {
+   511→    en: 'Data is stale. No recent readings received.',
+   512→    key: 'engine.stale_reading',
+   513→    action: 'Check probe battery and Bluetooth connection.',
+   514→    actionKey: 'engine.stale_action',
+   515→  },
+   516→  IDLE: {
+   517→    en: 'Waiting for readings...',
+   518→    key: 'engine.idle',
+   519→    action: 'Ensure probe is connected and sending data.',
+   520→    actionKey: 'engine.idle_action',
+   521→  },
+   522→};
+   523→
+   524→function resolveMessage(messageId: string): {
+   525→  en: string;
+   526→  key: string;
+   527→  action: string;
+   528→  actionKey: string;
+   529→} {
+   530→  return (
+   531→    MESSAGES[messageId] || {
+   532→      en: 'Unknown state.',
+   533→      key: 'engine.unknown',
+   534→      action: 'Monitor the situation.',
+   535→      actionKey: 'engine.unknown_action',
+   536→    }
+   537→  );
+   538→}
+   539→
+   540→/* ═══════════════════════════════════════════════════════════════
+   541→   7. PUBLIC API — evaluate()
+   542→   ═══════════════════════════════════════════════════════════════ */
+   543→
+   544→// Module-level cooldown state persists across calls within the same session
+   545→const cooldownManager = createCooldownManager();
+   546→
+   547→export function evaluate(
+   548→  reading: Reading,
+   549→  recentHistory: Reading[],
+   550→  thresholds: GrainThresholds,
+   551→): MochiDecision {
+   552→  const settings: EngineSettings = { ...DEFAULT_ENGINE_SETTINGS };
+   553→  const prevEngineState = cooldownManager.getState();
+   554→
+   555→  // 1. Validate input
+   556→  if (
+   557→    !reading ||
+   558→    reading.moisture == null ||
+   559→    isNaN(reading.moisture) ||
+   560→    reading.moisture < 0
+   561→  ) {
+   562→    return buildInvalidResponse(reading, thresholds, settings, prevEngineState, 'INVALID_MOISTURE');
+   563→  }
+   564→  if (
+   565→    reading.temperature == null ||
+   566→    isNaN(reading.temperature) ||
+   567→    reading.temperature < -20
+   568→  ) {
+   569→    return buildInvalidResponse(reading, thresholds, settings, prevEngineState, 'INVALID_TEMPERATURE');
+   570→  }
+   571→
+   572→  // Check stale data
+   573→  const isStale = reading.timestamp
+   574→    ? Date.now() - reading.timestamp > settings.staleThresholdMs
+   575→    : false;
+   576→  if (isStale) {
+   577→    return buildInvalidResponse(reading, thresholds, settings, prevEngineState, 'STALE_READING', true);
+   578→  }
+   579→
+   580→  // 2. Analyze history
+   581→  const historyAnalysis = analyzeHistory(recentHistory, reading, settings);
+   582→
+   583→  // 3. Evaluate risk
+   584→  const risk = evaluateRisk(reading, historyAnalysis, thresholds, settings);
+   585→
+   586→  // 4. Select grain rule (includes recovery check)
+   587→  const grainRule = selectGrainRule(risk, historyAnalysis, prevEngineState);
+   588→
+   589→  // 5. Build response
+   590→  return buildResponse(
+   591→    grainRule,
+   592→    reading,
+   593→    historyAnalysis,
+   594→    risk,
+   595→    settings,
+   596→    prevEngineState,
+   597→    isStale,
+   598→  );
+   599→}
+   600→
+   601→function buildInvalidResponse(
+   602→  reading: Reading,
+   603→  thresholds: GrainThresholds,
+   604→  settings: EngineSettings,
+   605→  prevEngineState: CooldownState,
+   606→  reasonCode: string,
+   607→  isStale = false,
+   608→): MochiDecision {
+   609→  return {
+   610→    state: STATE.INVALID,
+   611→    severity: PRIORITY.INVALID,
+   612→    ruleId: 'INVALID_READING',
+   613→    messageId: isStale ? 'STALE_READING' : 'INVALID_READING',
+   614→    message: isStale
+   615→      ? 'Data is stale. No recent readings received.'
+   616→      : 'Sensor reading appears invalid.',
+   617→    action: isStale
+   618→      ? 'Check probe battery and Bluetooth connection.'
+   619→      : 'Verify the probe is properly inserted.',
+   620→    messageKey: isStale ? 'engine.stale_reading' : 'engine.invalid_reading',
+   621→    actionKey: isStale ? 'engine.stale_action' : 'engine.invalid_action',
+   622→    reasonCodes: [reasonCode],
+   623→    secondaryObservations: [],
+   624→    trend: TREND.INSUFFICIENT_DATA,
+   625→    expression: EXPRESSION.THINKING,
+   626→    confidence: 'low',
+   627→    variables: {
+   628→      moisture: reading?.moisture ?? 0,
+   629→      temperature: reading?.temperature ?? 0,
+   630→      battery: reading?.battery ?? 0,
+   631→      grainType: reading?.grainType ?? 'wheat',
+   632→    },
+   633→    debug: {
+   634→      triggeredRules: [isStale ? 'STALE_READING' : 'INVALID_READING'],
+   635→      selectedRule: isStale ? 'STALE_READING' : 'INVALID_READING',
+   636→    },
+   637→  };
+   638→}
+   639→
+   640→function buildResponse(
+   641→  selectedRule: SelectedRule,
+   642→  reading: Reading,
+   643→  historyAnalysis: HistoryAnalysis,
+   644→  risk: RiskAssessment,
+   645→  settings: EngineSettings,
+   646→  prevEngineState: CooldownState,
+   647→  isStale: boolean,
+   648→): MochiDecision {
+   649→  // Cooldown check
+   650→  const suppressed = cooldownManager.shouldSuppress(selectedRule.ruleId);
+   651→  const bypassCooldown =
+   652→    selectedRule.ruleId === 'RECOVERY' ||
+   653→    selectedRule.ruleId === 'CRITICAL_CONDITION' ||
+   654→    selectedRule.state === STATE.CRITICAL;
+   655→
+   656→  const msg = resolveMessage(selectedRule.messageId);
+   657→
+   658→  if (!suppressed || bypassCooldown) {
+   659→    cooldownManager.updateCooldown(selectedRule.ruleId, selectedRule.state);
+   660→  }
+   661→
+   662→  // Confidence
+   663→  const hasGaps = historyAnalysis.gaps.length > 0;
+   664→  const confidence:
+   665→    | 'high'
+   666→    | 'medium'
+   667→    | 'low' =
+   668→    historyAnalysis.recentReadingsCount >= 3 && !isStale && !hasGaps
+   669→      ? 'high'
+   670→      : historyAnalysis.recentReadingsCount > 0
+   671→        ? 'medium'
+   672→        : 'low';
+   673→
+   674→  // Secondary observations
+   675→  const secondaryObservations: string[] = [];
+   676→  if (reading.battery < 20) secondaryObservations.push('obs.low_battery');
+   677→  if (reading.signal < 30) secondaryObservations.push('obs.weak_signal');
+   678→
+   679→  return {
+   680→    state: selectedRule.state,
+   681→    severity: selectedRule.priority,
+   682→    ruleId: selectedRule.ruleId,
+   683→    messageId: selectedRule.messageId,
+   684→    message: msg.en,
+   685→    action: msg.action,
+   686→    messageKey: msg.key,
+   687→    actionKey: msg.actionKey,
+   688→    reasonCodes: selectedRule.reasonCodes,
+   689→    secondaryObservations,
+   690→    trend: historyAnalysis.trend,
+   691→    expression: selectedRule.expression,
+   692→    confidence,
+   693→    variables: {
+   694→      moisture: reading.moisture,
+   695→      temperature: reading.temperature,
+   696→      battery: reading.battery,
+   697→      grainType: reading.grainType,
+   698→      previousMoisture: historyAnalysis.previousReading?.moisture ?? 0,
+   699→      previousTemperature: historyAnalysis.previousReading?.temperature ?? 0,
+   700→      moistureChange: historyAnalysis.moistureChange ?? 0,
+   701→      temperatureChange: historyAnalysis.tempChange ?? 0,
+   702→      trend: historyAnalysis.trend,
+   703→      readingsCount: historyAnalysis.recentReadingsCount,
+   704→    },
+   705→    debug: {
+   706→      triggeredRules: [selectedRule.ruleId],
+   707→      selectedRule: selectedRule.ruleId,
+   708→      historySummary: {
+   709→        trend: historyAnalysis.trend,
+   710→        isStableWindow: historyAnalysis.isStableWindow,
+   711→        gaps: historyAnalysis.gaps.map((g) => ({
+   712→          from: new Date(g.from).toISOString(),
+   713→          to: new Date(g.to).toISOString(),
+   714→        })),
+   715→        duplicatesRemoved: historyAnalysis.duplicatesRemoved,
+   716→        recentReadingsCount: historyAnalysis.recentReadingsCount,
+   717→      },
+   718→      riskAssessment: {
+   719→        state: risk.state,
+   720→        severity: risk.severity,
+   721→        reasonCodes: risk.reasonCodes,
+   722→      },
+   723→    },
+   724→  };
+   725→}
+   726→
+   727→/* ═══════════════════════════════════════════════════════════════
+   728→   STATUS BADGE (for header)
+   729→   ═══════════════════════════════════════════════════════════════ */
+   730→
+   731→export function getStatusBadge(
+   732→  decision: MochiDecision | null,
+   733→  deviceState: string,
+   734→): StatusBadge {
+   735→  if (deviceState === 'sleeping') return 'SLEEPING';
+   736→  if (deviceState === 'syncing') return 'SYNCING';
+   737→  if (deviceState === 'connecting') return 'OFFLINE';
+   738→  if (!decision) return 'OFFLINE';
+   739→
+   740→  switch (decision.state) {
+   741→    case STATE.CRITICAL:
+   742→    case STATE.INVALID:
+   743→      return 'CRITICAL';
+   744→    case STATE.WARNING:
+   745→      if (
+   746→        decision.trend === TREND.RISING ||
+   747→        decision.trend === TREND.RISING_RAPIDLY
+   748→      )
+   749→        return 'RISING';
+   750→      return 'WARNING';
+   751→    case STATE.MONITOR:
+   752→      return 'MONITOR';
+   753→    case STATE.RECOVERY:
+   754→      return 'RECOVERY';
+   755→    case STATE.INSUFFICIENT_DATA:
+   756→      return 'LEARNING';
+   757→    case STATE.IDLE:
+   758→      return 'IDLE';
+   759→    case STATE.SAFE:
+   760→    default:
+   761→      return 'STABLE';
+   762→  }
+   763→}
+   764→
+   765→/* ═══════════════════════════════════════════════════════════════
+   766→   INSIGHT TITLE (for InsightCard header)
+   767→   ═══════════════════════════════════════════════════════════════ */
+   768→
+   769→export function getInsightTitle(decision: MochiDecision): string {
+   770→  switch (decision.state) {
+   771→    case STATE.CRITICAL:
+   772→      return 'engine.title_critical';
+   773→    case STATE.WARNING:
+   774→      return 'engine.title_warning';
+   775→    case STATE.MONITOR:
+   776→      return 'engine.title_monitor';
+   777→    case STATE.RECOVERY:
+   778→      return 'engine.title_recovery';
+   779→    case STATE.INSUFFICIENT_DATA:
+   780→      return 'engine.title_learning';
+   781→    case STATE.IDLE:
+   782→      return 'engine.title_idle';
+   783→    case STATE.INVALID:
+   784→      return 'engine.title_invalid';
+   785→    case STATE.SAFE:
+   786→    default:
+   787→      return 'engine.title_safe';
+   788→  }
+   789→}
+   790→
+   791→/* ═══════════════════════════════════════════════════════════════
+   792→   TREND LABEL (for status display)
+   793→   ═══════════════════════════════════════════════════════════════ */
+   794→
+   795→export function getTrendLabel(trend: TrendDirection): string {
+   796→  switch (trend) {
+   797→    case TREND.RISING_RAPIDLY:
+   798→      return 'trend.rising_rapidly';
+   799→    case TREND.RISING:
+   800→      return 'trend.rising';
+   801→    case TREND.FALLING_RAPIDLY:
+   802→      return 'trend.falling_rapidly';
+   803→    case TREND.FALLING:
+   804→      return 'trend.falling';
+   805→    case TREND.STABLE:
+   806→      return 'trend.stable';
+   807→    case TREND.INSUFFICIENT_DATA:
+   808→    default:
+   809→      return 'trend.insufficient_data';
+   810→  }
+   811→}
+   812→
